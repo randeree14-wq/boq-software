@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 
+// ------------------------------
+// Types
+// ------------------------------
 type BeamType = {
   id: number;
   name: string;
@@ -18,25 +21,21 @@ type BeamMeasurement = {
   beamTypeId: number;
   length: number;
 };
+
 type PadFootingType = {
   id: number;
   name: string;
-
   padLength: number;
   padWidth: number;
   padDepth: number;
-
   excavationLength: number;
   excavationWidth: number;
   excavationDepth: number;
-
   concreteClass: string;
   reinfKg: number;
-
   formworkRequired: boolean;
   blindingRequired: boolean;
   blindingThickness: number;
-
   soilPoison: boolean;
   backfill: boolean;
 };
@@ -46,11 +45,6 @@ type PadFootingMeasurement = {
   mark: string;
   padFootingTypeId: number;
   quantity: number;
-};
-type BoqItem = {
-  item: string;
-  unit: string;
-  qty: number;
 };
 
 type SurfaceBedType = {
@@ -83,7 +77,89 @@ type SurfaceBedMeasurement = {
   area: number;
 };
 
+type BoqItem = {
+  item: string;
+  unit: string;
+  qty: number;
+};
+
+// ------------------------------
+// Helper: BOQ accumulation
+// ------------------------------
+function addToBoqItem(
+  boq: Record<string, BoqItem>,
+  itemName: string,
+  unit: string,
+  qty: number
+) {
+  if (!boq[itemName]) {
+    boq[itemName] = { item: itemName, unit, qty: 0 };
+  }
+  boq[itemName].qty += qty;
+}
+
+function addLayerToBoq(
+  boq: Record<string, BoqItem>,
+  material: string,
+  thickness: number,
+  area: number
+) {
+  if (material && thickness > 0) {
+    addToBoqItem(boq, `${thickness}mm ${material} compacted`, "m²", area);
+  }
+}
+
+// ------------------------------
+// Custom hook for form state
+// ------------------------------
+function useFormState<T>(initialState: T) {
+  const [values, setValues] = useState<T>(initialState);
+  const reset = () => setValues(initialState);
+  const update = (partial: Partial<T>) => setValues((prev) => ({ ...prev, ...partial }));
+  return { values, setValues, update, reset };
+}
+
+// ------------------------------
+// Styles
+// ------------------------------
+const pageStyle = {
+  padding: "30px",
+  fontFamily: "Arial",
+  maxWidth: "1400px",
+  margin: "0 auto",
+  backgroundColor: "#f4f6f8",
+};
+
+const formGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+  gap: "10px",
+  marginBottom: "20px",
+};
+
+const cardStyle = {
+  border: "1px solid #ddd",
+  borderRadius: "12px",
+  padding: "20px",
+  marginTop: "25px",
+  backgroundColor: "#ffffff",
+};
+
+const thStyle = { padding: "8px 12px", textAlign: "left" as const };
+const tdStyle = { padding: "8px 12px" };
+
+const tableStyle = {
+  width: "100%",
+  borderCollapse: "collapse" as const,
+  marginTop: "10px",
+  backgroundColor: "#ffffff",
+};
+
+// ------------------------------
+// Main Component
+// ------------------------------
 export default function Home() {
+  // Beam state
   const [beamTypes, setBeamTypes] = useState<BeamType[]>([
     {
       id: 1,
@@ -95,10 +171,8 @@ export default function Home() {
       concreteClass: "25MPa/19mm",
     },
   ]);
-
-  const [editingId, setEditingId] = useState<number | null>(null);
-
-  const [newBeam, setNewBeam] = useState({
+  const [editingBeamId, setEditingBeamId] = useState<number | null>(null);
+  const { values: newBeam, update: updateBeam, reset: resetBeam } = useFormState({
     name: "",
     width: 230,
     depth: 500,
@@ -106,177 +180,17 @@ export default function Home() {
     formworkFinish: "Smooth",
     concreteClass: "25MPa/19mm",
   });
-
-  const [measurements, setMeasurements] = useState<BeamMeasurement[]>([]);
-const [surfaceBedTypes, setSurfaceBedTypes] = useState<SurfaceBedType[]>([]);
-const [surfaceBedMeasurements, setSurfaceBedMeasurements] = useState<
-  SurfaceBedMeasurement[]
->([]);
-const [editingSurfaceBedId, setEditingSurfaceBedId] =
-  useState<number | null>(null);
-  const [newMeasurement, setNewMeasurement] = useState({
-    
+  const [beamMeasurements, setBeamMeasurements] = useState<BeamMeasurement[]>([]);
+  const { values: newBeamMeas, update: updateBeamMeas, reset: resetBeamMeas } = useFormState({
     mark: "",
     beamTypeId: 0,
     length: 0,
   });
 
-const [newSurfaceBed, setNewSurfaceBed] = useState({
-  name: "",
-  category: "Internal",
-  thickness: 170,
-  concreteClass: "35MPa/19mm",
-  meshType: "Ref193",
-  dpm: true,
-  soilPoison: true,
-  layer1Material: "",
-  layer1Thickness: 0,
-  layer2Material: "",
-  layer2Thickness: 0,
-  layer3Material: "",
-  layer3Thickness: 0,
-  powerfloat: true,
-  screedRequired: false,
-  screedThickness: 40,
-  screedType: "Normal",
-  tileRequired: false,
-  tilePcSum: 0,
-});
-const [newSurfaceBedMeasurement, setNewSurfaceBedMeasurement] = useState({
-  mark: "",
-  surfaceBedTypeId: 0,
-  area: 0,
-});
-const [padFootingTypes, setPadFootingTypes] = useState<PadFootingType[]>([]);
-
-const [padFootingMeasurements, setPadFootingMeasurements] = useState<
-  PadFootingMeasurement[]
->([]);
-
-const [editingPadFootingId, setEditingPadFootingId] =
-  useState<number | null>(null);
-
-const [newPadFooting, setNewPadFooting] = useState({
-  name: "",
-
-  padLength: 1200,
-  padWidth: 1200,
-  padDepth: 400,
-
-  excavationLength: 1800,
-  excavationWidth: 1800,
-  excavationDepth: 800,
-
-  concreteClass: "30MPa/19mm",
-  reinfKg: 120,
-
-  formworkRequired: true,
-  blindingRequired: true,
-  blindingThickness: 50,
-
-  soilPoison: false,
-  backfill: true,
-});
-
-const [newPadFootingMeasurement, setNewPadFootingMeasurement] =
-  useState({
-    mark: "",
-    padFootingTypeId: 0,
-    quantity: 0,
-  });
-  function addBeamType() {
-    if (!newBeam.name) return;
-
-    if (editingId !== null) {
-      setBeamTypes(
-        beamTypes.map((beam) =>
-          beam.id === editingId ? { ...beam, ...newBeam } : beam
-        )
-      );
-      setEditingId(null);
-    } else {
-      setBeamTypes([
-        ...beamTypes,
-        {
-          id: beamTypes.length + 1,
-          ...newBeam,
-        },
-      ]);
-    }
-
-    setNewBeam({
-      name: "",
-      width: 230,
-      depth: 500,
-      reinfKg: 120,
-      formworkFinish: "Smooth",
-      concreteClass: "25MPa/19mm",
-    });
-  }
-
-  function editBeamType(id: number) {
-    const beam = beamTypes.find((b) => b.id === id);
-    if (!beam) return;
-
-    setNewBeam({
-      name: beam.name,
-      width: beam.width,
-      depth: beam.depth,
-      reinfKg: beam.reinfKg,
-      formworkFinish: beam.formworkFinish,
-      concreteClass: beam.concreteClass,
-    });
-
-    setEditingId(id);
-  }
-
-  function deleteBeamType(id: number) {
-    setBeamTypes(beamTypes.filter((beam) => beam.id !== id));
-    setMeasurements(measurements.filter((m) => m.beamTypeId !== id));
-  }
-function addMeasurement() {
-  if (!newMeasurement.mark) return;
-  if (newMeasurement.beamTypeId === 0) return;
-
-  setMeasurements([
-    ...measurements,
-    {
-      id: measurements.length + 1,
-      ...newMeasurement,
-    },
-  ]);
-
-  setNewMeasurement({
-    mark: "",
-    beamTypeId: 0,
-    length: 0,
-  });
-}
-
-function addSurfaceBedType() {
-  if (!newSurfaceBed.name) return;
-
-  if (editingSurfaceBedId !== null) {
-    setSurfaceBedTypes(
-      surfaceBedTypes.map((sb) =>
-        sb.id === editingSurfaceBedId
-          ? { ...sb, ...newSurfaceBed }
-          : sb
-      )
-    );
-
-    setEditingSurfaceBedId(null);
-  } else {
-    setSurfaceBedTypes([
-      ...surfaceBedTypes,
-      {
-        id: surfaceBedTypes.length + 1,
-        ...newSurfaceBed,
-      },
-    ]);
-  }
-
-  setNewSurfaceBed({
+  // Surface Bed state
+  const [surfaceBedTypes, setSurfaceBedTypes] = useState<SurfaceBedType[]>([]);
+  const [editingSurfaceBedId, setEditingSurfaceBedId] = useState<number | null>(null);
+  const defaultSurfaceBed = {
     name: "",
     category: "Internal",
     thickness: 170,
@@ -296,1417 +210,867 @@ function addSurfaceBedType() {
     screedType: "Normal",
     tileRequired: false,
     tilePcSum: 0,
-  });
-}
-
-function editSurfaceBedType(id: number) {
-  const sb = surfaceBedTypes.find((s) => s.id === id);
-
-  if (!sb) return;
-
-  setNewSurfaceBed({
-    name: sb.name,
-    category: sb.category,
-    thickness: sb.thickness,
-    concreteClass: sb.concreteClass,
-    meshType: sb.meshType,
-    dpm: sb.dpm,
-    soilPoison: sb.soilPoison,
-    layer1Material: sb.layer1Material,
-    layer1Thickness: sb.layer1Thickness,
-    layer2Material: sb.layer2Material,
-    layer2Thickness: sb.layer2Thickness,
-    layer3Material: sb.layer3Material,
-    layer3Thickness: sb.layer3Thickness,
-    powerfloat: sb.powerfloat,
-    screedRequired: sb.screedRequired,
-    screedThickness: sb.screedThickness,
-    screedType: sb.screedType,
-    tileRequired: sb.tileRequired,
-    tilePcSum: sb.tilePcSum,
-  });
-
-  setEditingSurfaceBedId(id);
-}
-
-function deleteSurfaceBedType(id: number) {
-  setSurfaceBedTypes(surfaceBedTypes.filter((sb) => sb.id !== id));
-}
-
-function addSurfaceBedMeasurement() {
-  if (!newSurfaceBedMeasurement.mark) return;
-  if (newSurfaceBedMeasurement.surfaceBedTypeId === 0) return;
-
-  setSurfaceBedMeasurements([
-    ...surfaceBedMeasurements,
-    {
-      id: surfaceBedMeasurements.length + 1,
-      ...newSurfaceBedMeasurement,
-    },
-  ]);
-
-
-  setNewSurfaceBedMeasurement({
+  };
+  const { values: newSurfaceBed, update: updateSurfaceBed, reset: resetSurfaceBed } = useFormState(defaultSurfaceBed);
+  const [surfaceBedMeasurements, setSurfaceBedMeasurements] = useState<SurfaceBedMeasurement[]>([]);
+  const { values: newSurfaceBedMeas, update: updateSurfaceBedMeas, reset: resetSurfaceBedMeas } = useFormState({
     mark: "",
     surfaceBedTypeId: 0,
     area: 0,
   });
-}
 
-function resetPadFootingForm() {
-  setNewPadFooting({
+  // Pad Footing state
+  const [padFootingTypes, setPadFootingTypes] = useState<PadFootingType[]>([]);
+  const [editingPadFootingId, setEditingPadFootingId] = useState<number | null>(null);
+  const defaultPadFooting = {
     name: "",
-
     padLength: 1200,
     padWidth: 1200,
     padDepth: 400,
-
     excavationLength: 1800,
     excavationWidth: 1800,
     excavationDepth: 800,
-
     concreteClass: "30MPa/19mm",
     reinfKg: 120,
-
     formworkRequired: true,
     blindingRequired: true,
     blindingThickness: 50,
-
     soilPoison: false,
     backfill: true,
-  });
-}
-
-function addPadFootingType() {
-  if (!newPadFooting.name) return;
-
-  setPadFootingTypes([
-    ...padFootingTypes,
-    {
-      id: padFootingTypes.length + 1,
-      ...newPadFooting,
-    },
-  ]);
-
-  resetPadFootingForm();
-  
-
-  if (editingPadFootingId !== null) {
-    setPadFootingTypes(
-      padFootingTypes.map((pf) =>
-        pf.id === editingPadFootingId
-          ? { ...pf, ...newPadFooting }
-          : pf
-      )
-    );
-
-    setEditingPadFootingId(null);
-  } else {
-    setPadFootingTypes([
-      ...padFootingTypes,
-      {
-        id: padFootingTypes.length + 1,
-        ...newPadFooting,
-      },
-    ]);
-  }
-
-  resetPadFootingForm();
-}
-function addPadFootingMeasurement() {
-  if (!newPadFootingMeasurement.mark) return;
-  if (newPadFootingMeasurement.padFootingTypeId === 0) return;
-
-  setPadFootingMeasurements([
-    ...padFootingMeasurements,
-    {
-      id: padFootingMeasurements.length + 1,
-      ...newPadFootingMeasurement,
-    },
-  ]);
-
-  setNewPadFootingMeasurement({
+  };
+  const { values: newPadFooting, update: updatePadFooting, reset: resetPadFooting } = useFormState(defaultPadFooting);
+  const [padFootingMeasurements, setPadFootingMeasurements] = useState<PadFootingMeasurement[]>([]);
+  const { values: newPadFootingMeas, update: updatePadFootingMeas, reset: resetPadFootingMeas } = useFormState({
     mark: "",
     padFootingTypeId: 0,
     quantity: 0,
   });
-}
-function editPadFootingType(id: number) {
-  const pf = padFootingTypes.find((p) => p.id === id);
 
-  if (!pf) return;
-
-  setNewPadFooting({
-    name: pf.name,
-
-    padLength: pf.padLength,
-    padWidth: pf.padWidth,
-    padDepth: pf.padDepth,
-
-    excavationLength: pf.excavationLength,
-    excavationWidth: pf.excavationWidth,
-    excavationDepth: pf.excavationDepth,
-
-    concreteClass: pf.concreteClass,
-    reinfKg: pf.reinfKg,
-
-    formworkRequired: pf.formworkRequired,
-    blindingRequired: pf.blindingRequired,
-    blindingThickness: pf.blindingThickness,
-
-    soilPoison: pf.soilPoison,
-    backfill: pf.backfill,
-  });
-
-  setEditingPadFootingId(id);
-}
-
-function deletePadFootingType(id: number) {
-  setPadFootingTypes(padFootingTypes.filter((pf) => pf.id !== id));
-  setPadFootingMeasurements(
-    padFootingMeasurements.filter((m) => m.padFootingTypeId !== id)
-  );
-}
-const beamBoqItems: Record<string, BoqItem> = {};
-
-const surfaceBedBoqItems: Record<string, BoqItem> = {};
-surfaceBedMeasurements.forEach((m) => {
-  const sb = surfaceBedTypes.find(
-    (s) => s.id === m.surfaceBedTypeId
-  );
-
-  if (!sb) return;
-
-  const concrete =
-    m.area * (sb.thickness / 1000);
-
-  if (sb.layer1Material) {
-    const item = `${sb.layer1Thickness}mm ${sb.layer1Material} compacted`;
-
-    if (!surfaceBedBoqItems[item]) {
-      surfaceBedBoqItems[item] = {
-        item,
-        unit: "m²",
-        qty: 0,
-      };
+  // ------------------------------
+  // Beam handlers
+  // ------------------------------
+  function saveBeamType() {
+    if (!newBeam.name.trim()) return;
+    if (editingBeamId !== null) {
+      setBeamTypes((prev) =>
+        prev.map((b) => (b.id === editingBeamId ? { ...b, ...newBeam } : b))
+      );
+      setEditingBeamId(null);
+    } else {
+      setBeamTypes((prev) => [...prev, { id: Date.now(), ...newBeam }]);
     }
-
-    surfaceBedBoqItems[item].qty += m.area;
+    resetBeam();
   }
 
-  if (sb.layer2Material) {
-    const item = `${sb.layer2Thickness}mm ${sb.layer2Material} compacted`;
-
-    if (!surfaceBedBoqItems[item]) {
-      surfaceBedBoqItems[item] = {
-        item,
-        unit: "m²",
-        qty: 0,
-      };
+  function editBeamType(id: number) {
+    const beam = beamTypes.find((b) => b.id === id);
+    if (beam) {
+      updateBeam(beam);
+      setEditingBeamId(id);
     }
-
-    surfaceBedBoqItems[item].qty += m.area;
   }
 
-  if (sb.layer3Material) {
-    const item = `${sb.layer3Thickness}mm ${sb.layer3Material} compacted`;
+  function deleteBeamType(id: number) {
+    setBeamTypes((prev) => prev.filter((b) => b.id !== id));
+    setBeamMeasurements((prev) => prev.filter((m) => m.beamTypeId !== id));
+  }
 
-    if (!surfaceBedBoqItems[item]) {
-      surfaceBedBoqItems[item] = {
-        item,
-        unit: "m²",
-        qty: 0,
-      };
+  function addBeamMeasurement() {
+    if (!newBeamMeas.mark.trim() || newBeamMeas.beamTypeId === 0) return;
+    setBeamMeasurements((prev) => [
+      ...prev,
+      { id: Date.now(), ...newBeamMeas },
+    ]);
+    resetBeamMeas();
+  }
+
+  // ------------------------------
+  // Surface Bed handlers
+  // ------------------------------
+  function saveSurfaceBedType() {
+    if (!newSurfaceBed.name.trim()) return;
+    if (editingSurfaceBedId !== null) {
+      setSurfaceBedTypes((prev) =>
+        prev.map((sb) => (sb.id === editingSurfaceBedId ? { ...sb, ...newSurfaceBed } : sb))
+      );
+      setEditingSurfaceBedId(null);
+    } else {
+      setSurfaceBedTypes((prev) => [...prev, { id: Date.now(), ...newSurfaceBed }]);
     }
-
-    surfaceBedBoqItems[item].qty += m.area;
+    resetSurfaceBed();
   }
 
-  if (sb.dpm) {
-    const item = "DPM under surface beds";
-
-    if (!surfaceBedBoqItems[item]) {
-      surfaceBedBoqItems[item] = {
-        item,
-        unit: "m²",
-        qty: 0,
-      };
+  function editSurfaceBedType(id: number) {
+    const sb = surfaceBedTypes.find((s) => s.id === id);
+    if (sb) {
+      updateSurfaceBed(sb);
+      setEditingSurfaceBedId(id);
     }
-
-    surfaceBedBoqItems[item].qty += m.area;
   }
 
-  if (sb.soilPoison) {
-    const item = "Soil poisoning under surface beds";
+  function deleteSurfaceBedType(id: number) {
+    setSurfaceBedTypes((prev) => prev.filter((sb) => sb.id !== id));
+    setSurfaceBedMeasurements((prev) => prev.filter((m) => m.surfaceBedTypeId !== id));
+  }
 
-    if (!surfaceBedBoqItems[item]) {
-      surfaceBedBoqItems[item] = {
-        item,
-        unit: "m²",
-        qty: 0,
-      };
+  function addSurfaceBedMeasurement() {
+    if (!newSurfaceBedMeas.mark.trim() || newSurfaceBedMeas.surfaceBedTypeId === 0) return;
+    setSurfaceBedMeasurements((prev) => [
+      ...prev,
+      { id: Date.now(), ...newSurfaceBedMeas },
+    ]);
+    resetSurfaceBedMeas();
+  }
+
+  // ------------------------------
+  // Pad Footing handlers
+  // ------------------------------
+  function savePadFootingType() {
+    if (!newPadFooting.name.trim()) return;
+    if (editingPadFootingId !== null) {
+      setPadFootingTypes((prev) =>
+        prev.map((pf) => (pf.id === editingPadFootingId ? { ...pf, ...newPadFooting } : pf))
+      );
+      setEditingPadFootingId(null);
+    } else {
+      setPadFootingTypes((prev) => [...prev, { id: Date.now(), ...newPadFooting }]);
     }
-
-    surfaceBedBoqItems[item].qty += m.area;
+    resetPadFooting();
   }
 
-  if (sb.meshType !== "None") {
-    const item = `${sb.meshType} mesh reinforcement`;
-
-    if (!surfaceBedBoqItems[item]) {
-      surfaceBedBoqItems[item] = {
-        item,
-        unit: "m²",
-        qty: 0,
-      };
+  function editPadFootingType(id: number) {
+    const pf = padFootingTypes.find((p) => p.id === id);
+    if (pf) {
+      updatePadFooting(pf);
+      setEditingPadFootingId(id);
     }
-
-    surfaceBedBoqItems[item].qty += m.area;
   }
 
-  const concreteItem =
-    `${sb.concreteClass} concrete in surface beds`;
-
-  if (!surfaceBedBoqItems[concreteItem]) {
-    surfaceBedBoqItems[concreteItem] = {
-      item: concreteItem,
-      unit: "m³",
-      qty: 0,
-    };
+  function deletePadFootingType(id: number) {
+    setPadFootingTypes((prev) => prev.filter((pf) => pf.id !== id));
+    setPadFootingMeasurements((prev) => prev.filter((m) => m.padFootingTypeId !== id));
   }
 
-  surfaceBedBoqItems[concreteItem].qty += concrete;
-
-  if (sb.powerfloat) {
-    if (sb.screedRequired) {
-  const item =
-    `${sb.screedThickness}mm screed ${sb.screedType}`;
-
-  if (!surfaceBedBoqItems[item]) {
-    surfaceBedBoqItems[item] = {
-      item,
-      unit: "m²",
-      qty: 0,
-    };
+  function addPadFootingMeasurement() {
+    if (!newPadFootingMeas.mark.trim() || newPadFootingMeas.padFootingTypeId === 0) return;
+    setPadFootingMeasurements((prev) => [
+      ...prev,
+      { id: Date.now(), ...newPadFootingMeas },
+    ]);
+    resetPadFootingMeas();
   }
 
-  surfaceBedBoqItems[item].qty += m.area;
-}if (sb.tileRequired) {
-  const item =
-    `Tiles PC Sum R${sb.tilePcSum}/m²`;
-
-  if (!surfaceBedBoqItems[item]) {
-    surfaceBedBoqItems[item] = {
-      item,
-      unit: "m²",
-      qty: 0,
-    };
-  }
-
-  surfaceBedBoqItems[item].qty += m.area;
-}
-    const item = "Powerfloat finish";
-
-    if (!surfaceBedBoqItems[item]) {
-      surfaceBedBoqItems[item] = {
-        item,
-        unit: "m²",
-        qty: 0,
-      };
-    }
-
-    surfaceBedBoqItems[item].qty += m.area;
-  }
-});
-const padFootingBoqItems: Record<string, BoqItem> = {};
-padFootingMeasurements.forEach((m) => {
-  const pf = padFootingTypes.find(
-    (p) => p.id === m.padFootingTypeId
-  );
-
-  if (!pf) return;
-
-  const qty = m.quantity;
-
-  const padConcrete =
-    (pf.padLength / 1000) *
-    (pf.padWidth / 1000) *
-    (pf.padDepth / 1000) *
-    qty;
-
-  const excavation =
-    (pf.excavationLength / 1000) *
-    (pf.excavationWidth / 1000) *
-    (pf.excavationDepth / 1000) *
-    qty;
-
-  const reinforcement =
-    (padConcrete * pf.reinfKg) / 1000;
-
-  const concreteItem =
-    `${pf.concreteClass} concrete in pad footings`;
-
-  if (!padFootingBoqItems[concreteItem]) {
-    padFootingBoqItems[concreteItem] = {
-      item: concreteItem,
-      unit: "m³",
-      qty: 0,
-    };
-  }
-
-  padFootingBoqItems[concreteItem].qty += padConcrete;
-
-  const excavationItem = "Excavation for pad footings";
-
-  if (!padFootingBoqItems[excavationItem]) {
-    padFootingBoqItems[excavationItem] = {
-      item: excavationItem,
-      unit: "m³",
-      qty: 0,
-    };
-  }
-
-  padFootingBoqItems[excavationItem].qty += excavation;
-
-  const reinforcementItem =
-    "Reinforcement to pad footings";
-
-  if (!padFootingBoqItems[reinforcementItem]) {
-    padFootingBoqItems[reinforcementItem] = {
-      item: reinforcementItem,
-      unit: "t",
-      qty: 0,
-    };
-  }
-
-  padFootingBoqItems[reinforcementItem].qty +=
-    reinforcement;
-});
-  measurements.forEach((m) => {
+  // ------------------------------
+  // BOQ Calculations
+  // ------------------------------
+  const beamBoqItems: Record<string, BoqItem> = {};
+  beamMeasurements.forEach((m) => {
     const beam = beamTypes.find((b) => b.id === m.beamTypeId);
     if (!beam) return;
-
     const widthM = beam.width / 1000;
     const depthM = beam.depth / 1000;
-
     const concrete = widthM * depthM * m.length;
     const formwork = m.length * (2 * depthM + widthM);
     const reinforcement = (concrete * beam.reinfKg) / 1000;
-
-    const concreteItem = `${beam.concreteClass} concrete in beams`;
-    const formworkItem = `${beam.formworkFinish} formwork to sides and soffits of beams`;
-    const reinforcementItem = "Reinforcement allowance to beams";
-
-    if (!beamBoqItems[concreteItem]) {
-      beamBoqItems[concreteItem] = { item: concreteItem, unit: "m³", qty: 0 };
-    }
-
-    if (!beamBoqItems[formworkItem]) {
-      beamBoqItems[formworkItem] = { item: formworkItem, unit: "m²", qty: 0 };
-    }
-
-    if (!beamBoqItems[reinforcementItem]) {
-      beamBoqItems[reinforcementItem] = {
-        item: reinforcementItem,
-        unit: "t",
-        qty: 0,
-      };
-    }
-
-    beamBoqItems[concreteItem].qty += concrete;
-    beamBoqItems[formworkItem].qty += formwork;
-    beamBoqItems[reinforcementItem].qty += reinforcement;
+    addToBoqItem(beamBoqItems, `${beam.concreteClass} concrete in beams`, "m³", concrete);
+    addToBoqItem(beamBoqItems, `${beam.formworkFinish} formwork to sides and soffits of beams`, "m²", formwork);
+    addToBoqItem(beamBoqItems, "Reinforcement allowance to beams", "t", reinforcement);
   });
 
+  const surfaceBedBoqItems: Record<string, BoqItem> = {};
+  surfaceBedMeasurements.forEach((m) => {
+    const sb = surfaceBedTypes.find((s) => s.id === m.surfaceBedTypeId);
+    if (!sb) return;
+    const concreteVol = m.area * (sb.thickness / 1000);
+    addLayerToBoq(surfaceBedBoqItems, sb.layer1Material, sb.layer1Thickness, m.area);
+    addLayerToBoq(surfaceBedBoqItems, sb.layer2Material, sb.layer2Thickness, m.area);
+    addLayerToBoq(surfaceBedBoqItems, sb.layer3Material, sb.layer3Thickness, m.area);
+    if (sb.dpm) addToBoqItem(surfaceBedBoqItems, "DPM under surface beds", "m²", m.area);
+    if (sb.soilPoison) addToBoqItem(surfaceBedBoqItems, "Soil poisoning under surface beds", "m²", m.area);
+    if (sb.meshType !== "None") addToBoqItem(surfaceBedBoqItems, `${sb.meshType} mesh reinforcement`, "m²", m.area);
+    addToBoqItem(surfaceBedBoqItems, `${sb.concreteClass} concrete in surface beds`, "m³", concreteVol);
+    if (sb.screedRequired) addToBoqItem(surfaceBedBoqItems, `${sb.screedThickness}mm screed ${sb.screedType}`, "m²", m.area);
+    if (sb.tileRequired) addToBoqItem(surfaceBedBoqItems, `Tiles PC Sum R${sb.tilePcSum}/m²`, "m²", m.area);
+    if (sb.powerfloat) addToBoqItem(surfaceBedBoqItems, "Powerfloat finish", "m²", m.area);
+  });
+
+  const padFootingBoqItems: Record<string, BoqItem> = {};
+  padFootingMeasurements.forEach((m) => {
+    const pf = padFootingTypes.find((p) => p.id === m.padFootingTypeId);
+    if (!pf) return;
+    const qty = m.quantity;
+    const padConcrete = (pf.padLength / 1000) * (pf.padWidth / 1000) * (pf.padDepth / 1000) * qty;
+    const excavationVol = (pf.excavationLength / 1000) * (pf.excavationWidth / 1000) * (pf.excavationDepth / 1000) * qty;
+    const reinforcementTonnes = (padConcrete * pf.reinfKg) / 1000;
+    addToBoqItem(padFootingBoqItems, `${pf.concreteClass} concrete in pad footings`, "m³", padConcrete);
+    addToBoqItem(padFootingBoqItems, "Excavation for pad footings", "m³", excavationVol);
+    addToBoqItem(padFootingBoqItems, "Reinforcement to pad footings", "t", reinforcementTonnes);
+    if (pf.formworkRequired) {
+      const formwork = 2 * ((pf.padLength / 1000) + (pf.padWidth / 1000)) * (pf.padDepth / 1000) * qty;
+      addToBoqItem(padFootingBoqItems, "Formwork to sides of pad footings", "m²", formwork);
+    }
+    if (pf.blindingRequired) {
+      const blinding = (pf.excavationLength / 1000) * (pf.excavationWidth / 1000) * (pf.blindingThickness / 1000) * qty;
+      addToBoqItem(padFootingBoqItems, `${pf.blindingThickness}mm blinding under pad footings`, "m³", blinding);
+    }
+    if (pf.soilPoison) {
+      const soilPoisonArea = (pf.excavationLength / 1000) * (pf.excavationWidth / 1000) * qty;
+      addToBoqItem(padFootingBoqItems, "Soil poisoning to bottoms of pad footings", "m²", soilPoisonArea);
+    }
+    if (pf.backfill) {
+      const backfillVol = excavationVol - padConcrete;
+      addToBoqItem(padFootingBoqItems, "Backfilling to pad footings", "m³", backfillVol);
+    }
+  });
+
+  const finalBoqItems: Record<string, BoqItem> = {};
+  const addToFinal = (items: Record<string, BoqItem>) => {
+    Object.values(items).forEach((row) => {
+      addToBoqItem(finalBoqItems, row.item, row.unit, row.qty);
+    });
+  };
+  addToFinal(beamBoqItems);
+  addToFinal(surfaceBedBoqItems);
+  addToFinal(padFootingBoqItems);
+
+  // ------------------------------
+  // Render
+  // ------------------------------
   return (
-    <main style={{ padding: "20px", fontFamily: "Arial" }}>
+    <main style={pageStyle}>
       <h1>BOQ Measurement Software</h1>
 
-      <h2>Beam Type Library</h2>
-
-      <div style={{ marginBottom: "20px" }}>
-        <input
-          placeholder="Beam type name"
-          value={newBeam.name}
-          onChange={(e) => setNewBeam({ ...newBeam, name: e.target.value })}
-        />
-
-        <input
-          type="number"
-          placeholder="Width mm"
-          value={newBeam.width}
-          onChange={(e) =>
-            setNewBeam({ ...newBeam, width: Number(e.target.value) })
-          }
-        />
-
-        <input
-          type="number"
-          placeholder="Depth mm"
-          value={newBeam.depth}
-          onChange={(e) =>
-            setNewBeam({ ...newBeam, depth: Number(e.target.value) })
-          }
-        />
-
-        <input
-          type="number"
-          placeholder="Reinf kg/m³"
-          value={newBeam.reinfKg}
-          onChange={(e) =>
-            setNewBeam({ ...newBeam, reinfKg: Number(e.target.value) })
-          }
-        />
-
-        <select
-          value={newBeam.formworkFinish}
-          onChange={(e) =>
-            setNewBeam({ ...newBeam, formworkFinish: e.target.value })
-          }
-        >
-          <option>Smooth</option>
-          <option>Rough</option>
-          <option>Special</option>
-        </select>
-
-        <select
-          value={newBeam.concreteClass}
-          onChange={(e) =>
-            setNewBeam({ ...newBeam, concreteClass: e.target.value })
-          }
-        >
-          <option>25MPa/19mm</option>
-          <option>30MPa/19mm</option>
-          <option>35MPa/19mm</option>
-        </select>
-
-        <button onClick={addBeamType}>
-          {editingId !== null ? "Update Beam Type" : "Save Beam Type"}
-        </button>
-      </div>
-
-      <table border={1} cellPadding={8}>
+      {/* BOQ Summary Table */}
+      <h2>Generated BOQ Summary</h2>
+      <table style={tableStyle} border={1} cellPadding={8}>
         <thead>
           <tr>
-            <th>Beam Type</th>
-            <th>Width mm</th>
-            <th>Depth mm</th>
-            <th>Reinf kg/m³</th>
-            <th>Formwork Finish</th>
-            <th>Concrete Class</th>
-            <th>Actions</th>
+            <th style={thStyle}>BOQ Item</th>
+            <th style={thStyle}>Unit</th>
+            <th style={thStyle}>Total Quantity</th>
           </tr>
         </thead>
-
         <tbody>
-          {beamTypes.map((beam) => (
-            <tr key={beam.id}>
-              <td>{beam.name}</td>
-              <td>{beam.width}</td>
-              <td>{beam.depth}</td>
-              <td>{beam.reinfKg}</td>
-              <td>{beam.formworkFinish}</td>
-              <td>{beam.concreteClass}</td>
-              <td>
-                <button onClick={() => editBeamType(beam.id)}>Edit</button>
-                <button
-                  onClick={() => deleteBeamType(beam.id)}
-                  style={{ marginLeft: "5px" }}
-                >
-                  Delete
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <hr style={{ marginTop: "40px" }} />
-
-      <h2>Beam Measurements</h2>
-
-      <div style={{ marginBottom: "20px" }}>
-        <input
-          placeholder="Mark"
-          value={newMeasurement.mark}
-          onChange={(e) =>
-            setNewMeasurement({ ...newMeasurement, mark: e.target.value })
-          }
-        />
-
-        <select
-          value={newMeasurement.beamTypeId}
-          onChange={(e) =>
-            setNewMeasurement({
-              ...newMeasurement,
-              beamTypeId: Number(e.target.value),
-            })
-          }
-        >
-          <option value={0}>Select Beam Type</option>
-
-          {beamTypes.map((beam) => (
-            <option key={beam.id} value={beam.id}>
-              {beam.name}
-            </option>
-          ))}
-        </select>
-
-        <input
-          type="number"
-          placeholder="Length (m)"
-          value={newMeasurement.length}
-          onChange={(e) =>
-            setNewMeasurement({
-              ...newMeasurement,
-              length: Number(e.target.value),
-            })
-          }
-        />
-
-        <button onClick={addMeasurement}>Add Measurement</button>
-      </div>
-
-      <table border={1} cellPadding={8}>
-        <thead>
-          <tr>
-            <th>Mark</th>
-            <th>Beam Type</th>
-            <th>Length</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {measurements.map((m) => {
-            const beam = beamTypes.find((b) => b.id === m.beamTypeId);
-
+          {Object.values(finalBoqItems).map((row) => {
             return (
-              <tr key={m.id}>
-                <td>{m.mark}</td>
-                <td>{beam?.name}</td>
-                <td>{m.length}</td>
+              <tr key={row.item}>
+                <td style={tdStyle}>{row.item}</td>
+                <td style={tdStyle}>{row.unit}</td>
+                <td style={tdStyle}>{row.qty.toFixed(3)}</td>
               </tr>
             );
           })}
         </tbody>
       </table>
 
-      <hr style={{ marginTop: "40px" }} />
-
-      <h2>Generated BOQ Summary</h2>
-
-      <table border={1} cellPadding={8}>
-        <thead>
-          <tr>
-            <th>BOQ Item</th>
-            <th>Unit</th>
-            <th>Total Quantity</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {Object.values(beamBoqItems).map((row) => (
-            <tr key={row.item}>
-              <td>{row.item}</td>
-              <td>{row.unit}</td>
-              <td>{row.qty.toFixed(3)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <hr style={{ marginTop: "60px" }} />
-
-<h1>Surface Bed Module</h1>
-<h2>Surface Bed Type Library</h2>
-
-<div style={{ marginBottom: "20px" }}>
-  <input
-    placeholder="Surface bed name"
-    value={newSurfaceBed.name}
-    onChange={(e) =>
-      setNewSurfaceBed({ ...newSurfaceBed, name: e.target.value })
-    }
-  />
-
-  <select
-    value={newSurfaceBed.category}
-    onChange={(e) =>
-      setNewSurfaceBed({ ...newSurfaceBed, category: e.target.value })
-    }
-  >
-    <option>Internal</option>
-    <option>External</option>
-    <option>Wet Area</option>
-    <option>Balcony</option>
-    <option>Roof Slab</option>
-  </select>
-
-  <input
-    type="number"
-    placeholder="Thickness mm"
-    value={newSurfaceBed.thickness}
-    onChange={(e) =>
-      setNewSurfaceBed({
-        ...newSurfaceBed,
-        thickness: Number(e.target.value),
-      })
-    }
-  />
-
-  <select
-    value={newSurfaceBed.concreteClass}
-    onChange={(e) =>
-      setNewSurfaceBed({ ...newSurfaceBed, concreteClass: e.target.value })
-    }
-  >
-    <option>25MPa/19mm</option>
-    <option>30MPa/19mm</option>
-    <option>35MPa/19mm</option>
-  </select>
-
-  <select
-    value={newSurfaceBed.meshType}
-    onChange={(e) =>
-      setNewSurfaceBed({ ...newSurfaceBed, meshType: e.target.value })
-    }
-  >
-    <option>None</option>
-    <option>Ref193</option>
-    <option>Ref245</option>
-    <option>Ref395</option>
-  </select>
-
-  <label>
-    DPM
-    <input
-      type="checkbox"
-      checked={newSurfaceBed.dpm}
-      onChange={(e) =>
-        setNewSurfaceBed({ ...newSurfaceBed, dpm: e.target.checked })
-      }
-    />
-  </label>
-
-  <label>
-    Soil Poison
-    <input
-      type="checkbox"
-      checked={newSurfaceBed.soilPoison}
-      onChange={(e) =>
-        setNewSurfaceBed({
-          ...newSurfaceBed,
-          soilPoison: e.target.checked,
-        })
-      }
-    />
-  </label>
-
-  <br />
-
-  <h3>Layerworks</h3>
-
-  <select
-    value={newSurfaceBed.layer1Material}
-    onChange={(e) =>
-      setNewSurfaceBed({
-        ...newSurfaceBed,
-        layer1Material: e.target.value,
-      })
-    }
-  >
-    <option value="">No Layer 1</option>
-    <option>G5</option>
-    <option>G6</option>
-    <option>G7</option>
-    <option>Selected Fill</option>
-    <option>Imported Fill</option>
-  </select>
-
-  <input
-    type="number"
-    placeholder="Layer 1 thickness"
-    value={newSurfaceBed.layer1Thickness}
-    onChange={(e) =>
-      setNewSurfaceBed({
-        ...newSurfaceBed,
-        layer1Thickness: Number(e.target.value),
-      })
-    }
-  />
-
-  <select
-    value={newSurfaceBed.layer2Material}
-    onChange={(e) =>
-      setNewSurfaceBed({
-        ...newSurfaceBed,
-        layer2Material: e.target.value,
-      })
-    }
-  >
-    <option value="">No Layer 2</option>
-    <option>G5</option>
-    <option>G6</option>
-    <option>G7</option>
-    <option>Selected Fill</option>
-    <option>Imported Fill</option>
-  </select>
-
-  <input
-    type="number"
-    placeholder="Layer 2 thickness"
-    value={newSurfaceBed.layer2Thickness}
-    onChange={(e) =>
-      setNewSurfaceBed({
-        ...newSurfaceBed,
-        layer2Thickness: Number(e.target.value),
-      })
-    }
-  />
-
-  <select
-    value={newSurfaceBed.layer3Material}
-    onChange={(e) =>
-      setNewSurfaceBed({
-        ...newSurfaceBed,
-        layer3Material: e.target.value,
-      })
-    }
-  >
-    <option value="">No Layer 3</option>
-    <option>G5</option>
-    <option>G6</option>
-    <option>G7</option>
-    <option>Selected Fill</option>
-    <option>Imported Fill</option>
-  </select>
-
-  <input
-    type="number"
-    placeholder="Layer 3 thickness"
-    value={newSurfaceBed.layer3Thickness}
-    onChange={(e) =>
-      setNewSurfaceBed({
-        ...newSurfaceBed,
-        layer3Thickness: Number(e.target.value),
-      })
-    }
-  />
-
-  <h3>Finishes</h3>
-
-  <label>
-    Powerfloat
-    <input
-      type="checkbox"
-      checked={newSurfaceBed.powerfloat}
-      onChange={(e) =>
-        setNewSurfaceBed({
-          ...newSurfaceBed,
-          powerfloat: e.target.checked,
-        })
-      }
-    />
-  </label>
-
-  <label>
-    Screed Required
-    <input
-      type="checkbox"
-      checked={newSurfaceBed.screedRequired}
-      onChange={(e) =>
-        setNewSurfaceBed({
-          ...newSurfaceBed,
-          screedRequired: e.target.checked,
-        })
-      }
-    />
-  </label>
-
-  <input
-    type="number"
-    placeholder="Screed thickness"
-    value={newSurfaceBed.screedThickness}
-    onChange={(e) =>
-      setNewSurfaceBed({
-        ...newSurfaceBed,
-        screedThickness: Number(e.target.value),
-      })
-    }
-  />
-
-  <select
-    value={newSurfaceBed.screedType}
-    onChange={(e) =>
-      setNewSurfaceBed({
-        ...newSurfaceBed,
-        screedType: e.target.value,
-      })
-    }
-  >
-    <option>Normal</option>
-    <option>To Falls</option>
-  </select>
-
-  <label>
-    Tile Required
-    <input
-      type="checkbox"
-      checked={newSurfaceBed.tileRequired}
-      onChange={(e) =>
-        setNewSurfaceBed({
-          ...newSurfaceBed,
-          tileRequired: e.target.checked,
-        })
-      }
-    />
-  </label>
-
-  <input
-    type="number"
-    placeholder="Tile PC Sum R/m²"
-    value={newSurfaceBed.tilePcSum}
-    onChange={(e) =>
-      setNewSurfaceBed({
-        ...newSurfaceBed,
-        tilePcSum: Number(e.target.value),
-      })
-    }
-  />
-
-  <br />
-
-  <button onClick={addSurfaceBedType}>
-  {editingSurfaceBedId !== null
-    ? "Update Surface Bed Type"
-    : "Save Surface Bed Type"}
-</button>
-</div>
-<table border={1} cellPadding={8}>
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th>Category</th>
-      <th>Thickness</th>
-      <th>Concrete</th>
-      <th>Mesh</th>
-      <th>DPM</th>
-      <th>Soil Poison</th>
-      <th>Layer 1</th>
-      <th>Layer 2</th>
-      <th>Layer 3</th>
-      <th>Powerfloat</th>
-      <th>Screed</th>
-      <th>Tiles</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-
-  <tbody>
-    {surfaceBedTypes.map((sb) => (
-      <tr key={sb.id}>
-        <td>{sb.name}</td>
-        <td>{sb.category}</td>
-        <td>{sb.thickness}mm</td>
-        <td>{sb.concreteClass}</td>
-        <td>{sb.meshType}</td>
-        <td>{sb.dpm ? "Yes" : "No"}</td>
-        <td>{sb.soilPoison ? "Yes" : "No"}</td>
-        <td>
-          {sb.layer1Material
-            ? `${sb.layer1Thickness}mm ${sb.layer1Material}`
-            : "-"}
-        </td>
-        <td>
-          {sb.layer2Material
-            ? `${sb.layer2Thickness}mm ${sb.layer2Material}`
-            : "-"}
-        </td>
-        <td>
-          {sb.layer3Material
-            ? `${sb.layer3Thickness}mm ${sb.layer3Material}`
-            : "-"}
-        </td>
-        <td>{sb.powerfloat ? "Yes" : "No"}</td>
-        <td>
-          {sb.screedRequired
-            ? `${sb.screedThickness}mm ${sb.screedType}`
-            : "No"}
-        </td>
-        <td>
-  {sb.tileRequired
-    ? `PC Sum R${sb.tilePcSum}/m²`
-    : "No"}
-</td>
-
-<td>
-  <button
-    onClick={() => editSurfaceBedType(sb.id)}
-  >
-    Edit
-  </button>
-
-  <button
-    onClick={() => deleteSurfaceBedType(sb.id)}
-    style={{ marginLeft: "5px" }}
-  >
-    Delete
-  </button>
-</td>
-
-</tr>
-        
-    ))}
-  </tbody>
-</table>
-<hr style={{ marginTop: "40px" }} />
-
-<h2>Surface Bed Measurements</h2>
-<div style={{ marginBottom: "20px" }}>
-  <input
-    placeholder="Mark"
-    value={newSurfaceBedMeasurement.mark}
-    onChange={(e) =>
-      setNewSurfaceBedMeasurement({
-        ...newSurfaceBedMeasurement,
-        mark: e.target.value,
-      })
-    }
-  />
-
-  <select
-    value={newSurfaceBedMeasurement.surfaceBedTypeId}
-    onChange={(e) =>
-      setNewSurfaceBedMeasurement({
-        ...newSurfaceBedMeasurement,
-        surfaceBedTypeId: Number(e.target.value),
-      })
-    }
-  >
-    <option value={0}>Select Surface Bed Type</option>
-
-    {surfaceBedTypes.map((sb) => (
-      <option key={sb.id} value={sb.id}>
-        {sb.name}
-      </option>
-    ))}
-  </select>
-
-  <input
-    type="number"
-    placeholder="Area (m²)"
-    value={newSurfaceBedMeasurement.area}
-    onChange={(e) =>
-      setNewSurfaceBedMeasurement({
-        ...newSurfaceBedMeasurement,
-        area: Number(e.target.value),
-      })
-    }
-  />
-
-  <button onClick={addSurfaceBedMeasurement}>
-    Add Measurement
-  </button>
-</div>
-
-<table border={1} cellPadding={8}>
-  <thead>
-    <tr>
-      <th>Mark</th>
-      <th>Surface Bed Type</th>
-      <th>Area</th>
-    </tr>
-  </thead>
-
-  <tbody>
-    {surfaceBedMeasurements.map((m) => {
-      const sb = surfaceBedTypes.find(
-        (s) => s.id === m.surfaceBedTypeId
-      );
-
-      return (
-        <tr key={m.id}>
-          <td>{m.mark}</td>
-          <td>{sb?.name}</td>
-          <td>{m.area}</td>
-        </tr>
-      );
-    })}
-  </tbody>
-</table>
-
-<h2>Generated Surface Bed BOQ</h2>
-
-<table border={1} cellPadding={8}>
-  <thead>
-    <tr>
-      <th>BOQ Item</th>
-      <th>Unit</th>
-      <th>Total Quantity</th>
-    </tr>
-  </thead>
-
-  <tbody>
-    {Object.values(surfaceBedBoqItems).map((row) => (
-      <tr key={row.item}>
-        <td>{row.item}</td>
-        <td>{row.unit}</td>
-        <td>{row.qty.toFixed(3)}</td>
-      </tr>
-    ))}
-  </tbody>
-</table>
-...
-<hr style={{ marginTop: "60px" }} />
-
-<h1>Pad Footing Module</h1>
-
-<h2>Pad Footing Type Library</h2><div style={{ marginBottom: "20px" }}>
-  <input
-    placeholder="Pad Footing Name"
-    value={newPadFooting.name}
-    onChange={(e) =>
-      setNewPadFooting({
-        ...newPadFooting,
-        name: e.target.value,
-      })
-    }
-  />
-
-  <h3>Pad Size (mm)</h3>
-
-  <input
-    type="number"
-    placeholder="Length"
-    value={newPadFooting.padLength}
-    onChange={(e) =>
-      setNewPadFooting({
-        ...newPadFooting,
-        padLength: Number(e.target.value),
-      })
-    }
-  />
-
-  <input
-    type="number"
-    placeholder="Width"
-    value={newPadFooting.padWidth}
-    onChange={(e) =>
-      setNewPadFooting({
-        ...newPadFooting,
-        padWidth: Number(e.target.value),
-      })
-    }
-  />
-
-  <input
-    type="number"
-    placeholder="Depth"
-    value={newPadFooting.padDepth}
-    onChange={(e) =>
-      setNewPadFooting({
-        ...newPadFooting,
-        padDepth: Number(e.target.value),
-      })
-    }
-  />
-
-  <h3>Excavation Size (mm)</h3>
-
-  <input
-    type="number"
-    placeholder="Exc Length"
-    value={newPadFooting.excavationLength}
-    onChange={(e) =>
-      setNewPadFooting({
-        ...newPadFooting,
-        excavationLength: Number(e.target.value),
-      })
-    }
-  />
-
-  <input
-    type="number"
-    placeholder="Exc Width"
-    value={newPadFooting.excavationWidth}
-    onChange={(e) =>
-      setNewPadFooting({
-        ...newPadFooting,
-        excavationWidth: Number(e.target.value),
-      })
-    }
-  />
-
-  <input
-    type="number"
-    placeholder="Exc Depth"
-    value={newPadFooting.excavationDepth}
-    onChange={(e) =>
-      setNewPadFooting({
-        ...newPadFooting,
-        excavationDepth: Number(e.target.value),
-      })
-    }
-  />
-
-  <h3>Concrete & Reinforcement</h3>
-
-  <select
-    value={newPadFooting.concreteClass}
-    onChange={(e) =>
-      setNewPadFooting({
-        ...newPadFooting,
-        concreteClass: e.target.value,
-      })
-    }
-  >
-    <option>25MPa/19mm</option>
-    <option>30MPa/19mm</option>
-    <option>35MPa/19mm</option>
-  </select>
-
-  <input
-    type="number"
-    placeholder="Reinf kg/m³"
-    value={newPadFooting.reinfKg}
-    onChange={(e) =>
-      setNewPadFooting({
-        ...newPadFooting,
-        reinfKg: Number(e.target.value),
-      })
-    }
-  />
-
-  <br />
-  <br />
-
-  <label>
-    Formwork Required
-    <input
-      type="checkbox"
-      checked={newPadFooting.formworkRequired}
-      onChange={(e) =>
-        setNewPadFooting({
-          ...newPadFooting,
-          formworkRequired: e.target.checked,
-        })
-      }
-    />
-  </label>
-
-  <label style={{ marginLeft: "20px" }}>
-    Blinding Required
-    <input
-      type="checkbox"
-      checked={newPadFooting.blindingRequired}
-      onChange={(e) =>
-        setNewPadFooting({
-          ...newPadFooting,
-          blindingRequired: e.target.checked,
-        })
-      }
-    />
-  </label>
-
-  <input
-    type="number"
-    placeholder="Blinding Thickness"
-    value={newPadFooting.blindingThickness}
-    onChange={(e) =>
-      setNewPadFooting({
-        ...newPadFooting,
-        blindingThickness: Number(e.target.value),
-      })
-    }
-  />
-
-  <label style={{ marginLeft: "20px" }}>
-    Soil Poison
-    <input
-      type="checkbox"
-      checked={newPadFooting.soilPoison}
-      onChange={(e) =>
-        setNewPadFooting({
-          ...newPadFooting,
-          soilPoison: e.target.checked,
-        })
-      }
-    />
-  </label>
-
-  <label style={{ marginLeft: "20px" }}>
-    Backfill
-    <input
-      type="checkbox"
-      checked={newPadFooting.backfill}
-      onChange={(e) =>
-        setNewPadFooting({
-          ...newPadFooting,
-          backfill: e.target.checked,
-        })
-      }
-    />
-  </label>
-
-  <br />
-  <br />
-
-  <button onClick={addPadFootingType}>
-    {editingPadFootingId !== null
-      ? "Update Pad Footing"
-      : "Save Pad Footing"}
-  </button>
-</div>
-<table border={1} cellPadding={8}>
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th>Pad Size</th>
-      <th>Excavation Size</th>
-      <th>Concrete</th>
-      <th>Reinf kg/m³</th>
-      <th>Formwork</th>
-      <th>Blinding</th>
-      <th>Soil Poison</th>
-      <th>Backfill</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-
-  <tbody>
-    {padFootingTypes.map((pf) => (
-      <tr key={pf.id}>
-        <td>{pf.name}</td>
-        <td>
-          {pf.padLength} x {pf.padWidth} x {pf.padDepth}mm
-        </td>
-        <td>
-          {pf.excavationLength} x {pf.excavationWidth} x{" "}
-          {pf.excavationDepth}mm
-        </td>
-        <td>{pf.concreteClass}</td>
-        <td>{pf.reinfKg}</td>
-        <td>{pf.formworkRequired ? "Yes" : "No"}</td>
-        <td>
-          {pf.blindingRequired
-            ? `${pf.blindingThickness}mm`
-            : "No"}
-        </td>
-        <td>{pf.soilPoison ? "Yes" : "No"}</td>
-        <td>{pf.backfill ? "Yes" : "No"}</td>
-        <td>
-          <button onClick={() => editPadFootingType(pf.id)}>
-            Edit
-          </button>
-
-          <button
-            onClick={() => deletePadFootingType(pf.id)}
-            style={{ marginLeft: "5px" }}
+      {/* BEAM MODULE */}
+      <div style={cardStyle}>
+        <h1>Beam Module</h1>
+        <h2>Beam Type Library</h2>
+        <div style={formGridStyle}>
+          <input
+            placeholder="Beam type name"
+            value={newBeam.name}
+            onChange={(e) => updateBeam({ name: e.target.value })}
+          />
+          <input
+            type="number"
+            placeholder="Width mm"
+            value={newBeam.width}
+            onChange={(e) => updateBeam({ width: Number(e.target.value) })}
+          />
+          <input
+            type="number"
+            placeholder="Depth mm"
+            value={newBeam.depth}
+            onChange={(e) => updateBeam({ depth: Number(e.target.value) })}
+          />
+          <input
+            type="number"
+            placeholder="Reinf kg/m³"
+            value={newBeam.reinfKg}
+            onChange={(e) => updateBeam({ reinfKg: Number(e.target.value) })}
+          />
+          <select
+            value={newBeam.formworkFinish}
+            onChange={(e) => updateBeam({ formworkFinish: e.target.value })}
           >
-            Delete
+            <option>Smooth</option>
+            <option>Rough</option>
+            <option>Special</option>
+          </select>
+          <select
+            value={newBeam.concreteClass}
+            onChange={(e) => updateBeam({ concreteClass: e.target.value })}
+          >
+            <option>25MPa/19mm</option>
+            <option>30MPa/19mm</option>
+            <option>35MPa/19mm</option>
+          </select>
+          <button onClick={saveBeamType}>
+            {editingBeamId !== null ? "Update Beam Type" : "Save Beam Type"}
           </button>
-        </td>
-      </tr>
-    ))}
-  </tbody>
-</table>
-<hr style={{ marginTop: "40px" }} />
+        </div>
 
-<h2>Pad Footing Measurements</h2>
+        <table style={tableStyle} border={1} cellPadding={8}>
+          <thead>
+            <tr>
+              <th style={thStyle}>Name</th>
+              <th style={thStyle}>Width</th>
+              <th style={thStyle}>Depth</th>
+              <th style={thStyle}>Reinf kg/m³</th>
+              <th style={thStyle}>Formwork</th>
+              <th style={thStyle}>Concrete</th>
+              <th style={thStyle}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {beamTypes.map((beam) => {
+              return (
+                <tr key={beam.id}>
+                  <td style={tdStyle}>{beam.name}</td>
+                  <td style={tdStyle}>{beam.width}</td>
+                  <td style={tdStyle}>{beam.depth}</td>
+                  <td style={tdStyle}>{beam.reinfKg}</td>
+                  <td style={tdStyle}>{beam.formworkFinish}</td>
+                  <td style={tdStyle}>{beam.concreteClass}</td>
+                  <td style={tdStyle}>
+                    <button onClick={() => editBeamType(beam.id)}>Edit</button>
+                    <button onClick={() => deleteBeamType(beam.id)} style={{ marginLeft: "5px" }}>
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
 
-<div style={{ marginBottom: "20px" }}>
-  <input
-    placeholder="Mark"
-    value={newPadFootingMeasurement.mark}
-    onChange={(e) =>
-      setNewPadFootingMeasurement({
-        ...newPadFootingMeasurement,
-        mark: e.target.value,
-      })
-    }
-  />
+        <hr style={{ marginTop: "40px" }} />
+        <h2>Beam Measurements</h2>
+        <div style={formGridStyle}>
+          <input
+            placeholder="Mark"
+            value={newBeamMeas.mark}
+            onChange={(e) => updateBeamMeas({ mark: e.target.value })}
+          />
+          <select
+            value={newBeamMeas.beamTypeId}
+            onChange={(e) => updateBeamMeas({ beamTypeId: Number(e.target.value) })}
+          >
+            <option value={0}>Select Beam Type</option>
+            {beamTypes.map((beam) => {
+              return (
+                <option key={beam.id} value={beam.id}>
+                  {beam.name}
+                </option>
+              );
+            })}
+          </select>
+          <input
+            type="number"
+            placeholder="Length (m)"
+            value={newBeamMeas.length}
+            onChange={(e) => updateBeamMeas({ length: Number(e.target.value) })}
+          />
+          <button onClick={addBeamMeasurement}>Add Measurement</button>
+        </div>
+        <table style={tableStyle} border={1} cellPadding={8}>
+          <thead>
+            <tr>
+              <th style={thStyle}>Mark</th>
+              <th style={thStyle}>Beam Type</th>
+              <th style={thStyle}>Length</th>
+            </tr>
+          </thead>
+          <tbody>
+            {beamMeasurements.map((m) => {
+              const beam = beamTypes.find((b) => b.id === m.beamTypeId);
+              return (
+                <tr key={m.id}>
+                  <td style={tdStyle}>{m.mark}</td>
+                  <td style={tdStyle}>{beam?.name}</td>
+                  <td style={tdStyle}>{m.length}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
-  <select
-    value={newPadFootingMeasurement.padFootingTypeId}
-    onChange={(e) =>
-      setNewPadFootingMeasurement({
-        ...newPadFootingMeasurement,
-        padFootingTypeId: Number(e.target.value),
-      })
-    }
-  >
-    <option value={0}>Select Pad Footing Type</option>
+      {/* SURFACE BED MODULE */}
+      <div style={cardStyle}>
+        <h1>Surface Bed Module</h1>
+        <h2>Surface Bed Type Library</h2>
+        <div style={formGridStyle}>
+          <input
+            placeholder="Surface bed name"
+            value={newSurfaceBed.name}
+            onChange={(e) => updateSurfaceBed({ name: e.target.value })}
+          />
+          <select
+            value={newSurfaceBed.category}
+            onChange={(e) => updateSurfaceBed({ category: e.target.value })}
+          >
+            <option>Internal</option>
+            <option>External</option>
+            <option>Wet Area</option>
+            <option>Balcony</option>
+            <option>Roof Slab</option>
+          </select>
+          <input
+            type="number"
+            placeholder="Thickness mm"
+            value={newSurfaceBed.thickness}
+            onChange={(e) => updateSurfaceBed({ thickness: Number(e.target.value) })}
+          />
+          <select
+            value={newSurfaceBed.concreteClass}
+            onChange={(e) => updateSurfaceBed({ concreteClass: e.target.value })}
+          >
+            <option>25MPa/19mm</option>
+            <option>30MPa/19mm</option>
+            <option>35MPa/19mm</option>
+          </select>
+          <select
+            value={newSurfaceBed.meshType}
+            onChange={(e) => updateSurfaceBed({ meshType: e.target.value })}
+          >
+            <option>None</option>
+            <option>Ref193</option>
+            <option>Ref245</option>
+            <option>Ref395</option>
+          </select>
+          <label>
+            DPM
+            <input
+              type="checkbox"
+              checked={newSurfaceBed.dpm}
+              onChange={(e) => updateSurfaceBed({ dpm: e.target.checked })}
+            />
+          </label>
+          <label>
+            Soil Poison
+            <input
+              type="checkbox"
+              checked={newSurfaceBed.soilPoison}
+              onChange={(e) => updateSurfaceBed({ soilPoison: e.target.checked })}
+            />
+          </label>
+          <h3>Layerworks</h3>
+          <select
+            value={newSurfaceBed.layer1Material}
+            onChange={(e) => updateSurfaceBed({ layer1Material: e.target.value })}
+          >
+            <option value="">No Layer 1</option>
+            <option>G5</option>
+            <option>G6</option>
+            <option>G7</option>
+            <option>Selected Fill</option>
+            <option>Imported Fill</option>
+          </select>
+          <input
+            type="number"
+            placeholder="Layer 1 thickness"
+            value={newSurfaceBed.layer1Thickness}
+            onChange={(e) => updateSurfaceBed({ layer1Thickness: Number(e.target.value) })}
+          />
+          <select
+            value={newSurfaceBed.layer2Material}
+            onChange={(e) => updateSurfaceBed({ layer2Material: e.target.value })}
+          >
+            <option value="">No Layer 2</option>
+            <option>G5</option>
+            <option>G6</option>
+            <option>G7</option>
+            <option>Selected Fill</option>
+            <option>Imported Fill</option>
+          </select>
+          <input
+            type="number"
+            placeholder="Layer 2 thickness"
+            value={newSurfaceBed.layer2Thickness}
+            onChange={(e) => updateSurfaceBed({ layer2Thickness: Number(e.target.value) })}
+          />
+          <select
+            value={newSurfaceBed.layer3Material}
+            onChange={(e) => updateSurfaceBed({ layer3Material: e.target.value })}
+          >
+            <option value="">No Layer 3</option>
+            <option>G5</option>
+            <option>G6</option>
+            <option>G7</option>
+            <option>Selected Fill</option>
+            <option>Imported Fill</option>
+          </select>
+          <input
+            type="number"
+            placeholder="Layer 3 thickness"
+            value={newSurfaceBed.layer3Thickness}
+            onChange={(e) => updateSurfaceBed({ layer3Thickness: Number(e.target.value) })}
+          />
+          <h3>Finishes</h3>
+          <label>
+            Powerfloat
+            <input
+              type="checkbox"
+              checked={newSurfaceBed.powerfloat}
+              onChange={(e) => updateSurfaceBed({ powerfloat: e.target.checked })}
+            />
+          </label>
+          <label>
+            Screed Required
+            <input
+              type="checkbox"
+              checked={newSurfaceBed.screedRequired}
+              onChange={(e) => updateSurfaceBed({ screedRequired: e.target.checked })}
+            />
+          </label>
+          <input
+            type="number"
+            placeholder="Screed thickness"
+            value={newSurfaceBed.screedThickness}
+            onChange={(e) => updateSurfaceBed({ screedThickness: Number(e.target.value) })}
+          />
+          <select
+            value={newSurfaceBed.screedType}
+            onChange={(e) => updateSurfaceBed({ screedType: e.target.value })}
+          >
+            <option>Normal</option>
+            <option>To Falls</option>
+          </select>
+          <label>
+            Tile Required
+            <input
+              type="checkbox"
+              checked={newSurfaceBed.tileRequired}
+              onChange={(e) => updateSurfaceBed({ tileRequired: e.target.checked })}
+            />
+          </label>
+          <input
+            type="number"
+            placeholder="Tile PC Sum R/m²"
+            value={newSurfaceBed.tilePcSum}
+            onChange={(e) => updateSurfaceBed({ tilePcSum: Number(e.target.value) })}
+          />
+          <button onClick={saveSurfaceBedType}>
+            {editingSurfaceBedId !== null ? "Update Surface Bed Type" : "Save Surface Bed Type"}
+          </button>
+        </div>
 
-    {padFootingTypes.map((pf) => (
-      <option key={pf.id} value={pf.id}>
-        {pf.name}
-      </option>
-    ))}
-  </select>
+        <table style={tableStyle} border={1} cellPadding={8}>
+          <thead>
+            <tr>
+              <th style={thStyle}>Name</th>
+              <th style={thStyle}>Category</th>
+              <th style={thStyle}>Thickness</th>
+              <th style={thStyle}>Concrete</th>
+              <th style={thStyle}>Mesh</th>
+              <th style={thStyle}>DPM</th>
+              <th style={thStyle}>Soil Poison</th>
+              <th style={thStyle}>Layer 1</th>
+              <th style={thStyle}>Layer 2</th>
+              <th style={thStyle}>Layer 3</th>
+              <th style={thStyle}>Powerfloat</th>
+              <th style={thStyle}>Screed</th>
+              <th style={thStyle}>Tiles</th>
+              <th style={thStyle}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {surfaceBedTypes.map((sb) => {
+              return (
+                <tr key={sb.id}>
+                  <td style={tdStyle}>{sb.name}</td>
+                  <td style={tdStyle}>{sb.category}</td>
+                  <td style={tdStyle}>{sb.thickness}mm</td>
+                  <td style={tdStyle}>{sb.concreteClass}</td>
+                  <td style={tdStyle}>{sb.meshType}</td>
+                  <td style={tdStyle}>{sb.dpm ? "Yes" : "No"}</td>
+                  <td style={tdStyle}>{sb.soilPoison ? "Yes" : "No"}</td>
+                  <td style={tdStyle}>
+                    {sb.layer1Material ? `${sb.layer1Thickness}mm ${sb.layer1Material}` : "-"}
+                  </td>
+                  <td style={tdStyle}>
+                    {sb.layer2Material ? `${sb.layer2Thickness}mm ${sb.layer2Material}` : "-"}
+                  </td>
+                  <td style={tdStyle}>
+                    {sb.layer3Material ? `${sb.layer3Thickness}mm ${sb.layer3Material}` : "-"}
+                  </td>
+                  <td style={tdStyle}>{sb.powerfloat ? "Yes" : "No"}</td>
+                  <td style={tdStyle}>
+                    {sb.screedRequired ? `${sb.screedThickness}mm ${sb.screedType}` : "No"}
+                  </td>
+                  <td style={tdStyle}>
+                    {sb.tileRequired ? `PC Sum R${sb.tilePcSum}/m²` : "No"}
+                  </td>
+                  <td style={tdStyle}>
+                    <button onClick={() => editSurfaceBedType(sb.id)}>Edit</button>
+                    <button onClick={() => deleteSurfaceBedType(sb.id)} style={{ marginLeft: "5px" }}>
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
 
-  <input
-    type="number"
-    placeholder="Quantity"
-    value={newPadFootingMeasurement.quantity}
-    onChange={(e) =>
-      setNewPadFootingMeasurement({
-        ...newPadFootingMeasurement,
-        quantity: Number(e.target.value),
-      })
-    }
-  />
+        <hr style={{ marginTop: "40px" }} />
+        <h2>Surface Bed Measurements</h2>
+        <div style={formGridStyle}>
+          <input
+            placeholder="Mark"
+            value={newSurfaceBedMeas.mark}
+            onChange={(e) => updateSurfaceBedMeas({ mark: e.target.value })}
+          />
+          <select
+            value={newSurfaceBedMeas.surfaceBedTypeId}
+            onChange={(e) => updateSurfaceBedMeas({ surfaceBedTypeId: Number(e.target.value) })}
+          >
+            <option value={0}>Select Surface Bed Type</option>
+            {surfaceBedTypes.map((sb) => {
+              return (
+                <option key={sb.id} value={sb.id}>
+                  {sb.name}
+                </option>
+              );
+            })}
+          </select>
+          <input
+            type="number"
+            placeholder="Area (m²)"
+            value={newSurfaceBedMeas.area}
+            onChange={(e) => updateSurfaceBedMeas({ area: Number(e.target.value) })}
+          />
+          <button onClick={addSurfaceBedMeasurement}>Add Measurement</button>
+        </div>
+        <table style={tableStyle} border={1} cellPadding={8}>
+          <thead>
+            <tr>
+              <th style={thStyle}>Mark</th>
+              <th style={thStyle}>Surface Bed Type</th>
+              <th style={thStyle}>Area</th>
+            </tr>
+          </thead>
+          <tbody>
+            {surfaceBedMeasurements.map((m) => {
+              const sb = surfaceBedTypes.find((s) => s.id === m.surfaceBedTypeId);
+              return (
+                <tr key={m.id}>
+                  <td style={tdStyle}>{m.mark}</td>
+                  <td style={tdStyle}>{sb?.name}</td>
+                  <td style={tdStyle}>{m.area}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
-  <button onClick={addPadFootingMeasurement}>
-    Add Measurement
-  </button>
-</div>
-<table border={1} cellPadding={8}>
-  <thead>
-    <tr>
-      <th>Mark</th>
-      <th>Pad Footing Type</th>
-      <th>Quantity</th>
-    </tr>
-  </thead>
+      {/* PAD FOOTING MODULE */}
+      <div style={cardStyle}>
+        <h1>Pad Footing Module</h1>
+        <h2>Pad Footing Type Library</h2>
+        <div style={formGridStyle}>
+          <input
+            placeholder="Pad Footing Name"
+            value={newPadFooting.name}
+            onChange={(e) => updatePadFooting({ name: e.target.value })}
+          />
+          <h3>Pad Size (mm)</h3>
+          <input
+            type="number"
+            placeholder="Length"
+            value={newPadFooting.padLength}
+            onChange={(e) => updatePadFooting({ padLength: Number(e.target.value) })}
+          />
+          <input
+            type="number"
+            placeholder="Width"
+            value={newPadFooting.padWidth}
+            onChange={(e) => updatePadFooting({ padWidth: Number(e.target.value) })}
+          />
+          <input
+            type="number"
+            placeholder="Depth"
+            value={newPadFooting.padDepth}
+            onChange={(e) => updatePadFooting({ padDepth: Number(e.target.value) })}
+          />
+          <h3>Excavation Size (mm)</h3>
+          <input
+            type="number"
+            placeholder="Exc Length"
+            value={newPadFooting.excavationLength}
+            onChange={(e) => updatePadFooting({ excavationLength: Number(e.target.value) })}
+          />
+          <input
+            type="number"
+            placeholder="Exc Width"
+            value={newPadFooting.excavationWidth}
+            onChange={(e) => updatePadFooting({ excavationWidth: Number(e.target.value) })}
+          />
+          <input
+            type="number"
+            placeholder="Exc Depth"
+            value={newPadFooting.excavationDepth}
+            onChange={(e) => updatePadFooting({ excavationDepth: Number(e.target.value) })}
+          />
+          <h3>Concrete & Reinforcement</h3>
+          <select
+            value={newPadFooting.concreteClass}
+            onChange={(e) => updatePadFooting({ concreteClass: e.target.value })}
+          >
+            <option>25MPa/19mm</option>
+            <option>30MPa/19mm</option>
+            <option>35MPa/19mm</option>
+          </select>
+          <input
+            type="number"
+            placeholder="Reinf kg/m³"
+            value={newPadFooting.reinfKg}
+            onChange={(e) => updatePadFooting({ reinfKg: Number(e.target.value) })}
+          />
+          <label>
+            Formwork Required
+            <input
+              type="checkbox"
+              checked={newPadFooting.formworkRequired}
+              onChange={(e) => updatePadFooting({ formworkRequired: e.target.checked })}
+            />
+          </label>
+          <label>
+            Blinding Required
+            <input
+              type="checkbox"
+              checked={newPadFooting.blindingRequired}
+              onChange={(e) => updatePadFooting({ blindingRequired: e.target.checked })}
+            />
+          </label>
+          <input
+            type="number"
+            placeholder="Blinding Thickness"
+            value={newPadFooting.blindingThickness}
+            onChange={(e) => updatePadFooting({ blindingThickness: Number(e.target.value) })}
+          />
+          <label>
+            Soil Poison
+            <input
+              type="checkbox"
+              checked={newPadFooting.soilPoison}
+              onChange={(e) => updatePadFooting({ soilPoison: e.target.checked })}
+            />
+          </label>
+          <label>
+            Backfill
+            <input
+              type="checkbox"
+              checked={newPadFooting.backfill}
+              onChange={(e) => updatePadFooting({ backfill: e.target.checked })}
+            />
+          </label>
+          <button onClick={savePadFootingType}>
+            {editingPadFootingId !== null ? "Update Pad Footing" : "Save Pad Footing"}
+          </button>
+        </div>
 
-  <tbody>
-    {padFootingMeasurements.map((measurement) => {
-      const pf = padFootingTypes.find(
-        (p) => p.id === measurement.padFootingTypeId
-      );
+        <table style={tableStyle} border={1} cellPadding={8}>
+          <thead>
+            <tr>
+              <th style={thStyle}>Name</th>
+              <th style={thStyle}>Pad Size</th>
+              <th style={thStyle}>Excavation Size</th>
+              <th style={thStyle}>Concrete</th>
+              <th style={thStyle}>Reinf kg/m³</th>
+              <th style={thStyle}>Formwork</th>
+              <th style={thStyle}>Blinding</th>
+              <th style={thStyle}>Soil Poison</th>
+              <th style={thStyle}>Backfill</th>
+              <th style={thStyle}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {padFootingTypes.map((pf) => {
+              return (
+                <tr key={pf.id}>
+                  <td style={tdStyle}>{pf.name}</td>
+                  <td style={tdStyle}>
+                    {pf.padLength} x {pf.padWidth} x {pf.padDepth}mm
+                  </td>
+                  <td style={tdStyle}>
+                    {pf.excavationLength} x {pf.excavationWidth} x {pf.excavationDepth}mm
+                  </td>
+                  <td style={tdStyle}>{pf.concreteClass}</td>
+                  <td style={tdStyle}>{pf.reinfKg}</td>
+                  <td style={tdStyle}>{pf.formworkRequired ? "Yes" : "No"}</td>
+                  <td style={tdStyle}>
+                    {pf.blindingRequired ? `${pf.blindingThickness}mm` : "No"}
+                  </td>
+                  <td style={tdStyle}>{pf.soilPoison ? "Yes" : "No"}</td>
+                  <td style={tdStyle}>{pf.backfill ? "Yes" : "No"}</td>
+                  <td style={tdStyle}>
+                    <button onClick={() => editPadFootingType(pf.id)}>Edit</button>
+                    <button onClick={() => deletePadFootingType(pf.id)} style={{ marginLeft: "5px" }}>
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
 
-      return (
-        <tr key={measurement.id}>
-          <td>{measurement.mark}</td>
-          <td>{pf?.name}</td>
-          <td>{measurement.quantity}</td>
-        </tr>
-      );
-    })}
-  </tbody>
-</table>
-<hr style={{ marginTop: "40px" }} />
-
-<h2>Generated Pad Footing BOQ</h2>
-
-<table border={1} cellPadding={8}>
-  <thead>
-    <tr>
-      <th>BOQ Item</th>
-      <th>Unit</th>
-      <th>Total Quantity</th>
-    </tr>
-  </thead>
-<tbody>
-  {(Object.values(padFootingBoqItems) as BoqItem[]).map((row) => (
-    <tr key={row.item}>
-      <td>{row.item}</td>
-      <td>{row.unit}</td>
-      <td>{row.qty.toFixed(3)}</td>
-    </tr>
-  ))}
-</tbody>
-</table>
-
+        <hr style={{ marginTop: "40px" }} />
+        <h2>Pad Footing Measurements</h2>
+        <div style={formGridStyle}>
+          <input
+            placeholder="Mark"
+            value={newPadFootingMeas.mark}
+            onChange={(e) => updatePadFootingMeas({ mark: e.target.value })}
+          />
+          <select
+            value={newPadFootingMeas.padFootingTypeId}
+            onChange={(e) => updatePadFootingMeas({ padFootingTypeId: Number(e.target.value) })}
+          >
+            <option value={0}>Select Pad Footing Type</option>
+            {padFootingTypes.map((pf) => {
+              return (
+                <option key={pf.id} value={pf.id}>
+                  {pf.name}
+                </option>
+              );
+            })}
+          </select>
+          <input
+            type="number"
+            placeholder="Quantity"
+            value={newPadFootingMeas.quantity}
+            onChange={(e) => updatePadFootingMeas({ quantity: Number(e.target.value) })}
+          />
+          <button onClick={addPadFootingMeasurement}>Add Measurement</button>
+        </div>
+        <table style={tableStyle} border={1} cellPadding={8}>
+          <thead>
+            <tr>
+              <th style={thStyle}>Mark</th>
+              <th style={thStyle}>Pad Footing Type</th>
+              <th style={thStyle}>Quantity</th>
+            </tr>
+          </thead>
+          <tbody>
+            {padFootingMeasurements.map((measurement) => {
+              const pf = padFootingTypes.find((p) => p.id === measurement.padFootingTypeId);
+              return (
+                <tr key={measurement.id}>
+                  <td style={tdStyle}>{measurement.mark}</td>
+                  <td style={tdStyle}>{pf?.name}</td>
+                  <td style={tdStyle}>{measurement.quantity}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </main>
   );
 }
