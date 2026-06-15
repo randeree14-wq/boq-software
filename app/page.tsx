@@ -18,7 +18,35 @@ type BeamMeasurement = {
   beamTypeId: number;
   length: number;
 };
+type PadFootingType = {
+  id: number;
+  name: string;
 
+  padLength: number;
+  padWidth: number;
+  padDepth: number;
+
+  excavationLength: number;
+  excavationWidth: number;
+  excavationDepth: number;
+
+  concreteClass: string;
+  reinfKg: number;
+
+  formworkRequired: boolean;
+  blindingRequired: boolean;
+  blindingThickness: number;
+
+  soilPoison: boolean;
+  backfill: boolean;
+};
+
+type PadFootingMeasurement = {
+  id: number;
+  mark: string;
+  padFootingTypeId: number;
+  quantity: number;
+};
 type BoqItem = {
   item: string;
   unit: string;
@@ -54,6 +82,7 @@ type SurfaceBedMeasurement = {
   surfaceBedTypeId: number;
   area: number;
 };
+
 export default function Home() {
   const [beamTypes, setBeamTypes] = useState<BeamType[]>([
     {
@@ -118,6 +147,43 @@ const [newSurfaceBedMeasurement, setNewSurfaceBedMeasurement] = useState({
   surfaceBedTypeId: 0,
   area: 0,
 });
+const [padFootingTypes, setPadFootingTypes] = useState<PadFootingType[]>([]);
+
+const [padFootingMeasurements, setPadFootingMeasurements] = useState<
+  PadFootingMeasurement[]
+>([]);
+
+const [editingPadFootingId, setEditingPadFootingId] =
+  useState<number | null>(null);
+
+const [newPadFooting, setNewPadFooting] = useState({
+  name: "",
+
+  padLength: 1200,
+  padWidth: 1200,
+  padDepth: 400,
+
+  excavationLength: 1800,
+  excavationWidth: 1800,
+  excavationDepth: 800,
+
+  concreteClass: "30MPa/19mm",
+  reinfKg: 120,
+
+  formworkRequired: true,
+  blindingRequired: true,
+  blindingThickness: 50,
+
+  soilPoison: false,
+  backfill: true,
+});
+
+const [newPadFootingMeasurement, setNewPadFootingMeasurement] =
+  useState({
+    mark: "",
+    padFootingTypeId: 0,
+    quantity: 0,
+  });
   function addBeamType() {
     if (!newBeam.name) return;
 
@@ -266,7 +332,8 @@ function editSurfaceBedType(id: number) {
 function deleteSurfaceBedType(id: number) {
   setSurfaceBedTypes(surfaceBedTypes.filter((sb) => sb.id !== id));
 }
-    function addSurfaceBedMeasurement() {
+
+function addSurfaceBedMeasurement() {
   if (!newSurfaceBedMeasurement.mark) return;
   if (newSurfaceBedMeasurement.surfaceBedTypeId === 0) return;
 
@@ -278,11 +345,127 @@ function deleteSurfaceBedType(id: number) {
     },
   ]);
 
+
   setNewSurfaceBedMeasurement({
     mark: "",
     surfaceBedTypeId: 0,
     area: 0,
   });
+}
+
+function resetPadFootingForm() {
+  setNewPadFooting({
+    name: "",
+
+    padLength: 1200,
+    padWidth: 1200,
+    padDepth: 400,
+
+    excavationLength: 1800,
+    excavationWidth: 1800,
+    excavationDepth: 800,
+
+    concreteClass: "30MPa/19mm",
+    reinfKg: 120,
+
+    formworkRequired: true,
+    blindingRequired: true,
+    blindingThickness: 50,
+
+    soilPoison: false,
+    backfill: true,
+  });
+}
+
+function addPadFootingType() {
+  if (!newPadFooting.name) return;
+
+  setPadFootingTypes([
+    ...padFootingTypes,
+    {
+      id: padFootingTypes.length + 1,
+      ...newPadFooting,
+    },
+  ]);
+
+  resetPadFootingForm();
+  
+
+  if (editingPadFootingId !== null) {
+    setPadFootingTypes(
+      padFootingTypes.map((pf) =>
+        pf.id === editingPadFootingId
+          ? { ...pf, ...newPadFooting }
+          : pf
+      )
+    );
+
+    setEditingPadFootingId(null);
+  } else {
+    setPadFootingTypes([
+      ...padFootingTypes,
+      {
+        id: padFootingTypes.length + 1,
+        ...newPadFooting,
+      },
+    ]);
+  }
+
+  resetPadFootingForm();
+}
+function addPadFootingMeasurement() {
+  if (!newPadFootingMeasurement.mark) return;
+  if (newPadFootingMeasurement.padFootingTypeId === 0) return;
+
+  setPadFootingMeasurements([
+    ...padFootingMeasurements,
+    {
+      id: padFootingMeasurements.length + 1,
+      ...newPadFootingMeasurement,
+    },
+  ]);
+
+  setNewPadFootingMeasurement({
+    mark: "",
+    padFootingTypeId: 0,
+    quantity: 0,
+  });
+}
+function editPadFootingType(id: number) {
+  const pf = padFootingTypes.find((p) => p.id === id);
+
+  if (!pf) return;
+
+  setNewPadFooting({
+    name: pf.name,
+
+    padLength: pf.padLength,
+    padWidth: pf.padWidth,
+    padDepth: pf.padDepth,
+
+    excavationLength: pf.excavationLength,
+    excavationWidth: pf.excavationWidth,
+    excavationDepth: pf.excavationDepth,
+
+    concreteClass: pf.concreteClass,
+    reinfKg: pf.reinfKg,
+
+    formworkRequired: pf.formworkRequired,
+    blindingRequired: pf.blindingRequired,
+    blindingThickness: pf.blindingThickness,
+
+    soilPoison: pf.soilPoison,
+    backfill: pf.backfill,
+  });
+
+  setEditingPadFootingId(id);
+}
+
+function deletePadFootingType(id: number) {
+  setPadFootingTypes(padFootingTypes.filter((pf) => pf.id !== id));
+  setPadFootingMeasurements(
+    padFootingMeasurements.filter((m) => m.padFootingTypeId !== id)
+  );
 }
 const beamBoqItems: Record<string, BoqItem> = {};
 
@@ -434,6 +617,70 @@ surfaceBedMeasurements.forEach((m) => {
 
     surfaceBedBoqItems[item].qty += m.area;
   }
+});
+const padFootingBoqItems: Record<string, BoqItem> = {};
+padFootingMeasurements.forEach((m) => {
+  const pf = padFootingTypes.find(
+    (p) => p.id === m.padFootingTypeId
+  );
+
+  if (!pf) return;
+
+  const qty = m.quantity;
+
+  const padConcrete =
+    (pf.padLength / 1000) *
+    (pf.padWidth / 1000) *
+    (pf.padDepth / 1000) *
+    qty;
+
+  const excavation =
+    (pf.excavationLength / 1000) *
+    (pf.excavationWidth / 1000) *
+    (pf.excavationDepth / 1000) *
+    qty;
+
+  const reinforcement =
+    (padConcrete * pf.reinfKg) / 1000;
+
+  const concreteItem =
+    `${pf.concreteClass} concrete in pad footings`;
+
+  if (!padFootingBoqItems[concreteItem]) {
+    padFootingBoqItems[concreteItem] = {
+      item: concreteItem,
+      unit: "m³",
+      qty: 0,
+    };
+  }
+
+  padFootingBoqItems[concreteItem].qty += padConcrete;
+
+  const excavationItem = "Excavation for pad footings";
+
+  if (!padFootingBoqItems[excavationItem]) {
+    padFootingBoqItems[excavationItem] = {
+      item: excavationItem,
+      unit: "m³",
+      qty: 0,
+    };
+  }
+
+  padFootingBoqItems[excavationItem].qty += excavation;
+
+  const reinforcementItem =
+    "Reinforcement to pad footings";
+
+  if (!padFootingBoqItems[reinforcementItem]) {
+    padFootingBoqItems[reinforcementItem] = {
+      item: reinforcementItem,
+      unit: "t",
+      qty: 0,
+    };
+  }
+
+  padFootingBoqItems[reinforcementItem].qty +=
+    reinforcement;
 });
   measurements.forEach((m) => {
     const beam = beamTypes.find((b) => b.id === m.beamTypeId);
@@ -1109,6 +1356,357 @@ surfaceBedMeasurements.forEach((m) => {
   </tbody>
 </table>
 ...
+<hr style={{ marginTop: "60px" }} />
+
+<h1>Pad Footing Module</h1>
+
+<h2>Pad Footing Type Library</h2><div style={{ marginBottom: "20px" }}>
+  <input
+    placeholder="Pad Footing Name"
+    value={newPadFooting.name}
+    onChange={(e) =>
+      setNewPadFooting({
+        ...newPadFooting,
+        name: e.target.value,
+      })
+    }
+  />
+
+  <h3>Pad Size (mm)</h3>
+
+  <input
+    type="number"
+    placeholder="Length"
+    value={newPadFooting.padLength}
+    onChange={(e) =>
+      setNewPadFooting({
+        ...newPadFooting,
+        padLength: Number(e.target.value),
+      })
+    }
+  />
+
+  <input
+    type="number"
+    placeholder="Width"
+    value={newPadFooting.padWidth}
+    onChange={(e) =>
+      setNewPadFooting({
+        ...newPadFooting,
+        padWidth: Number(e.target.value),
+      })
+    }
+  />
+
+  <input
+    type="number"
+    placeholder="Depth"
+    value={newPadFooting.padDepth}
+    onChange={(e) =>
+      setNewPadFooting({
+        ...newPadFooting,
+        padDepth: Number(e.target.value),
+      })
+    }
+  />
+
+  <h3>Excavation Size (mm)</h3>
+
+  <input
+    type="number"
+    placeholder="Exc Length"
+    value={newPadFooting.excavationLength}
+    onChange={(e) =>
+      setNewPadFooting({
+        ...newPadFooting,
+        excavationLength: Number(e.target.value),
+      })
+    }
+  />
+
+  <input
+    type="number"
+    placeholder="Exc Width"
+    value={newPadFooting.excavationWidth}
+    onChange={(e) =>
+      setNewPadFooting({
+        ...newPadFooting,
+        excavationWidth: Number(e.target.value),
+      })
+    }
+  />
+
+  <input
+    type="number"
+    placeholder="Exc Depth"
+    value={newPadFooting.excavationDepth}
+    onChange={(e) =>
+      setNewPadFooting({
+        ...newPadFooting,
+        excavationDepth: Number(e.target.value),
+      })
+    }
+  />
+
+  <h3>Concrete & Reinforcement</h3>
+
+  <select
+    value={newPadFooting.concreteClass}
+    onChange={(e) =>
+      setNewPadFooting({
+        ...newPadFooting,
+        concreteClass: e.target.value,
+      })
+    }
+  >
+    <option>25MPa/19mm</option>
+    <option>30MPa/19mm</option>
+    <option>35MPa/19mm</option>
+  </select>
+
+  <input
+    type="number"
+    placeholder="Reinf kg/m³"
+    value={newPadFooting.reinfKg}
+    onChange={(e) =>
+      setNewPadFooting({
+        ...newPadFooting,
+        reinfKg: Number(e.target.value),
+      })
+    }
+  />
+
+  <br />
+  <br />
+
+  <label>
+    Formwork Required
+    <input
+      type="checkbox"
+      checked={newPadFooting.formworkRequired}
+      onChange={(e) =>
+        setNewPadFooting({
+          ...newPadFooting,
+          formworkRequired: e.target.checked,
+        })
+      }
+    />
+  </label>
+
+  <label style={{ marginLeft: "20px" }}>
+    Blinding Required
+    <input
+      type="checkbox"
+      checked={newPadFooting.blindingRequired}
+      onChange={(e) =>
+        setNewPadFooting({
+          ...newPadFooting,
+          blindingRequired: e.target.checked,
+        })
+      }
+    />
+  </label>
+
+  <input
+    type="number"
+    placeholder="Blinding Thickness"
+    value={newPadFooting.blindingThickness}
+    onChange={(e) =>
+      setNewPadFooting({
+        ...newPadFooting,
+        blindingThickness: Number(e.target.value),
+      })
+    }
+  />
+
+  <label style={{ marginLeft: "20px" }}>
+    Soil Poison
+    <input
+      type="checkbox"
+      checked={newPadFooting.soilPoison}
+      onChange={(e) =>
+        setNewPadFooting({
+          ...newPadFooting,
+          soilPoison: e.target.checked,
+        })
+      }
+    />
+  </label>
+
+  <label style={{ marginLeft: "20px" }}>
+    Backfill
+    <input
+      type="checkbox"
+      checked={newPadFooting.backfill}
+      onChange={(e) =>
+        setNewPadFooting({
+          ...newPadFooting,
+          backfill: e.target.checked,
+        })
+      }
+    />
+  </label>
+
+  <br />
+  <br />
+
+  <button onClick={addPadFootingType}>
+    {editingPadFootingId !== null
+      ? "Update Pad Footing"
+      : "Save Pad Footing"}
+  </button>
+</div>
+<table border={1} cellPadding={8}>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Pad Size</th>
+      <th>Excavation Size</th>
+      <th>Concrete</th>
+      <th>Reinf kg/m³</th>
+      <th>Formwork</th>
+      <th>Blinding</th>
+      <th>Soil Poison</th>
+      <th>Backfill</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    {padFootingTypes.map((pf) => (
+      <tr key={pf.id}>
+        <td>{pf.name}</td>
+        <td>
+          {pf.padLength} x {pf.padWidth} x {pf.padDepth}mm
+        </td>
+        <td>
+          {pf.excavationLength} x {pf.excavationWidth} x{" "}
+          {pf.excavationDepth}mm
+        </td>
+        <td>{pf.concreteClass}</td>
+        <td>{pf.reinfKg}</td>
+        <td>{pf.formworkRequired ? "Yes" : "No"}</td>
+        <td>
+          {pf.blindingRequired
+            ? `${pf.blindingThickness}mm`
+            : "No"}
+        </td>
+        <td>{pf.soilPoison ? "Yes" : "No"}</td>
+        <td>{pf.backfill ? "Yes" : "No"}</td>
+        <td>
+          <button onClick={() => editPadFootingType(pf.id)}>
+            Edit
+          </button>
+
+          <button
+            onClick={() => deletePadFootingType(pf.id)}
+            style={{ marginLeft: "5px" }}
+          >
+            Delete
+          </button>
+        </td>
+      </tr>
+    ))}
+  </tbody>
+</table>
+<hr style={{ marginTop: "40px" }} />
+
+<h2>Pad Footing Measurements</h2>
+
+<div style={{ marginBottom: "20px" }}>
+  <input
+    placeholder="Mark"
+    value={newPadFootingMeasurement.mark}
+    onChange={(e) =>
+      setNewPadFootingMeasurement({
+        ...newPadFootingMeasurement,
+        mark: e.target.value,
+      })
+    }
+  />
+
+  <select
+    value={newPadFootingMeasurement.padFootingTypeId}
+    onChange={(e) =>
+      setNewPadFootingMeasurement({
+        ...newPadFootingMeasurement,
+        padFootingTypeId: Number(e.target.value),
+      })
+    }
+  >
+    <option value={0}>Select Pad Footing Type</option>
+
+    {padFootingTypes.map((pf) => (
+      <option key={pf.id} value={pf.id}>
+        {pf.name}
+      </option>
+    ))}
+  </select>
+
+  <input
+    type="number"
+    placeholder="Quantity"
+    value={newPadFootingMeasurement.quantity}
+    onChange={(e) =>
+      setNewPadFootingMeasurement({
+        ...newPadFootingMeasurement,
+        quantity: Number(e.target.value),
+      })
+    }
+  />
+
+  <button onClick={addPadFootingMeasurement}>
+    Add Measurement
+  </button>
+</div>
+<table border={1} cellPadding={8}>
+  <thead>
+    <tr>
+      <th>Mark</th>
+      <th>Pad Footing Type</th>
+      <th>Quantity</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    {padFootingMeasurements.map((measurement) => {
+      const pf = padFootingTypes.find(
+        (p) => p.id === measurement.padFootingTypeId
+      );
+
+      return (
+        <tr key={measurement.id}>
+          <td>{measurement.mark}</td>
+          <td>{pf?.name}</td>
+          <td>{measurement.quantity}</td>
+        </tr>
+      );
+    })}
+  </tbody>
+</table>
+<hr style={{ marginTop: "40px" }} />
+
+<h2>Generated Pad Footing BOQ</h2>
+
+<table border={1} cellPadding={8}>
+  <thead>
+    <tr>
+      <th>BOQ Item</th>
+      <th>Unit</th>
+      <th>Total Quantity</th>
+    </tr>
+  </thead>
+<tbody>
+  {(Object.values(padFootingBoqItems) as BoqItem[]).map((row) => (
+    <tr key={row.item}>
+      <td>{row.item}</td>
+      <td>{row.unit}</td>
+      <td>{row.qty.toFixed(3)}</td>
+    </tr>
+  ))}
+</tbody>
+</table>
+
     </main>
   );
 }
