@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
 import type {
   BeamType,
   BeamMeasurement,
@@ -19,11 +20,19 @@ import type {
   SlabType,
   SlabMeasurement,
   BoqItem,
+  ProjectData,
 } from "@/types/boq";
+
 import {
   addToBoqItem,
   addLayerToBoq,
 } from "@/lib/boqHelpers";
+
+import {
+  saveProjectData,
+  loadProjectData,
+  clearProjectData,
+} from "@/lib/projectStorage";
 
 // Import all module components
 import BeamModule from "@/components/BeamModule";
@@ -85,9 +94,7 @@ const styles = { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle };
 // ============================================
 export default function Home() {
   // BEAM STATE
-  const [beamTypes, setBeamTypes] = useState<BeamType[]>([
-    { id: 1, name: "Main Roof Beam", width: 230, depth: 500, reinfKg: 120, formworkFinish: "Smooth", concreteClass: "25MPa/19mm" },
-  ]);
+  const [beamTypes, setBeamTypes] = useState<BeamType[]>([]);
   const [editingBeamId, setEditingBeamId] = useState<number | null>(null);
   const { values: newBeam, update: updateBeam, reset: resetBeam } = useFormState({
     name: "", width: 230, depth: 500, reinfKg: 120, formworkFinish: "Smooth", concreteClass: "25MPa/19mm",
@@ -98,7 +105,7 @@ export default function Home() {
   });
 
   // SURFACE BED STATE
-const [surfaceBedTypes, setSurfaceBedTypes] = useState<SurfaceBedType[]>([]);
+  const [surfaceBedTypes, setSurfaceBedTypes] = useState<SurfaceBedType[]>([]);
   const [editingSurfaceBedId, setEditingSurfaceBedId] = useState<number | null>(null);
   const defaultSurfaceBed = {
     name: "", category: "Internal", thickness: 170, concreteClass: "35MPa/19mm", meshType: "Ref193",
@@ -113,9 +120,7 @@ const [surfaceBedTypes, setSurfaceBedTypes] = useState<SurfaceBedType[]>([]);
   });
 
   // PAD FOOTING STATE
-  const [padFootingTypes, setPadFootingTypes] = useState<PadFootingType[]>([
-    { id: 1, name: "Test Pad Footing", padLength: 1200, padWidth: 1200, padDepth: 400, excavationLength: 1800, excavationWidth: 1800, excavationDepth: 800, concreteClass: "30MPa/19mm", reinfKg: 120, formworkRequired: true, blindingRequired: true, blindingThickness: 50, soilPoison: false, backfill: true },
-  ]);
+  const [padFootingTypes, setPadFootingTypes] = useState<PadFootingType[]>([]);
   const [editingPadFootingId, setEditingPadFootingId] = useState<number | null>(null);
   const defaultPadFooting = {
     name: "", padLength: 1200, padWidth: 1200, padDepth: 400, excavationLength: 1800, excavationWidth: 1800,
@@ -129,9 +134,7 @@ const [surfaceBedTypes, setSurfaceBedTypes] = useState<SurfaceBedType[]>([]);
   });
 
   // GROUND BEAM STATE
-  const [groundBeamTypes, setGroundBeamTypes] = useState<GroundBeamType[]>([
-    { id: 1, name: "Test Ground Beam", trenchWidth: 600, trenchDepth: 1000, beamWidth: 350, beamDepth: 600, concreteClass: "30MPa/19mm", reinfKgPerM3: 150, formworkRequired: true, blindingRequired: true, blindingThickness: 50, backfillRequired: true, dpcRequired: false, soilPoisonRequired: false },
-  ]);
+  const [groundBeamTypes, setGroundBeamTypes] = useState<GroundBeamType[]>([]);
   const [editingGroundBeamId, setEditingGroundBeamId] = useState<number | null>(null);
   const defaultGroundBeam = {
     name: "", trenchWidth: 600, trenchDepth: 1000, beamWidth: 350, beamDepth: 600,
@@ -146,9 +149,7 @@ const [surfaceBedTypes, setSurfaceBedTypes] = useState<SurfaceBedType[]>([]);
   });
 
   // COLUMN STATE
-  const [columnTypes, setColumnTypes] = useState<ColumnType[]>([
-    { id: 1, name: "Test Column", width: 300, depth: 300, height: 3000, concreteClass: "35MPa/19mm", reinfKgPerM3: 200, formworkRequired: true, formworkFinish: "Smooth" },
-  ]);
+  const [columnTypes, setColumnTypes] = useState<ColumnType[]>([]);
   const [editingColumnId, setEditingColumnId] = useState<number | null>(null);
   const defaultColumn = {
     name: "", width: 300, depth: 300, height: 3000, concreteClass: "35MPa/19mm",
@@ -161,9 +162,7 @@ const [surfaceBedTypes, setSurfaceBedTypes] = useState<SurfaceBedType[]>([]);
   });
 
   // WALL STATE
-  const [wallTypes, setWallTypes] = useState<WallType[]>([
-    { id: 1, name: "Test Wall", brickType: "Common", thicknessType: "Single Skin (Half Brick)", thicknessMm: 102, courseHeight: 75, plasterBothSides: true, plasterThickness: 13, paintRequired: true, dpcRequired: true, reinforcementRequired: false, coursesPerReinforcement: 4, reinforcementType: "Galvanised mesh", tilesInternal: false, tilesExternal: false, tilePcSumInternal: 0, tilePcSumExternal: 0 },
-  ]);
+  const [wallTypes, setWallTypes] = useState<WallType[]>([]);
   const [editingWallId, setEditingWallId] = useState<number | null>(null);
   const defaultWall = {
     name: "",
@@ -190,9 +189,7 @@ const [surfaceBedTypes, setSurfaceBedTypes] = useState<SurfaceBedType[]>([]);
   });
 
   // SLAB STATE
-  const [slabTypes, setSlabTypes] = useState<SlabType[]>([
-    { id: 1, name: "Test Slab", thickness: 175, concreteClass: "30MPa/19mm", reinfType: "Rebar", reinfKgPerM3: 120, meshType: "A193", formworkToEdges: true, screedRequired: false, screedThickness: 50, floorFinishPcSum: 0, floorFinishDescription: "Tiles" },
-  ]);
+  const [slabTypes, setSlabTypes] = useState<SlabType[]>([]);
   const [editingSlabId, setEditingSlabId] = useState<number | null>(null);
   const defaultSlab = {
     name: "", thickness: 175, concreteClass: "30MPa/19mm", reinfType: "Rebar" as "Mesh" | "Rebar",
@@ -204,6 +201,94 @@ const [surfaceBedTypes, setSurfaceBedTypes] = useState<SurfaceBedType[]>([]);
   const { values: newSlabMeas, update: updateSlabMeas, reset: resetSlabMeas } = useFormState({
     mark: "", slabTypeId: 0, length: 0, width: 0, quantity: 1, area: 0,
   });
+
+  // ============================================
+  // LOCAL STORAGE PERSISTENCE
+  // ============================================
+
+  // Load saved data on initial render
+  useEffect(() => {
+    const savedData = loadProjectData();
+    if (savedData) {
+      setBeamTypes(savedData.beamTypes);
+      setBeamMeasurements(savedData.beamMeasurements);
+      setSurfaceBedTypes(savedData.surfaceBedTypes);
+      setSurfaceBedMeasurements(savedData.surfaceBedMeasurements);
+      setPadFootingTypes(savedData.padFootingTypes);
+      setPadFootingMeasurements(savedData.padFootingMeasurements);
+      setGroundBeamTypes(savedData.groundBeamTypes);
+      setGroundBeamMeasurements(savedData.groundBeamMeasurements);
+      setColumnTypes(savedData.columnTypes);
+      setColumnMeasurements(savedData.columnMeasurements);
+      setWallTypes(savedData.wallTypes);
+      setWallMeasurements(savedData.wallMeasurements);
+      setSlabTypes(savedData.slabTypes);
+      setSlabMeasurements(savedData.slabMeasurements);
+    }
+  }, []);
+
+  // Save data whenever any state changes
+  const saveAllData = () => {
+    const data: ProjectData = {
+      beamTypes,
+      beamMeasurements,
+      surfaceBedTypes,
+      surfaceBedMeasurements,
+      padFootingTypes,
+      padFootingMeasurements,
+      groundBeamTypes,
+      groundBeamMeasurements,
+      columnTypes,
+      columnMeasurements,
+      wallTypes,
+      wallMeasurements,
+      slabTypes,
+      slabMeasurements,
+    };
+    saveProjectData(data);
+  };
+
+  // Save whenever any state changes
+  useEffect(() => {
+    saveAllData();
+  }, [
+    beamTypes,
+    beamMeasurements,
+    surfaceBedTypes,
+    surfaceBedMeasurements,
+    padFootingTypes,
+    padFootingMeasurements,
+    groundBeamTypes,
+    groundBeamMeasurements,
+    columnTypes,
+    columnMeasurements,
+    wallTypes,
+    wallMeasurements,
+    slabTypes,
+    slabMeasurements,
+  ]);
+
+  // Function to clear saved data
+  const handleClearProject = () => {
+    if (confirm("Are you sure you want to clear all saved project data? This cannot be undone.")) {
+      clearProjectData();
+      // Reset all state to empty arrays
+      setBeamTypes([]);
+      setBeamMeasurements([]);
+      setSurfaceBedTypes([]);
+      setSurfaceBedMeasurements([]);
+      setPadFootingTypes([]);
+      setPadFootingMeasurements([]);
+      setGroundBeamTypes([]);
+      setGroundBeamMeasurements([]);
+      setColumnTypes([]);
+      setColumnMeasurements([]);
+      setWallTypes([]);
+      setWallMeasurements([]);
+      setSlabTypes([]);
+      setSlabMeasurements([]);
+    }
+  };
 
   // ============================================
   // BOQ CALCULATIONS
@@ -384,7 +469,24 @@ const [surfaceBedTypes, setSurfaceBedTypes] = useState<SurfaceBedType[]>([]);
   // ============================================
   return (
     <main style={pageStyle}>
-      <h1>BOQ Measurement Software</h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+        <h1>BOQ Measurement Software</h1>
+        <button 
+          onClick={handleClearProject}
+          style={{
+            padding: "10px 20px",
+            backgroundColor: "#dc3545",
+            color: "white",
+            border: "none",
+            borderRadius: "6px",
+            cursor: "pointer",
+            fontSize: "14px",
+            fontWeight: "bold",
+          }}
+        >
+          Clear Saved Project
+        </button>
+      </div>
       
       {/* BOQ SUMMARY */}
       <h2>Generated BOQ Summary</h2>
