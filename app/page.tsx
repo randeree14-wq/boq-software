@@ -25,7 +25,7 @@ import {
   addLayerToBoq,
 } from "@/lib/boqHelpers";
 
-// Import all module components - using default imports
+// Import all module components
 import BeamModule from "@/components/BeamModule";
 import SurfaceBedModule from "@/components/SurfaceBedModule";
 import PadFootingModule from "@/components/PadFootingModule";
@@ -33,7 +33,6 @@ import GroundBeamModule from "@/components/GroundBeamModule";
 import ColumnModule from "@/components/ColumnModule";
 import WallModule from "@/components/WallModule";
 import SlabModule from "@/components/SlabModule";
-import BoqSummary from "@/components/BoqSummary";
 
 // CUSTOM HOOK
 function useFormState<T>(initialState: T) {
@@ -99,7 +98,7 @@ export default function Home() {
   });
 
   // SURFACE BED STATE
-  const [surfaceBedTypes, setSurfaceBedTypes] = useState<SurfaceBedType[]>([]);
+const [surfaceBedTypes, setSurfaceBedTypes] = useState<SurfaceBedType[]>([]);
   const [editingSurfaceBedId, setEditingSurfaceBedId] = useState<number | null>(null);
   const defaultSurfaceBed = {
     name: "", category: "Internal", thickness: 170, concreteClass: "35MPa/19mm", meshType: "Ref193",
@@ -114,7 +113,9 @@ export default function Home() {
   });
 
   // PAD FOOTING STATE
-  const [padFootingTypes, setPadFootingTypes] = useState<PadFootingType[]>([]);
+  const [padFootingTypes, setPadFootingTypes] = useState<PadFootingType[]>([
+    { id: 1, name: "Test Pad Footing", padLength: 1200, padWidth: 1200, padDepth: 400, excavationLength: 1800, excavationWidth: 1800, excavationDepth: 800, concreteClass: "30MPa/19mm", reinfKg: 120, formworkRequired: true, blindingRequired: true, blindingThickness: 50, soilPoison: false, backfill: true },
+  ]);
   const [editingPadFootingId, setEditingPadFootingId] = useState<number | null>(null);
   const defaultPadFooting = {
     name: "", padLength: 1200, padWidth: 1200, padDepth: 400, excavationLength: 1800, excavationWidth: 1800,
@@ -128,7 +129,9 @@ export default function Home() {
   });
 
   // GROUND BEAM STATE
-  const [groundBeamTypes, setGroundBeamTypes] = useState<GroundBeamType[]>([]);
+  const [groundBeamTypes, setGroundBeamTypes] = useState<GroundBeamType[]>([
+    { id: 1, name: "Test Ground Beam", trenchWidth: 600, trenchDepth: 1000, beamWidth: 350, beamDepth: 600, concreteClass: "30MPa/19mm", reinfKgPerM3: 150, formworkRequired: true, blindingRequired: true, blindingThickness: 50, backfillRequired: true, dpcRequired: false, soilPoisonRequired: false },
+  ]);
   const [editingGroundBeamId, setEditingGroundBeamId] = useState<number | null>(null);
   const defaultGroundBeam = {
     name: "", trenchWidth: 600, trenchDepth: 1000, beamWidth: 350, beamDepth: 600,
@@ -143,7 +146,9 @@ export default function Home() {
   });
 
   // COLUMN STATE
-  const [columnTypes, setColumnTypes] = useState<ColumnType[]>([]);
+  const [columnTypes, setColumnTypes] = useState<ColumnType[]>([
+    { id: 1, name: "Test Column", width: 300, depth: 300, height: 3000, concreteClass: "35MPa/19mm", reinfKgPerM3: 200, formworkRequired: true, formworkFinish: "Smooth" },
+  ]);
   const [editingColumnId, setEditingColumnId] = useState<number | null>(null);
   const defaultColumn = {
     name: "", width: 300, depth: 300, height: 3000, concreteClass: "35MPa/19mm",
@@ -156,7 +161,9 @@ export default function Home() {
   });
 
   // WALL STATE
-  const [wallTypes, setWallTypes] = useState<WallType[]>([]);
+  const [wallTypes, setWallTypes] = useState<WallType[]>([
+    { id: 1, name: "Test Wall", brickType: "Common", thicknessType: "Single Skin (Half Brick)", thicknessMm: 102, courseHeight: 75, plasterBothSides: true, plasterThickness: 13, paintRequired: true, dpcRequired: true, reinforcementRequired: false, coursesPerReinforcement: 4, reinforcementType: "Galvanised mesh", tilesInternal: false, tilesExternal: false, tilePcSumInternal: 0, tilePcSumExternal: 0 },
+  ]);
   const [editingWallId, setEditingWallId] = useState<number | null>(null);
   const defaultWall = {
     name: "",
@@ -183,7 +190,9 @@ export default function Home() {
   });
 
   // SLAB STATE
-  const [slabTypes, setSlabTypes] = useState<SlabType[]>([]);
+  const [slabTypes, setSlabTypes] = useState<SlabType[]>([
+    { id: 1, name: "Test Slab", thickness: 175, concreteClass: "30MPa/19mm", reinfType: "Rebar", reinfKgPerM3: 120, meshType: "A193", formworkToEdges: true, screedRequired: false, screedThickness: 50, floorFinishPcSum: 0, floorFinishDescription: "Tiles" },
+  ]);
   const [editingSlabId, setEditingSlabId] = useState<number | null>(null);
   const defaultSlab = {
     name: "", thickness: 175, concreteClass: "30MPa/19mm", reinfType: "Rebar" as "Mesh" | "Rebar",
@@ -378,7 +387,25 @@ export default function Home() {
       <h1>BOQ Measurement Software</h1>
       
       {/* BOQ SUMMARY */}
-      <BoqSummary finalBoqItems={finalBoqItems} styles={styles} />
+      <h2>Generated BOQ Summary</h2>
+      <table style={tableStyle} border={1} cellPadding={8}>
+        <thead>
+          <tr>
+            <th style={thStyle}>BOQ Item</th>
+            <th style={thStyle}>Unit</th>
+            <th style={thStyle}>Total Quantity</th>
+          </tr>
+        </thead>
+        <tbody>
+          {Object.values(finalBoqItems).map((row) => (
+            <tr key={row.item}>
+              <td style={tdStyle}>{row.item}</td>
+              <td style={tdStyle}>{row.unit}</td>
+              <td style={tdStyle}>{row.qty.toFixed(3)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
 
       {/* BEAM MODULE */}
       <BeamModule

@@ -108,7 +108,9 @@ const SurfaceBedModule = ({
         <button onClick={saveSurfaceBedType}>{editingSurfaceBedId !== null ? "Update" : "Save"}</button>
       </div>
       <table style={tableStyle} border={1} cellPadding={8}>
-        <thead><tr><th>Name</th><th>Category</th><th>Thick</th><th>Concrete</th><th>Mesh</th><th>DPM</th><th>Soil</th><th>Layer1</th><th>Layer2</th><th>Layer3</th><th>Powerfloat</th><th>Screed</th><th>Tiles</th><th>Actions</th></tr></thead>
+        <thead>
+          <tr><th style={thStyle}>Name</th><th style={thStyle}>Category</th><th style={thStyle}>Thick</th><th style={thStyle}>Concrete</th><th style={thStyle}>Mesh</th><th style={thStyle}>DPM</th><th style={thStyle}>Soil</th><th style={thStyle}>Layer1</th><th style={thStyle}>Layer2</th><th style={thStyle}>Layer3</th><th style={thStyle}>Powerfloat</th><th style={thStyle}>Screed</th><th style={thStyle}>Tiles</th><th style={thStyle}>Actions</th></tr>
+        </thead>
         <tbody>
           {surfaceBedTypes.map((sb) => (
             <tr key={sb.id}>
@@ -145,7 +147,7 @@ const SurfaceBedModule = ({
         <button onClick={addSurfaceBedMeasurement}>Add</button>
       </div>
       <table style={tableStyle} border={1} cellPadding={8}>
-        <thead><tr><th>Mark</th><th>Surface Bed Type</th><th>Area</th></tr></thead>
+        <thead><tr><th style={thStyle}>Mark</th><th style={thStyle}>Surface Bed Type</th><th style={thStyle}>Area</th></tr></thead>
         <tbody>
           {surfaceBedMeasurements.map((m) => {
             const sb = surfaceBedTypes.find((s) => s.id === m.surfaceBedTypeId);

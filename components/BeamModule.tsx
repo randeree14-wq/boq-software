@@ -15,13 +15,7 @@ interface BeamModuleProps {
   newBeamMeas: Omit<BeamMeasurement, "id">;
   updateBeamMeas: (partial: Partial<Omit<BeamMeasurement, "id">>) => void;
   resetBeamMeas: () => void;
-  styles: {
-    cardStyle: React.CSSProperties;
-    formGridStyle: React.CSSProperties;
-    tableStyle: React.CSSProperties;
-    thStyle: React.CSSProperties;
-    tdStyle: React.CSSProperties;
-  };
+  styles: any;
 }
 
 const BeamModule = ({
@@ -39,7 +33,7 @@ const BeamModule = ({
   resetBeamMeas,
   styles,
 }: BeamModuleProps) => {
-  function saveBeamType() {
+  const saveBeamType = () => {
     if (!newBeam.name.trim()) return;
     if (editingBeamId !== null) {
       setBeamTypes((prev) => prev.map((b) => (b.id === editingBeamId ? { ...b, ...newBeam } : b)));
@@ -48,26 +42,26 @@ const BeamModule = ({
       setBeamTypes((prev) => [...prev, { id: Date.now(), ...newBeam }]);
     }
     resetBeam();
-  }
+  };
 
-  function editBeamType(id: number) {
+  const editBeamType = (id: number) => {
     const beam = beamTypes.find((b) => b.id === id);
     if (beam) {
       updateBeam(beam);
       setEditingBeamId(id);
     }
-  }
+  };
 
-  function deleteBeamType(id: number) {
+  const deleteBeamType = (id: number) => {
     setBeamTypes((prev) => prev.filter((b) => b.id !== id));
     setBeamMeasurements((prev) => prev.filter((m) => m.beamTypeId !== id));
-  }
+  };
 
-  function addBeamMeasurement() {
+  const addBeamMeasurement = () => {
     if (!newBeamMeas.mark.trim() || newBeamMeas.beamTypeId === 0 || newBeamMeas.length <= 0) return;
     setBeamMeasurements((prev) => [...prev, { id: Date.now(), ...newBeamMeas }]);
     resetBeamMeas();
-  }
+  };
 
   const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles;
 
@@ -81,28 +75,16 @@ const BeamModule = ({
         <input type="number" placeholder="Depth mm" value={newBeam.depth} onChange={(e) => updateBeam({ depth: Number(e.target.value) })} />
         <input type="number" placeholder="Reinf kg/m³" value={newBeam.reinfKg} onChange={(e) => updateBeam({ reinfKg: Number(e.target.value) })} />
         <select value={newBeam.formworkFinish} onChange={(e) => updateBeam({ formworkFinish: e.target.value })}>
-          <option>Smooth</option>
-          <option>Rough</option>
-          <option>Special</option>
+          <option>Smooth</option><option>Rough</option><option>Special</option>
         </select>
         <select value={newBeam.concreteClass} onChange={(e) => updateBeam({ concreteClass: e.target.value })}>
-          <option>25MPa/19mm</option>
-          <option>30MPa/19mm</option>
-          <option>35MPa/19mm</option>
+          <option>25MPa/19mm</option><option>30MPa/19mm</option><option>35MPa/19mm</option>
         </select>
         <button onClick={saveBeamType}>{editingBeamId !== null ? "Update" : "Save"}</button>
       </div>
       <table style={tableStyle} border={1} cellPadding={8}>
         <thead>
-          <tr>
-            <th style={thStyle}>Name</th>
-            <th style={thStyle}>Width</th>
-            <th style={thStyle}>Depth</th>
-            <th style={thStyle}>Reinf</th>
-            <th style={thStyle}>Formwork</th>
-            <th style={thStyle}>Concrete</th>
-            <th style={thStyle}>Actions</th>
-          </tr>
+          <tr><th style={thStyle}>Name</th><th style={thStyle}>Width</th><th style={thStyle}>Depth</th><th style={thStyle}>Reinf</th><th style={thStyle}>Formwork</th><th style={thStyle}>Concrete</th><th style={thStyle}>Actions</th></tr>
         </thead>
         <tbody>
           {beamTypes.map((beam) => (
@@ -127,31 +109,17 @@ const BeamModule = ({
         <input placeholder="Mark" value={newBeamMeas.mark} onChange={(e) => updateBeamMeas({ mark: e.target.value })} />
         <select value={newBeamMeas.beamTypeId} onChange={(e) => updateBeamMeas({ beamTypeId: Number(e.target.value) })}>
           <option value={0}>Select Type</option>
-          {beamTypes.map((b) => (
-            <option key={b.id} value={b.id}>{b.name}</option>
-          ))}
+          {beamTypes.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
         </select>
         <input type="number" placeholder="Length (m)" value={newBeamMeas.length} onChange={(e) => updateBeamMeas({ length: Number(e.target.value) })} />
         <button onClick={addBeamMeasurement}>Add</button>
       </div>
       <table style={tableStyle} border={1} cellPadding={8}>
-        <thead>
-          <tr>
-            <th style={thStyle}>Mark</th>
-            <th style={thStyle}>Beam Type</th>
-            <th style={thStyle}>Length</th>
-          </tr>
-        </thead>
+        <thead><tr><th style={thStyle}>Mark</th><th style={thStyle}>Beam Type</th><th style={thStyle}>Length</th></tr></thead>
         <tbody>
           {beamMeasurements.map((m) => {
             const beam = beamTypes.find((b) => b.id === m.beamTypeId);
-            return (
-              <tr key={m.id}>
-                <td style={tdStyle}>{m.mark}</td>
-                <td style={tdStyle}>{beam?.name}</td>
-                <td style={tdStyle}>{m.length}</td>
-              </tr>
-            );
+            return <tr key={m.id}><td style={tdStyle}>{m.mark}</td><td style={tdStyle}>{beam?.name}</td><td style={tdStyle}>{m.length}</td></tr>;
           })}
         </tbody>
       </table>
