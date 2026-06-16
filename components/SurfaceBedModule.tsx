@@ -26,6 +26,8 @@ import {
   getBrickDefaults,
   getThicknessFromType,
 } from "@/lib/boqHelpers";
+import BeamModule from "@/components/BeamModule";
+import SurfaceBedModule from "@/components/SurfaceBedModule";
 
 // CUSTOM HOOK
 function useFormState<T>(initialState: T) {
@@ -70,6 +72,8 @@ const tableStyle = {
   marginTop: "10px",
   backgroundColor: "#ffffff",
 };
+
+const styles = { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle };
 
 // ============================================
 // MAIN COMPONENT
@@ -185,72 +189,6 @@ export default function Home() {
   const { values: newSlabMeas, update: updateSlabMeas, reset: resetSlabMeas } = useFormState({
     mark: "", slabTypeId: 0, length: 0, width: 0, quantity: 1, area: 0,
   });
-
-  // ============================================
-  // BEAM HANDLERS
-  // ============================================
-  function saveBeamType() {
-    if (!newBeam.name.trim()) return;
-    if (editingBeamId !== null) {
-      setBeamTypes((prev) => prev.map((b) => (b.id === editingBeamId ? { ...b, ...newBeam } : b)));
-      setEditingBeamId(null);
-    } else {
-      setBeamTypes((prev) => [...prev, { id: Date.now(), ...newBeam }]);
-    }
-    resetBeam();
-  }
-
-  function editBeamType(id: number) {
-    const beam = beamTypes.find((b) => b.id === id);
-    if (beam) {
-      updateBeam(beam);
-      setEditingBeamId(id);
-    }
-  }
-
-  function deleteBeamType(id: number) {
-    setBeamTypes((prev) => prev.filter((b) => b.id !== id));
-    setBeamMeasurements((prev) => prev.filter((m) => m.beamTypeId !== id));
-  }
-
-  function addBeamMeasurement() {
-    if (!newBeamMeas.mark.trim() || newBeamMeas.beamTypeId === 0 || newBeamMeas.length <= 0) return;
-    setBeamMeasurements((prev) => [...prev, { id: Date.now(), ...newBeamMeas }]);
-    resetBeamMeas();
-  }
-
-  // ============================================
-  // SURFACE BED HANDLERS
-  // ============================================
-  function saveSurfaceBedType() {
-    if (!newSurfaceBed.name.trim()) return;
-    if (editingSurfaceBedId !== null) {
-      setSurfaceBedTypes((prev) => prev.map((sb) => (sb.id === editingSurfaceBedId ? { ...sb, ...newSurfaceBed } : sb)));
-      setEditingSurfaceBedId(null);
-    } else {
-      setSurfaceBedTypes((prev) => [...prev, { id: Date.now(), ...newSurfaceBed }]);
-    }
-    resetSurfaceBed();
-  }
-
-  function editSurfaceBedType(id: number) {
-    const sb = surfaceBedTypes.find((s) => s.id === id);
-    if (sb) {
-      updateSurfaceBed(sb);
-      setEditingSurfaceBedId(id);
-    }
-  }
-
-  function deleteSurfaceBedType(id: number) {
-    setSurfaceBedTypes((prev) => prev.filter((sb) => sb.id !== id));
-    setSurfaceBedMeasurements((prev) => prev.filter((m) => m.surfaceBedTypeId !== id));
-  }
-
-  function addSurfaceBedMeasurement() {
-    if (!newSurfaceBedMeas.mark.trim() || newSurfaceBedMeas.surfaceBedTypeId === 0 || newSurfaceBedMeas.area <= 0) return;
-    setSurfaceBedMeasurements((prev) => [...prev, { id: Date.now(), ...newSurfaceBedMeas }]);
-    resetSurfaceBedMeas();
-  }
 
   // ============================================
   // PAD FOOTING HANDLERS
@@ -630,195 +568,41 @@ export default function Home() {
         </tbody>
       </table>
 
-      {/* ============================================
-      BEAM MODULE UI
-      ============================================ */}
-      <div style={cardStyle}>
-        <h1>Beam Module</h1>
-        <h2>Beam Type Library</h2>
-        <div style={formGridStyle}>
-          <input placeholder="Name" value={newBeam.name} onChange={(e) => updateBeam({ name: e.target.value })} />
-          <input type="number" placeholder="Width mm" value={newBeam.width} onChange={(e) => updateBeam({ width: Number(e.target.value) })} />
-          <input type="number" placeholder="Depth mm" value={newBeam.depth} onChange={(e) => updateBeam({ depth: Number(e.target.value) })} />
-          <input type="number" placeholder="Reinf kg/m³" value={newBeam.reinfKg} onChange={(e) => updateBeam({ reinfKg: Number(e.target.value) })} />
-          <select value={newBeam.formworkFinish} onChange={(e) => updateBeam({ formworkFinish: e.target.value })}>
-            <option>Smooth</option>
-            <option>Rough</option>
-            <option>Special</option>
-          </select>
-          <select value={newBeam.concreteClass} onChange={(e) => updateBeam({ concreteClass: e.target.value })}>
-            <option>25MPa/19mm</option>
-            <option>30MPa/19mm</option>
-            <option>35MPa/19mm</option>
-          </select>
-          <button onClick={saveBeamType}>{editingBeamId !== null ? "Update" : "Save"}</button>
-        </div>
-        <table style={tableStyle} border={1} cellPadding={8}>
-          <thead>
-            <tr>
-              <th style={thStyle}>Name</th>
-              <th style={thStyle}>Width</th>
-              <th style={thStyle}>Depth</th>
-              <th style={thStyle}>Reinf</th>
-              <th style={thStyle}>Formwork</th>
-              <th style={thStyle}>Concrete</th>
-              <th style={thStyle}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {beamTypes.map((beam) => (
-              <tr key={beam.id}>
-                <td style={tdStyle}>{beam.name}</td>
-                <td style={tdStyle}>{beam.width}</td>
-                <td style={tdStyle}>{beam.depth}</td>
-                <td style={tdStyle}>{beam.reinfKg}</td>
-                <td style={tdStyle}>{beam.formworkFinish}</td>
-                <td style={tdStyle}>{beam.concreteClass}</td>
-                <td style={tdStyle}>
-                  <button onClick={() => editBeamType(beam.id)}>Edit</button>
-                  <button onClick={() => deleteBeamType(beam.id)}>Delete</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <hr />
-        <h2>Beam Measurements</h2>
-        <div style={formGridStyle}>
-          <input placeholder="Mark" value={newBeamMeas.mark} onChange={(e) => updateBeamMeas({ mark: e.target.value })} />
-          <select value={newBeamMeas.beamTypeId} onChange={(e) => updateBeamMeas({ beamTypeId: Number(e.target.value) })}>
-            <option value={0}>Select Type</option>
-            {beamTypes.map((b) => (
-              <option key={b.id} value={b.id}>{b.name}</option>
-            ))}
-          </select>
-          <input type="number" placeholder="Length (m)" value={newBeamMeas.length} onChange={(e) => updateBeamMeas({ length: Number(e.target.value) })} />
-          <button onClick={addBeamMeasurement}>Add</button>
-        </div>
-        <table style={tableStyle} border={1} cellPadding={8}>
-          <thead>
-            <tr>
-              <th style={thStyle}>Mark</th>
-              <th style={thStyle}>Beam Type</th>
-              <th style={thStyle}>Length</th>
-            </tr>
-          </thead>
-          <tbody>
-            {beamMeasurements.map((m) => {
-              const beam = beamTypes.find((b) => b.id === m.beamTypeId);
-              return (
-                <tr key={m.id}>
-                  <td style={tdStyle}>{m.mark}</td>
-                  <td style={tdStyle}>{beam?.name}</td>
-                  <td style={tdStyle}>{m.length}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      {/* BEAM MODULE */}
+      <BeamModule
+        beamTypes={beamTypes}
+        setBeamTypes={setBeamTypes}
+        editingBeamId={editingBeamId}
+        setEditingBeamId={setEditingBeamId}
+        newBeam={newBeam}
+        updateBeam={updateBeam}
+        resetBeam={resetBeam}
+        beamMeasurements={beamMeasurements}
+        setBeamMeasurements={setBeamMeasurements}
+        newBeamMeas={newBeamMeas}
+        updateBeamMeas={updateBeamMeas}
+        resetBeamMeas={resetBeamMeas}
+        styles={styles}
+      />
 
-      {/* SURFACE BED MODULE UI */}
-      <div style={cardStyle}>
-        <h1>Surface Bed Module</h1>
-        <h2>Surface Bed Type Library</h2>
-        <div style={formGridStyle}>
-          <input placeholder="Name" value={newSurfaceBed.name} onChange={(e) => updateSurfaceBed({ name: e.target.value })} />
-          <select value={newSurfaceBed.category} onChange={(e) => updateSurfaceBed({ category: e.target.value })}>
-            <option>Internal</option>
-            <option>External</option>
-            <option>Wet Area</option>
-            <option>Balcony</option>
-            <option>Roof Slab</option>
-          </select>
-          <input type="number" placeholder="Thickness mm" value={newSurfaceBed.thickness} onChange={(e) => updateSurfaceBed({ thickness: Number(e.target.value) })} />
-          <select value={newSurfaceBed.concreteClass} onChange={(e) => updateSurfaceBed({ concreteClass: e.target.value })}>
-            <option>25MPa/19mm</option>
-            <option>30MPa/19mm</option>
-            <option>35MPa/19mm</option>
-          </select>
-          <select value={newSurfaceBed.meshType} onChange={(e) => updateSurfaceBed({ meshType: e.target.value })}>
-            <option>None</option>
-            <option>Ref193</option>
-            <option>Ref245</option>
-            <option>Ref395</option>
-          </select>
-          <label>
-            <input type="checkbox" checked={newSurfaceBed.dpm} onChange={(e) => updateSurfaceBed({ dpm: e.target.checked })} /> DPM
-          </label>
-          <label>
-            <input type="checkbox" checked={newSurfaceBed.soilPoison} onChange={(e) => updateSurfaceBed({ soilPoison: e.target.checked })} /> Soil Poison
-          </label>
-          <button onClick={saveSurfaceBedType}>{editingSurfaceBedId !== null ? "Update" : "Save"}</button>
-        </div>
-        <table style={tableStyle} border={1} cellPadding={8}>
-          <thead>
-            <tr>
-              <th style={thStyle}>Name</th>
-              <th style={thStyle}>Category</th>
-              <th style={thStyle}>Thick</th>
-              <th style={thStyle}>Concrete</th>
-              <th style={thStyle}>Mesh</th>
-              <th style={thStyle}>DPM</th>
-              <th style={thStyle}>Soil</th>
-              <th style={thStyle}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {surfaceBedTypes.map((sb) => (
-              <tr key={sb.id}>
-                <td style={tdStyle}>{sb.name}</td>
-                <td style={tdStyle}>{sb.category}</td>
-                <td style={tdStyle}>{sb.thickness}mm</td>
-                <td style={tdStyle}>{sb.concreteClass}</td>
-                <td style={tdStyle}>{sb.meshType}</td>
-                <td style={tdStyle}>{sb.dpm ? "Yes" : "No"}</td>
-                <td style={tdStyle}>{sb.soilPoison ? "Yes" : "No"}</td>
-                <td style={tdStyle}>
-                  <button onClick={() => editSurfaceBedType(sb.id)}>Edit</button>
-                  <button onClick={() => deleteSurfaceBedType(sb.id)}>Delete</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <hr />
-        <h2>Surface Bed Measurements</h2>
-        <div style={formGridStyle}>
-          <input placeholder="Mark" value={newSurfaceBedMeas.mark} onChange={(e) => updateSurfaceBedMeas({ mark: e.target.value })} />
-          <select value={newSurfaceBedMeas.surfaceBedTypeId} onChange={(e) => updateSurfaceBedMeas({ surfaceBedTypeId: Number(e.target.value) })}>
-            <option value={0}>Select Type</option>
-            {surfaceBedTypes.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
-          <input type="number" placeholder="Area (m²)" value={newSurfaceBedMeas.area} onChange={(e) => updateSurfaceBedMeas({ area: Number(e.target.value) })} />
-          <button onClick={addSurfaceBedMeasurement}>Add</button>
-        </div>
-        <table style={tableStyle} border={1} cellPadding={8}>
-          <thead>
-            <tr>
-              <th style={thStyle}>Mark</th>
-              <th style={thStyle}>Surface Bed Type</th>
-              <th style={thStyle}>Area</th>
-            </tr>
-          </thead>
-          <tbody>
-            {surfaceBedMeasurements.map((m) => {
-              const sb = surfaceBedTypes.find((s) => s.id === m.surfaceBedTypeId);
-              return (
-                <tr key={m.id}>
-                  <td style={tdStyle}>{m.mark}</td>
-                  <td style={tdStyle}>{sb?.name}</td>
-                  <td style={tdStyle}>{m.area}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      {/* SURFACE BED MODULE */}
+      <SurfaceBedModule
+        surfaceBedTypes={surfaceBedTypes}
+        setSurfaceBedTypes={setSurfaceBedTypes}
+        editingSurfaceBedId={editingSurfaceBedId}
+        setEditingSurfaceBedId={setEditingSurfaceBedId}
+        newSurfaceBed={newSurfaceBed}
+        updateSurfaceBed={updateSurfaceBed}
+        resetSurfaceBed={resetSurfaceBed}
+        surfaceBedMeasurements={surfaceBedMeasurements}
+        setSurfaceBedMeasurements={setSurfaceBedMeasurements}
+        newSurfaceBedMeas={newSurfaceBedMeas}
+        updateSurfaceBedMeas={updateSurfaceBedMeas}
+        resetSurfaceBedMeas={resetSurfaceBedMeas}
+        styles={styles}
+      />
 
-      {/* PAD FOOTING MODULE UI */}
+      {/* PAD FOOTING MODULE UI (remaining in page.tsx) */}
       <div style={cardStyle}>
         <h1>Pad Footing Module</h1>
         <h2>Pad Footing Type Library</h2>
