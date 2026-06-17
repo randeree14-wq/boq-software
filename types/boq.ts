@@ -171,8 +171,64 @@ export type SlabMeasurement = {
   area: number;
 };
 
+// ============================================
+// UPDATED BOQ ITEM TYPE
+// ============================================
 export type BoqItem = {
-  item: string;
+  billNo: string;
+  billName: string;
+  section: string;
+  description: string;
   unit: string;
   qty: number;
 };
+
+// ============================================
+// PROJECT DATA TYPE
+// ============================================
+export type ProjectData = {
+  beamTypes: BeamType[];
+  beamMeasurements: BeamMeasurement[];
+  surfaceBedTypes: SurfaceBedType[];
+  surfaceBedMeasurements: SurfaceBedMeasurement[];
+  padFootingTypes: PadFootingType[];
+  padFootingMeasurements: PadFootingMeasurement[];
+  groundBeamTypes: GroundBeamType[];
+  groundBeamMeasurements: GroundBeamMeasurement[];
+  columnTypes: ColumnType[];
+  columnMeasurements: ColumnMeasurement[];
+  wallTypes: WallType[];
+  wallMeasurements: WallMeasurement[];
+  slabTypes: SlabType[];
+  slabMeasurements: SlabMeasurement[];
+};
+// Add this type for type-safe bill references
+export type BillKey = 
+  | "PRELIMINARIES"
+  | "DEMOLITIONS"
+  | "ALTERATIONS"
+  | "EARTHWORKS"
+  | "LATERAL_SUPPORT"
+  | "PILING"
+  | "CONCRETE"
+  | "PRECAST_CONCRETE"
+  | "MASONRY"
+  | "WATERPROOFING"
+  | "ROOF_COVERINGS"
+  | "CARPENTRY"
+  | "CEILINGS"
+  | "FLOOR_COVERINGS"
+  | "IRONMONGERY"
+  | "STRUCTURAL_STEEL"
+  | "METALWORK"
+  | "PLASTERING"
+  | "TILING"
+  | "PLUMBING"
+  | "ELECTRICAL"
+  | "MECHANICAL"
+  | "GLAZING"
+  | "PAINTWORK"
+  | "PAPERHANGING"
+  | "EXTERNAL_WORK"
+  | "PROVISIONAL_SUMS"
+  | "FINAL_SUMMARY";

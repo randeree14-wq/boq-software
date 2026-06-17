@@ -1,4 +1,6 @@
 import type { BoqItem, BrickType, WallThicknessType } from "@/types/boq";
+import { getBill } from "./boqStructure";
+import type { BillKey } from "./boqStructure";
 
 export function addToBoqItem(boq: Record<string, BoqItem>, itemName: string, unit: string, qty: number) {
   if (!boq[itemName]) {
@@ -30,4 +32,35 @@ export function getThicknessFromType(thicknessType: WallThicknessType): number {
     case "Triple Skin": return 327;
     default: return 102;
   }
+}
+
+// BOQ Aggregation Helper
+export function addBoqItem(
+  boq: Record<string, BoqItem>,
+  billNo: string,
+  billName: string,
+  section: string,
+  description: string,
+  unit: string,
+  qty: number
+) {
+  const key = `${billNo}|${section}|${description}|${unit}`;
+  if (boq[key]) {
+    boq[key].qty += qty;
+  } else {
+    boq[key] = { billNo, billName, section, description, unit, qty };
+  }
+}
+
+// Type-safe helper using BillKey
+export function addBoqItemFromBillKey(
+  boq: Record<string, BoqItem>,
+  billKey: BillKey,
+  section: string,
+  description: string,
+  unit: string,
+  qty: number
+) {
+  const bill = getBill(billKey);
+  addBoqItem(boq, bill.billNo, bill.billName, section, description, unit, qty);
 }
