@@ -132,7 +132,15 @@ export default function Home() {
   ]);
   const [editingBeamId, setEditingBeamId] = useState<number | null>(null);
   const { values: newBeam, update: updateBeam, reset: resetBeam } = useFormState({
-    name: "", width: 230, depth: 500, reinfKg: 120, formworkFinish: "Smooth", concreteClass: "25MPa/19mm",
+    name: "", width: 230, 
+    depth: 500, 
+    reinfKg: 120, 
+    formworkFinish: "Smooth", 
+    concreteClass: "25MPa/19mm", 
+    beamFormType: "Downstand beam",
+    formworkMeasurement: "Sides and soffit together",
+    proppingHeightBand: "Not exceeding 1.5m",
+    customProppingHeightDescription: undefined,
   });
   const [beamMeasurements, setBeamMeasurements] = useState<BeamMeasurement[]>([]);
   const { values: newBeamMeas, update: updateBeamMeas, reset: resetBeamMeas } = useFormState({
@@ -262,6 +270,15 @@ const { values: newOpeningMeas, update: updateOpeningMeas, reset: resetOpeningMe
   quantity: 1,
   linkedWallId: undefined,
 });
+// Measurement editing states
+const [editingBeamMeasurementId, setEditingBeamMeasurementId] = useState<number | null>(null);
+const [editingSurfaceBedMeasurementId, setEditingSurfaceBedMeasurementId] = useState<number | null>(null);
+const [editingPadFootingMeasurementId, setEditingPadFootingMeasurementId] = useState<number | null>(null);
+const [editingGroundBeamMeasurementId, setEditingGroundBeamMeasurementId] = useState<number | null>(null);
+const [editingColumnMeasurementId, setEditingColumnMeasurementId] = useState<number | null>(null);
+const [editingWallMeasurementId, setEditingWallMeasurementId] = useState<number | null>(null);
+const [editingSlabMeasurementId, setEditingSlabMeasurementId] = useState<number | null>(null);
+const [editingOpeningMeasurementId, setEditingOpeningMeasurementId] = useState<number | null>(null);
 
   // ============================================
   // LOCAL STORAGE PERSISTENCE
