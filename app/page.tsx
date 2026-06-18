@@ -119,7 +119,16 @@ const styles = { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle };
 export default function Home() {
   // ---------- BEAM ----------
   const [beamTypes, setBeamTypes] = useState<BeamType[]>([
-    { id: 1, name: "Main Roof Beam", width: 230, depth: 500, reinfKg: 120, formworkFinish: "Smooth", concreteClass: "25MPa/19mm" },
+    { id: 1, name: "Main Roof Beam", width: 230, 
+      depth: 500, 
+      reinfKg: 120, 
+      formworkFinish: "Smooth", 
+      concreteClass: "25MPa/19mm",
+      beamFormType: "Downstand beam",
+      formworkMeasurement: "Sides and soffit together",
+      proppingHeightBand: "Not exceeding 1.5m", 
+      customProppingHeightDescription: undefined, 
+    },
   ]);
   const [editingBeamId, setEditingBeamId] = useState<number | null>(null);
   const { values: newBeam, update: updateBeam, reset: resetBeam } = useFormState({
@@ -592,75 +601,123 @@ function addOpeningMeasurement() {
   // ============================================
   const masterBoqItems: Record<string, BoqItem> = {};
 
-  // BEAMS
-  beamMeasurements.forEach((m) => {
-    const beam = beamTypes.find((b) => b.id === m.beamTypeId);
-    if (!beam) return;
-    
-    const widthM = beam.width / 1000;
-    const depthM = beam.depth / 1000;
-    const concrete = widthM * depthM * m.length;
-    const sidesFormwork = 2 * depthM * m.length;
-    const soffitFormwork = widthM * m.length;
-    const totalReinf = (concrete * beam.reinfKg) / 1000;
-    const highTensile = totalReinf * 0.9;
-    const mildSteel = totalReinf * 0.1;
-    const strength = getConcreteStrength(beam.concreteClass);
+// BEAMS
+beamMeasurements.forEach((m) => {
+  const beam = beamTypes.find((b) => b.id === m.beamTypeId);
+  if (!beam) return;
+  
+  const widthM = beam.width / 1000;
+  const depthM = beam.depth / 1000;
+  const concrete = widthM * depthM * m.length;
+  const totalReinf = (concrete * beam.reinfKg) / 1000;
+  const highTensile = totalReinf * 0.9;
+  const mildSteel = totalReinf * 0.1;
+  const strength = getConcreteStrength(beam.concreteClass);
 
-    // Concrete
+  // CONCRETE (unchanged)
+  addBoqItemFromBillKey(
+    masterBoqItems,
+    "CONCRETE",
+    `Concrete (${strength})`,
+    `${beam.concreteClass} concrete in beams`,
+    "m³",
+    concrete
+  );
+
+  // REINFORCEMENT (unchanged)
+  if (highTensile > 0) {
     addBoqItemFromBillKey(
       masterBoqItems,
       "CONCRETE",
-      `Concrete (${strength})`,
-      `${beam.concreteClass} concrete in beams`,
-      "m³",
-      concrete
+      SECTIONS.REINFORCEMENT,
+      "High tensile reinforcement",
+      "t",
+      highTensile
     );
+  }
+  if (mildSteel > 0) {
+    addBoqItemFromBillKey(
+      masterBoqItems,
+      "CONCRETE",
+      SECTIONS.REINFORCEMENT,
+      "Mild steel reinforcement",
+      "t",
+      mildSteel
+    );
+  }
 
-    // Formwork – sides
+  // ============================================
+  // FORMWORK - IMPROVED LOGIC
+  // ============================================
+  const beamFormType = beam.beamFormType || "Downstand beam";
+  const formworkMeasurement = beam.formworkMeasurement || "Sides and soffit together";
+  const formworkFinish = beam.formworkFinish || "Smooth";
+  
+  // Skip formwork if:
+  // - Integrated slab beam / no beam formwork
+  // - Formwork measurement is "None"
+  if (beamFormType === "Integrated slab beam / no beam formwork" || formworkMeasurement === "None") {
+    // No formwork generated
+    return;
+  }
+
+  // Calculate formwork area based on beam form type and measurement
+  let formworkArea = 0;
+  let formworkDescription = "";
+
+  // Get propping height description
+  let proppingHeightDesc = "";
+  if (beam.proppingHeightBand === "Custom") {
+    proppingHeightDesc = beam.customProppingHeightDescription || "custom height";
+  } else {
+    proppingHeightDesc = beam.proppingHeightBand || "Not exceeding 1.5m";
+  }
+
+  // Determine formwork area and description based on beam type
+  switch (beamFormType) {
+    case "Downstand beam":
+      if (formworkMeasurement === "Sides and soffit together") {
+        formworkArea = m.length * (2 * depthM + widthM);
+        formworkDescription = `${formworkFinish} formwork to sides and soffits of downstand beams, propped up ${proppingHeightDesc} high`;
+      } else if (formworkMeasurement === "Sides only") {
+        formworkArea = m.length * (2 * depthM);
+        formworkDescription = `${formworkFinish} formwork to sides of downstand beams, propped up ${proppingHeightDesc} high`;
+      } else if (formworkMeasurement === "Soffit only") {
+        formworkArea = m.length * widthM;
+        formworkDescription = `${formworkFinish} formwork to soffits of downstand beams, propped up ${proppingHeightDesc} high`;
+      }
+      break;
+
+    case "Perimeter downstand beam":
+      // Default: sides and soffit together
+      formworkArea = m.length * (2 * depthM + widthM);
+      formworkDescription = `${formworkFinish} formwork to sides and soffits of perimeter downstand beams, propped up ${proppingHeightDesc} high`;
+      break;
+
+    case "Upstand beam":
+      // No soffit - sides only
+      formworkArea = m.length * (2 * depthM);
+      formworkDescription = `${formworkFinish} formwork to sides of upstand beams, propped up ${proppingHeightDesc} high`;
+      break;
+
+    default:
+      // Fallback
+      formworkArea = m.length * (2 * depthM + widthM);
+      formworkDescription = `${formworkFinish} formwork to beams`;
+  }
+
+  // Add formwork BOQ item if area > 0
+  if (formworkArea > 0) {
     addBoqItemFromBillKey(
       masterBoqItems,
       "CONCRETE",
       SECTIONS.FORMWORK,
-      `${beam.formworkFinish} formwork to sides of beams`,
+      formworkDescription,
       "m²",
-      sidesFormwork
+      formworkArea
     );
-
-    // Formwork – soffit
-    addBoqItemFromBillKey(
-      masterBoqItems,
-      "CONCRETE",
-      SECTIONS.FORMWORK,
-      `${beam.formworkFinish} formwork to soffits of beams`,
-      "m²",
-      soffitFormwork
-    );
-
-    // Reinforcement – High Tensile
-    if (highTensile > 0) {
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "CONCRETE",
-        SECTIONS.REINFORCEMENT,
-        "High tensile reinforcement",
-        "t",
-        highTensile
-      );
-    }
-
-    // Reinforcement – Mild Steel
-    if (mildSteel > 0) {
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "CONCRETE",
-        SECTIONS.REINFORCEMENT,
-        "Mild steel reinforcement",
-        "t",
-        mildSteel
-      );
-    }
-  });
+  }
+});
 
   // SURFACE BEDS
   surfaceBedMeasurements.forEach((m) => {
