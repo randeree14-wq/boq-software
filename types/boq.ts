@@ -6,6 +6,10 @@ export type BeamType = {
   reinfKg: number;
   formworkFinish: string;
   concreteClass: string;
+  beamFormType: BeamFormType;
+  formworkMeasurement: FormworkMeasurement;
+  proppingHeightBand: ProppingHeightBand;
+  customProppingHeightDescription?: string; // only used if proppingHeightBand is "Custom"
 };
 
 export type BeamMeasurement = {
@@ -112,6 +116,16 @@ export type ColumnMeasurement = {
   columnTypeId: number;
   quantity: number;
 };
+
+export type BeamFormType = "Downstand beam" | "Perimeter downstand beam" | "Upstand beam" | "Integrated slab beam / no beam formwork";
+export type FormworkMeasurement = "Sides and soffit together" | "Sides only" | "Soffit only" | "None";
+export type ProppingHeightBand = 
+  | "Not exceeding 1.5m" 
+  | "Exceeding 1.5m and not exceeding 3.5m" 
+  | "Exceeding 3.5m and not exceeding 5.0m" 
+  | "Exceeding 5.0m and not exceeding 6.5m" 
+  | "Custom";
+
 
 export type BrickType = "Common" | "Imperial" | "Maxi 90";
 
@@ -232,3 +246,63 @@ export type BillKey =
   | "EXTERNAL_WORK"
   | "PROVISIONAL_SUMS"
   | "FINAL_SUMMARY";
+
+  // ============================================
+// Openings (Doors & Windows)
+// ============================================
+
+export type DoorConfiguration = "Single" | "Double" | "Sliding" | "Folding" | "Roller shutter";
+export type DoorLeafType =
+  | "Hollow core timber door"
+  | "Semi-solid timber door"
+  | "Solid timber door"
+  | "Aluminium door"
+  | "Fire door"
+  | "Steel door";
+export type DoorFrameType = "Timber frame" | "Steel frame" | "Aluminium frame";
+
+export type WindowType = "Aluminium window" | "Steel window" | "Timber window";
+export type WindowFrameType = "Aluminium" | "Steel" | "Timber";
+
+export type WallThicknessOption = "Half brick" | "One brick" | "Other mm";
+
+export type OpeningType = {
+  id: number;
+  name: string;
+  category: "Door" | "Window";
+  // Common
+  widthMm: number;
+  heightMm: number;
+  quantity: number; // default 1, but can be overridden in measurement
+  wallThicknessOption: WallThicknessOption;
+  wallThicknessMm?: number; // only used if "Other mm"
+  includeLintel: boolean;
+  lintelBearingMm: number; // default 230
+  includeRevealPlaster: boolean;
+  // Door-specific
+  doorConfiguration?: DoorConfiguration;
+  doorLeafType?: DoorLeafType;
+  doorFrameType?: DoorFrameType;
+  paintDoor?: boolean;
+  paintFrame?: boolean;
+  includeIronmongery?: boolean;
+  includeThreshold?: boolean;
+  // Window-specific
+  windowType?: WindowType;
+  windowFrameType?: WindowFrameType;
+  externalSill?: boolean;
+  internalSill?: boolean;
+};
+
+export type OpeningMeasurement = {
+  id: number;
+  mark: string;
+  openingTypeId: number;
+  quantity: number; // overrides type.quantity
+  linkedWallId?: number; // for future wall deduction
+};
+
+export type ProjectData = {
+  openingTypes: OpeningType[];
+  openingMeasurements: OpeningMeasurement[];
+};

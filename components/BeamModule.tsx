@@ -1,6 +1,6 @@
 "use client";
 
-import type { BeamType, BeamMeasurement } from "@/types/boq";
+import type { BeamType, BeamMeasurement, BeamFormType, FormworkMeasurement, ProppingHeightBand } from "@/types/boq";
 
 interface BeamModuleProps {
   beamTypes: BeamType[];
@@ -65,6 +65,14 @@ const BeamModule = ({
 
   const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles;
 
+  // Helper to get propping height description
+  const getProppingHeightDescription = (band: ProppingHeightBand, customDesc?: string) => {
+    if (band === "Custom" && customDesc) {
+      return customDesc;
+    }
+    return band;
+  };
+
   return (
     <div style={cardStyle}>
       <h1>Beam Module</h1>
@@ -74,17 +82,88 @@ const BeamModule = ({
         <input type="number" placeholder="Width mm" value={newBeam.width} onChange={(e) => updateBeam({ width: Number(e.target.value) })} />
         <input type="number" placeholder="Depth mm" value={newBeam.depth} onChange={(e) => updateBeam({ depth: Number(e.target.value) })} />
         <input type="number" placeholder="Reinf kg/m³" value={newBeam.reinfKg} onChange={(e) => updateBeam({ reinfKg: Number(e.target.value) })} />
+        
         <select value={newBeam.formworkFinish} onChange={(e) => updateBeam({ formworkFinish: e.target.value })}>
-          <option>Smooth</option><option>Rough</option><option>Special</option>
+          <option>Smooth</option>
+          <option>Rough</option>
+          <option>Special</option>
         </select>
+        
         <select value={newBeam.concreteClass} onChange={(e) => updateBeam({ concreteClass: e.target.value })}>
-          <option>25MPa/19mm</option><option>30MPa/19mm</option><option>35MPa/19mm</option>
+          <option>25MPa/19mm</option>
+          <option>30MPa/19mm</option>
+          <option>35MPa/19mm</option>
         </select>
+
+        {/* NEW: Beam Form Type */}
+        <select 
+          value={newBeam.beamFormType || "Downstand beam"} 
+          onChange={(e) => updateBeam({ beamFormType: e.target.value as BeamFormType })}
+        >
+          <option value="Downstand beam">Downstand beam</option>
+          <option value="Perimeter downstand beam">Perimeter downstand beam</option>
+          <option value="Upstand beam">Upstand beam</option>
+          <option value="Integrated slab beam / no beam formwork">Integrated slab beam / no beam formwork</option>
+        </select>
+
+        {/* NEW: Formwork Measurement */}
+        {newBeam.beamFormType !== "Integrated slab beam / no beam formwork" && (
+          <select 
+            value={newBeam.formworkMeasurement || "Sides and soffit together"} 
+            onChange={(e) => updateBeam({ formworkMeasurement: e.target.value as FormworkMeasurement })}
+          >
+            <option value="Sides and soffit together">Sides and soffit together</option>
+            <option value="Sides only">Sides only</option>
+            {newBeam.beamFormType === "Downstand beam" && (
+              <option value="Soffit only">Soffit only</option>
+            )}
+            <option value="None">None</option>
+          </select>
+        )}
+
+        {/* NEW: Propping Height Band */}
+        {newBeam.beamFormType !== "Integrated slab beam / no beam formwork" && 
+         newBeam.formworkMeasurement !== "None" && (
+          <>
+            <select 
+              value={newBeam.proppingHeightBand || "Not exceeding 1.5m"} 
+              onChange={(e) => updateBeam({ proppingHeightBand: e.target.value as ProppingHeightBand })}
+            >
+              <option value="Not exceeding 1.5m">Not exceeding 1.5m</option>
+              <option value="Exceeding 1.5m and not exceeding 3.5m">Exceeding 1.5m and not exceeding 3.5m</option>
+              <option value="Exceeding 3.5m and not exceeding 5.0m">Exceeding 3.5m and not exceeding 5.0m</option>
+              <option value="Exceeding 5.0m and not exceeding 6.5m">Exceeding 5.0m and not exceeding 6.5m</option>
+              <option value="Custom">Custom</option>
+            </select>
+            
+            {newBeam.proppingHeightBand === "Custom" && (
+              <input 
+                placeholder="Custom propping height description" 
+                value={newBeam.customProppingHeightDescription || ""} 
+                onChange={(e) => updateBeam({ customProppingHeightDescription: e.target.value })}
+              />
+            )}
+          </>
+        )}
+
         <button onClick={saveBeamType}>{editingBeamId !== null ? "Update" : "Save"}</button>
       </div>
+
+      {/* BEAM TYPE TABLE - Updated with new columns */}
       <table style={tableStyle} border={1} cellPadding={8}>
         <thead>
-          <tr><th style={thStyle}>Name</th><th style={thStyle}>Width</th><th style={thStyle}>Depth</th><th style={thStyle}>Reinf</th><th style={thStyle}>Formwork</th><th style={thStyle}>Concrete</th><th style={thStyle}>Actions</th></tr>
+          <tr>
+            <th style={thStyle}>Name</th>
+            <th style={thStyle}>Width</th>
+            <th style={thStyle}>Depth</th>
+            <th style={thStyle}>Reinf</th>
+            <th style={thStyle}>Formwork</th>
+            <th style={thStyle}>Concrete</th>
+            <th style={thStyle}>Beam Form</th>
+            <th style={thStyle}>Formwork Meas.</th>
+            <th style={thStyle}>Propping Height</th>
+            <th style={thStyle}>Actions</th>
+          </tr>
         </thead>
         <tbody>
           {beamTypes.map((beam) => (
@@ -95,6 +174,9 @@ const BeamModule = ({
               <td style={tdStyle}>{beam.reinfKg}</td>
               <td style={tdStyle}>{beam.formworkFinish}</td>
               <td style={tdStyle}>{beam.concreteClass}</td>
+              <td style={tdStyle}>{beam.beamFormType || "Downstand beam"}</td>
+              <td style={tdStyle}>{beam.formworkMeasurement || "Sides and soffit together"}</td>
+              <td style={tdStyle}>{beam.proppingHeightBand === "Custom" ? beam.customProppingHeightDescription || "Custom" : beam.proppingHeightBand || "Not exceeding 1.5m"}</td>
               <td style={tdStyle}>
                 <button onClick={() => editBeamType(beam.id)}>Edit</button>
                 <button onClick={() => deleteBeamType(beam.id)}>Delete</button>
@@ -103,23 +185,39 @@ const BeamModule = ({
           ))}
         </tbody>
       </table>
+
       <hr />
       <h2>Beam Measurements</h2>
       <div style={formGridStyle}>
         <input placeholder="Mark" value={newBeamMeas.mark} onChange={(e) => updateBeamMeas({ mark: e.target.value })} />
         <select value={newBeamMeas.beamTypeId} onChange={(e) => updateBeamMeas({ beamTypeId: Number(e.target.value) })}>
           <option value={0}>Select Type</option>
-          {beamTypes.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+          {beamTypes.map((b) => (
+            <option key={b.id} value={b.id}>{b.name}</option>
+          ))}
         </select>
         <input type="number" placeholder="Length (m)" value={newBeamMeas.length} onChange={(e) => updateBeamMeas({ length: Number(e.target.value) })} />
         <button onClick={addBeamMeasurement}>Add</button>
       </div>
+
       <table style={tableStyle} border={1} cellPadding={8}>
-        <thead><tr><th style={thStyle}>Mark</th><th style={thStyle}>Beam Type</th><th style={thStyle}>Length</th></tr></thead>
+        <thead>
+          <tr>
+            <th style={thStyle}>Mark</th>
+            <th style={thStyle}>Beam Type</th>
+            <th style={thStyle}>Length</th>
+          </tr>
+        </thead>
         <tbody>
           {beamMeasurements.map((m) => {
             const beam = beamTypes.find((b) => b.id === m.beamTypeId);
-            return <tr key={m.id}><td style={tdStyle}>{m.mark}</td><td style={tdStyle}>{beam?.name}</td><td style={tdStyle}>{m.length}</td></tr>;
+            return (
+              <tr key={m.id}>
+                <td style={tdStyle}>{m.mark}</td>
+                <td style={tdStyle}>{beam?.name}</td>
+                <td style={tdStyle}>{m.length}</td>
+              </tr>
+            );
           })}
         </tbody>
       </table>

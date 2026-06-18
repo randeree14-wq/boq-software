@@ -230,6 +230,7 @@ const defaultOpening: Omit<OpeningType, "id"> = {
   includeLintel: true,
   lintelBearingMm: 230,
   includeRevealPlaster: true,
+   includeIronmongery: true, // or false, but set a default
   // Door defaults
   doorConfiguration: "Single",
   doorLeafType: "Hollow core timber door",
@@ -1282,7 +1283,6 @@ openingMeasurements.forEach((m) => {
                      : op.wallThicknessOption === "One brick" ? 0.215
                      : (op.wallThicknessMm || 0) / 1000;
 
-  // Helper to add items
   const addItem = (billKey: string, section: string, description: string, unit: string, qtyVal: number) => {
     if (qtyVal > 0) {
       addBoqItemFromBillKey(masterBoqItems, billKey, section, description, unit, qtyVal);
@@ -1290,16 +1290,32 @@ openingMeasurements.forEach((m) => {
   };
 
   // 1. Lintel (if included)
-  if (op.includeLintel) {
+   if (op.includeLintel) {
     const lintelLength = (op.widthMm + 2 * op.lintelBearingMm) / 1000; // m
-    addItem("MASONRY", SECTIONS.LINTELS, "Prestressed concrete lintel over openings", "m", lintelLength * qty);
+    let lengthCategory = "";
+    if (lintelLength <= 3.0) {
+      lengthCategory = "not exceeding 3.0m";
+    } else if (lintelLength <= 4.5) {
+      lengthCategory = "exceeding 3.0m but not exceeding 4.5m";
+    } else if (lintelLength <= 6.0) {
+      lengthCategory = "exceeding 4.5m but not exceeding 6.0m";
+    } else if (lintelLength <= 7.5) {
+      lengthCategory = "exceeding 6.0m but not exceeding 7.5m";
+    } else {
+      lengthCategory = "exceeding 7.5m";
+    }
+    const lintelDesc = `Prestressed concrete lintel ${lengthCategory} over openings`;
+    addItem("MASONRY", SECTIONS.LINTELS, lintelDesc, "m", lintelLength * qty);
   }
-
-  // 2. Reveal plaster (if included)
+  // 2. Reveal plaster & paint to narrow widths (if included)
   if (op.includeRevealPlaster && wallThickness > 0) {
-    const plasterArea = perimeter * wallThickness; // m²
-    const description = `Plaster to narrow widths around ${op.category.toLowerCase()} openings`;
-    addItem("PLASTERING", SECTIONS.NARROW_WIDTHS, description, "m²", plasterArea * qty);
+    const narrowArea = perimeter * wallThickness; // m²
+
+    const plasterDesc = `Plaster to narrow widths around ${op.category.toLowerCase()} openings`;
+    addItem("PLASTERING", SECTIONS.NARROW_WIDTHS, plasterDesc, "m²", narrowArea * qty);
+
+    const paintDesc = `Paint to narrow widths around ${op.category.toLowerCase()} openings`;
+    addItem("PAINTWORK", SECTIONS.NARROW_WIDTHS, paintDesc, "m²", narrowArea * qty);
   }
 
   // 3. Door-specific items
@@ -1311,17 +1327,17 @@ openingMeasurements.forEach((m) => {
     const doorHeight = op.heightMm;
 
     // Door leaf
-    let leafBillKey: string;
+        let leafBillKey: string;
     if (leafType.includes("Aluminium") || leafType.includes("Steel")) {
       leafBillKey = "METALWORK";
     } else {
       leafBillKey = "CARPENTRY";
     }
-    const leafDesc = `${leafType} ${doorConfig} door ${doorWidth} x ${doorHeight}mm high`;
+    const leafDesc = `${doorConfig} ${leafType} ${doorWidth} x ${doorHeight}mm high`;
     addItem(leafBillKey, SECTIONS.DOORS, leafDesc, "No", qty);
 
     // Frame
-    let frameBillKey: string;
+        let frameBillKey: string;
     if (frameType === "Timber frame") {
       frameBillKey = "CARPENTRY";
     } else {
@@ -1335,17 +1351,21 @@ openingMeasurements.forEach((m) => {
     const frameDesc = `${frameType} for ${doorConfig} door`;
     addItem(frameBillKey, SECTIONS.FRAMES, frameDesc, "m", frameLengthM * qty);
 
+    // Ironmongery – Standard ironmongery set
+    if (op.includeIronmongery) {
+      addItem("IRONMONGERY", SECTIONS.IRONMONGERY, "Standard ironmongery set", "No", qty);
+    }
+
     // Painting
     if (op.paintDoor) {
       const paintArea = (doorWidth / 1000) * (doorHeight / 1000) * 2; // two faces
       addItem("PAINTWORK", SECTIONS.PAINT, `Paint to doors`, "m²", paintArea * qty);
     }
     if (op.paintFrame) {
-      // Approximate frame paint area: perimeter * frame width? For now we'll use length * 0.1 (assume frame width 100mm)
-      // Better: use frame length * 0.1 (m²) as a provisional method
-      const framePaintArea = frameLengthM * 0.1; // 0.1m width
+      const framePaintArea = frameLengthM * 0.1; // 0.1m width approximation
       addItem("PAINTWORK", SECTIONS.PAINT, `Paint to door frames`, "m²", framePaintArea * qty);
     }
+  
     // Ironmongery – we could add a PC sum item, but for now skip as it's complex.
     // Threshold – could add a separate item, but we already added length in frame.
 
@@ -1357,7 +1377,7 @@ openingMeasurements.forEach((m) => {
   }
 
   // 4. Window-specific items
-  if (op.category === "Window") {
+ if (op.category === "Window") {
     const windowType = op.windowType || "Aluminium window";
     const frameType = op.windowFrameType || "Aluminium";
     const windowWidth = op.widthMm;
@@ -1374,20 +1394,19 @@ openingMeasurements.forEach((m) => {
     addItem(windowBillKey, SECTIONS.WINDOWS, windowDesc, "No", qty);
 
     // External sill
-    if (op.externalSill) {
+ if (op.externalSill) {
       const sillLength = windowWidth / 1000;
       addItem("MASONRY", SECTIONS.SILLS, "External sill to window openings", "m", sillLength * qty);
     }
 
     // Internal sill
-    if (op.internalSill) {
+     if (op.internalSill) {
       const sillLength = windowWidth / 1000;
       addItem("CARPENTRY", SECTIONS.SILLS, "Internal sill to window openings", "m", sillLength * qty);
     }
 
     // Paint frame
-    if (op.paintFrame) {
-      // Approximate frame paint area: perimeter * 0.1 (m²)
+ if (op.paintFrame) {
       const framePerimeter = 2 * (windowWidth + windowHeight) / 1000; // m
       const framePaintArea = framePerimeter * 0.1;
       addItem("PAINTWORK", SECTIONS.PAINT, "Paint to window frames", "m²", framePaintArea * qty);
