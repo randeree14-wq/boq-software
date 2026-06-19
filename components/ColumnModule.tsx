@@ -15,6 +15,8 @@ interface ColumnModuleProps {
   newColumnMeas: Omit<ColumnMeasurement, "id">;
   updateColumnMeas: (partial: Partial<Omit<ColumnMeasurement, "id">>) => void;
   resetColumnMeas: () => void;
+  editingColumnMeasurementId: number | null;
+  setEditingColumnMeasurementId: React.Dispatch<React.SetStateAction<number | null>>;
   styles: any;
 }
 
@@ -31,6 +33,8 @@ const ColumnModule = ({
   newColumnMeas,
   updateColumnMeas,
   resetColumnMeas,
+  editingColumnMeasurementId,
+  setEditingColumnMeasurementId,
   styles,
 }: ColumnModuleProps) => {
   const saveColumnType = () => {
@@ -57,10 +61,38 @@ const ColumnModule = ({
     setColumnMeasurements((prev) => prev.filter((m) => m.columnTypeId !== id));
   };
 
-  const addColumnMeasurement = () => {
+  const saveColumnMeasurement = () => {
     if (!newColumnMeas.mark.trim() || newColumnMeas.columnTypeId === 0 || newColumnMeas.quantity <= 0) return;
-    setColumnMeasurements((prev) => [...prev, { id: Date.now(), ...newColumnMeas }]);
+    
+    if (editingColumnMeasurementId !== null) {
+      setColumnMeasurements((prev) =>
+        prev.map((m) =>
+          m.id === editingColumnMeasurementId ? { ...m, ...newColumnMeas } : m
+        )
+      );
+      setEditingColumnMeasurementId(null);
+    } else {
+      setColumnMeasurements((prev) => [...prev, { id: Date.now(), ...newColumnMeas }]);
+    }
     resetColumnMeas();
+  };
+
+  const editColumnMeasurement = (id: number) => {
+    const measurement = columnMeasurements.find((m) => m.id === id);
+    if (measurement) {
+      updateColumnMeas(measurement);
+      setEditingColumnMeasurementId(id);
+    }
+  };
+
+  const deleteColumnMeasurement = (id: number) => {
+    if (confirm("Are you sure you want to delete this measurement?")) {
+      setColumnMeasurements((prev) => prev.filter((m) => m.id !== id));
+      if (editingColumnMeasurementId === id) {
+        setEditingColumnMeasurementId(null);
+        resetColumnMeas();
+      }
+    }
   };
 
   const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles;
@@ -84,9 +116,14 @@ const ColumnModule = ({
         </select>
         <button onClick={saveColumnType}>{editingColumnId !== null ? "Update" : "Save"}</button>
       </div>
+
       <table style={tableStyle} border={1} cellPadding={8}>
         <thead>
-          <tr><th style={thStyle}>Name</th><th style={thStyle}>Width</th><th style={thStyle}>Depth</th><th style={thStyle}>Height</th><th style={thStyle}>Concrete</th><th style={thStyle}>Reinf</th><th style={thStyle}>Formwork</th><th style={thStyle}>Finish</th><th style={thStyle}>Actions</th></tr>
+          <tr>
+            <th style={thStyle}>Name</th><th style={thStyle}>Width</th><th style={thStyle}>Depth</th>
+            <th style={thStyle}>Height</th><th style={thStyle}>Concrete</th><th style={thStyle}>Reinf</th>
+            <th style={thStyle}>Formwork</th><th style={thStyle}>Finish</th><th style={thStyle}>Actions</th>
+          </tr>
         </thead>
         <tbody>
           {columnTypes.map((col) => (
@@ -107,6 +144,7 @@ const ColumnModule = ({
           ))}
         </tbody>
       </table>
+
       <hr />
       <h2>Column Measurements</h2>
       <div style={formGridStyle}>
@@ -116,14 +154,32 @@ const ColumnModule = ({
           {columnTypes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         <input type="number" placeholder="Quantity" value={newColumnMeas.quantity} onChange={(e) => updateColumnMeas({ quantity: Number(e.target.value) })} />
-        <button onClick={addColumnMeasurement}>Add</button>
+        <button onClick={saveColumnMeasurement}>
+          {editingColumnMeasurementId !== null ? "Update Measurement" : "Add Measurement"}
+        </button>
+        {editingColumnMeasurementId !== null && (
+          <button onClick={() => { setEditingColumnMeasurementId(null); resetColumnMeas(); }}>Cancel</button>
+        )}
       </div>
+
       <table style={tableStyle} border={1} cellPadding={8}>
-        <thead><tr><th style={thStyle}>Mark</th><th style={thStyle}>Column Type</th><th style={thStyle}>Quantity</th></tr></thead>
+        <thead>
+          <tr><th style={thStyle}>Mark</th><th style={thStyle}>Column Type</th><th style={thStyle}>Quantity</th><th style={thStyle}>Actions</th></tr>
+        </thead>
         <tbody>
           {columnMeasurements.map((m) => {
             const col = columnTypes.find((c) => c.id === m.columnTypeId);
-            return <tr key={m.id}><td style={tdStyle}>{m.mark}</td><td style={tdStyle}>{col?.name}</td><td style={tdStyle}>{m.quantity}</td></tr>;
+            return (
+              <tr key={m.id}>
+                <td style={tdStyle}>{m.mark}</td>
+                <td style={tdStyle}>{col?.name}</td>
+                <td style={tdStyle}>{m.quantity}</td>
+                <td style={tdStyle}>
+                  <button onClick={() => editColumnMeasurement(m.id)}>Edit</button>
+                  <button onClick={() => deleteColumnMeasurement(m.id)}>Delete</button>
+                </td>
+              </tr>
+            );
           })}
         </tbody>
       </table>

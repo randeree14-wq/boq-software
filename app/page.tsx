@@ -270,7 +270,13 @@ const { values: newOpeningMeas, update: updateOpeningMeas, reset: resetOpeningMe
   quantity: 1,
   linkedWallId: undefined,
 });
-// Measurement editing states
+
+  // ============================================
+  // MEASUREMENT EDITING STATES  <-- PUT IT HERE
+  // ============================================
+// ============================================
+// MEASUREMENT EDITING STATES
+// ============================================
 const [editingBeamMeasurementId, setEditingBeamMeasurementId] = useState<number | null>(null);
 const [editingSurfaceBedMeasurementId, setEditingSurfaceBedMeasurementId] = useState<number | null>(null);
 const [editingPadFootingMeasurementId, setEditingPadFootingMeasurementId] = useState<number | null>(null);
@@ -618,123 +624,75 @@ function addOpeningMeasurement() {
   // ============================================
   const masterBoqItems: Record<string, BoqItem> = {};
 
-// BEAMS
-beamMeasurements.forEach((m) => {
+  // BEAMS
+  beamMeasurements.forEach((m) => {
   const beam = beamTypes.find((b) => b.id === m.beamTypeId);
   if (!beam) return;
   
   const widthM = beam.width / 1000;
   const depthM = beam.depth / 1000;
   const concrete = widthM * depthM * m.length;
+  const sidesFormwork = 2 * depthM * m.length; 
+  const soffitFormwork = widthM * m.length; 
   const totalReinf = (concrete * beam.reinfKg) / 1000;
   const highTensile = totalReinf * 0.9;
   const mildSteel = totalReinf * 0.1;
   const strength = getConcreteStrength(beam.concreteClass);
 
-  // CONCRETE (unchanged)
-  addBoqItemFromBillKey(
-    masterBoqItems,
-    "CONCRETE",
-    `Concrete (${strength})`,
-    `${beam.concreteClass} concrete in beams`,
-    "m³",
-    concrete
-  );
-
-  // REINFORCEMENT (unchanged)
-  if (highTensile > 0) {
+    // Concrete
     addBoqItemFromBillKey(
       masterBoqItems,
       "CONCRETE",
-      SECTIONS.REINFORCEMENT,
-      "High tensile reinforcement",
-      "t",
-      highTensile
+      `Concrete (${strength})`,
+      `${beam.concreteClass} concrete in beams`,
+      "m³",
+      concrete
     );
-  }
-  if (mildSteel > 0) {
-    addBoqItemFromBillKey(
-      masterBoqItems,
-      "CONCRETE",
-      SECTIONS.REINFORCEMENT,
-      "Mild steel reinforcement",
-      "t",
-      mildSteel
-    );
-  }
 
-  // ============================================
-  // FORMWORK - IMPROVED LOGIC
-  // ============================================
-  const beamFormType = beam.beamFormType || "Downstand beam";
-  const formworkMeasurement = beam.formworkMeasurement || "Sides and soffit together";
-  const formworkFinish = beam.formworkFinish || "Smooth";
-  
-  // Skip formwork if:
-  // - Integrated slab beam / no beam formwork
-  // - Formwork measurement is "None"
-  if (beamFormType === "Integrated slab beam / no beam formwork" || formworkMeasurement === "None") {
-    // No formwork generated
-    return;
-  }
-
-  // Calculate formwork area based on beam form type and measurement
-  let formworkArea = 0;
-  let formworkDescription = "";
-
-  // Get propping height description
-  let proppingHeightDesc = "";
-  if (beam.proppingHeightBand === "Custom") {
-    proppingHeightDesc = beam.customProppingHeightDescription || "custom height";
-  } else {
-    proppingHeightDesc = beam.proppingHeightBand || "Not exceeding 1.5m";
-  }
-
-  // Determine formwork area and description based on beam type
-  switch (beamFormType) {
-    case "Downstand beam":
-      if (formworkMeasurement === "Sides and soffit together") {
-        formworkArea = m.length * (2 * depthM + widthM);
-        formworkDescription = `${formworkFinish} formwork to sides and soffits of downstand beams, propped up ${proppingHeightDesc} high`;
-      } else if (formworkMeasurement === "Sides only") {
-        formworkArea = m.length * (2 * depthM);
-        formworkDescription = `${formworkFinish} formwork to sides of downstand beams, propped up ${proppingHeightDesc} high`;
-      } else if (formworkMeasurement === "Soffit only") {
-        formworkArea = m.length * widthM;
-        formworkDescription = `${formworkFinish} formwork to soffits of downstand beams, propped up ${proppingHeightDesc} high`;
-      }
-      break;
-
-    case "Perimeter downstand beam":
-      // Default: sides and soffit together
-      formworkArea = m.length * (2 * depthM + widthM);
-      formworkDescription = `${formworkFinish} formwork to sides and soffits of perimeter downstand beams, propped up ${proppingHeightDesc} high`;
-      break;
-
-    case "Upstand beam":
-      // No soffit - sides only
-      formworkArea = m.length * (2 * depthM);
-      formworkDescription = `${formworkFinish} formwork to sides of upstand beams, propped up ${proppingHeightDesc} high`;
-      break;
-
-    default:
-      // Fallback
-      formworkArea = m.length * (2 * depthM + widthM);
-      formworkDescription = `${formworkFinish} formwork to beams`;
-  }
-
-  // Add formwork BOQ item if area > 0
-  if (formworkArea > 0) {
+    // Formwork – sides
     addBoqItemFromBillKey(
       masterBoqItems,
       "CONCRETE",
       SECTIONS.FORMWORK,
-      formworkDescription,
+      `${beam.formworkFinish} formwork to sides of beams`,
       "m²",
-      formworkArea
+      sidesFormwork
     );
-  }
-});
+
+    // Formwork – soffit
+    addBoqItemFromBillKey(
+      masterBoqItems,
+      "CONCRETE",
+      SECTIONS.FORMWORK,
+      `${beam.formworkFinish} formwork to soffits of beams`,
+      "m²",
+      soffitFormwork
+    );
+
+    // Reinforcement – High Tensile
+    if (highTensile > 0) {
+      addBoqItemFromBillKey(
+        masterBoqItems,
+        "CONCRETE",
+        SECTIONS.REINFORCEMENT,
+        "High tensile reinforcement",
+        "t",
+        highTensile
+      );
+    }
+
+    // Reinforcement – Mild Steel
+    if (mildSteel > 0) {
+      addBoqItemFromBillKey(
+        masterBoqItems,
+        "CONCRETE",
+        SECTIONS.REINFORCEMENT,
+        "Mild steel reinforcement",
+        "t",
+        mildSteel
+      );
+    }
+  });
 
   // SURFACE BEDS
   surfaceBedMeasurements.forEach((m) => {
@@ -1530,6 +1488,8 @@ openingMeasurements.forEach((m) => {
         updateBeamMeas={updateBeamMeas}
         resetBeamMeas={resetBeamMeas}
         styles={styles}
+        editingBeamMeasurementId={editingBeamMeasurementId}
+        setEditingBeamMeasurementId={setEditingBeamMeasurementId}
       />
 
       {/* SURFACE BED MODULE */}
@@ -1547,6 +1507,8 @@ openingMeasurements.forEach((m) => {
         updateSurfaceBedMeas={updateSurfaceBedMeas}
         resetSurfaceBedMeas={resetSurfaceBedMeas}
         styles={styles}
+        editingSurfaceBedMeasurementId={editingSurfaceBedMeasurementId}
+        setEditingSurfaceBedMeasurementId={setEditingSurfaceBedMeasurementId}
       />
 
       {/* PAD FOOTING MODULE */}
@@ -1564,6 +1526,8 @@ openingMeasurements.forEach((m) => {
         updatePadFootingMeas={updatePadFootingMeas}
         resetPadFootingMeas={resetPadFootingMeas}
         styles={styles}
+        editingPadFootingMeasurementId={editingPadFootingMeasurementId}
+        setEditingPadFootingMeasurementId={setEditingPadFootingMeasurementId}
       />
 
       {/* GROUND BEAM MODULE */}
@@ -1580,6 +1544,8 @@ openingMeasurements.forEach((m) => {
         newGroundBeamMeas={newGroundBeamMeas}
         updateGroundBeamMeas={updateGroundBeamMeas}
         resetGroundBeamMeas={resetGroundBeamMeas}
+        editingGroundBeamMeasurementId={editingGroundBeamMeasurementId}
+        setEditingGroundBeamMeasurementId={setEditingGroundBeamMeasurementId}
         styles={styles}
       />
 
@@ -1597,6 +1563,8 @@ openingMeasurements.forEach((m) => {
         newColumnMeas={newColumnMeas}
         updateColumnMeas={updateColumnMeas}
         resetColumnMeas={resetColumnMeas}
+        editingColumnMeasurementId={editingColumnMeasurementId}
+        setEditingColumnMeasurementId={setEditingColumnMeasurementId}
         styles={styles}
       />
 
@@ -1614,6 +1582,8 @@ openingMeasurements.forEach((m) => {
         newWallMeas={newWallMeas}
         updateWallMeas={updateWallMeas}
         resetWallMeas={resetWallMeas}
+        editingWallMeasurementId={editingWallMeasurementId}
+        setEditingWallMeasurementId={setEditingWallMeasurementId}
         styles={styles}
       />
 
@@ -1631,6 +1601,8 @@ openingMeasurements.forEach((m) => {
         newSlabMeas={newSlabMeas}
         updateSlabMeas={updateSlabMeas}
         resetSlabMeas={resetSlabMeas}
+        editingSlabMeasurementId={editingSlabMeasurementId}
+        setEditingSlabMeasurementId={setEditingSlabMeasurementId}
         styles={styles}
       />
 
@@ -1649,6 +1621,8 @@ openingMeasurements.forEach((m) => {
         updateOpeningMeas={updateOpeningMeas}
         resetOpeningMeas={resetOpeningMeas}
         styles={styles}
+        editingOpeningMeasurementId={editingOpeningMeasurementId}
+        setEditingOpeningMeasurementId={setEditingOpeningMeasurementId}
       />
 
     </main>

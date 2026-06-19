@@ -15,6 +15,8 @@ interface SlabModuleProps {
   newSlabMeas: Omit<SlabMeasurement, "id">;
   updateSlabMeas: (partial: Partial<Omit<SlabMeasurement, "id">>) => void;
   resetSlabMeas: () => void;
+  editingSlabMeasurementId: number | null;
+  setEditingSlabMeasurementId: React.Dispatch<React.SetStateAction<number | null>>;
   styles: any;
 }
 
@@ -31,6 +33,8 @@ const SlabModule = ({
   newSlabMeas,
   updateSlabMeas,
   resetSlabMeas,
+  editingSlabMeasurementId,
+  setEditingSlabMeasurementId,
   styles,
 }: SlabModuleProps) => {
   const saveSlabType = () => {
@@ -57,11 +61,41 @@ const SlabModule = ({
     setSlabMeasurements((prev) => prev.filter((m) => m.slabTypeId !== id));
   };
 
-  const addSlabMeasurement = () => {
+  const saveSlabMeasurement = () => {
     if (!newSlabMeas.mark.trim() || newSlabMeas.slabTypeId === 0 || newSlabMeas.length <= 0 || newSlabMeas.width <= 0 || newSlabMeas.quantity <= 0) return;
+    
     const area = newSlabMeas.length * newSlabMeas.width * newSlabMeas.quantity;
-    setSlabMeasurements((prev) => [...prev, { id: Date.now(), ...newSlabMeas, area }]);
+    const measurementData = { ...newSlabMeas, area };
+    
+    if (editingSlabMeasurementId !== null) {
+      setSlabMeasurements((prev) =>
+        prev.map((m) =>
+          m.id === editingSlabMeasurementId ? { ...m, ...measurementData } : m
+        )
+      );
+      setEditingSlabMeasurementId(null);
+    } else {
+      setSlabMeasurements((prev) => [...prev, { id: Date.now(), ...measurementData }]);
+    }
     resetSlabMeas();
+  };
+
+  const editSlabMeasurement = (id: number) => {
+    const measurement = slabMeasurements.find((m) => m.id === id);
+    if (measurement) {
+      updateSlabMeas(measurement);
+      setEditingSlabMeasurementId(id);
+    }
+  };
+
+  const deleteSlabMeasurement = (id: number) => {
+    if (confirm("Are you sure you want to delete this measurement?")) {
+      setSlabMeasurements((prev) => prev.filter((m) => m.id !== id));
+      if (editingSlabMeasurementId === id) {
+        setEditingSlabMeasurementId(null);
+        resetSlabMeas();
+      }
+    }
   };
 
   const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles;
@@ -96,9 +130,14 @@ const SlabModule = ({
         <input placeholder="Finish description" value={newSlab.floorFinishDescription} onChange={(e) => updateSlab({ floorFinishDescription: e.target.value })} />
         <button onClick={saveSlabType}>{editingSlabId !== null ? "Update" : "Save"}</button>
       </div>
+
       <table style={tableStyle} border={1} cellPadding={8}>
         <thead>
-          <tr><th style={thStyle}>Name</th><th style={thStyle}>Thick</th><th style={thStyle}>Concrete</th><th style={thStyle}>Reinf</th><th style={thStyle}>Edges</th><th style={thStyle}>Screed</th><th style={thStyle}>Floor Finish</th><th style={thStyle}>Actions</th></tr>
+          <tr>
+            <th style={thStyle}>Name</th><th style={thStyle}>Thick</th><th style={thStyle}>Concrete</th>
+            <th style={thStyle}>Reinf</th><th style={thStyle}>Edges</th><th style={thStyle}>Screed</th>
+            <th style={thStyle}>Floor Finish</th><th style={thStyle}>Actions</th>
+          </tr>
         </thead>
         <tbody>
           {slabTypes.map((slab) => (
@@ -118,6 +157,7 @@ const SlabModule = ({
           ))}
         </tbody>
       </table>
+
       <hr />
       <h2>Slab Measurements</h2>
       <div style={formGridStyle}>
@@ -129,14 +169,35 @@ const SlabModule = ({
         <input type="number" placeholder="Length (m)" value={newSlabMeas.length} onChange={(e) => updateSlabMeas({ length: Number(e.target.value) })} />
         <input type="number" placeholder="Width (m)" value={newSlabMeas.width} onChange={(e) => updateSlabMeas({ width: Number(e.target.value) })} />
         <input type="number" placeholder="Quantity" value={newSlabMeas.quantity} onChange={(e) => updateSlabMeas({ quantity: Number(e.target.value) })} />
-        <button onClick={addSlabMeasurement}>Add</button>
+        <button onClick={saveSlabMeasurement}>
+          {editingSlabMeasurementId !== null ? "Update Measurement" : "Add Measurement"}
+        </button>
+        {editingSlabMeasurementId !== null && (
+          <button onClick={() => { setEditingSlabMeasurementId(null); resetSlabMeas(); }}>Cancel</button>
+        )}
       </div>
+
       <table style={tableStyle} border={1} cellPadding={8}>
-        <thead><tr><th style={thStyle}>Mark</th><th style={thStyle}>Slab Type</th><th style={thStyle}>Length</th><th style={thStyle}>Width</th><th style={thStyle}>Qty</th><th style={thStyle}>Area</th></tr></thead>
+        <thead>
+          <tr><th style={thStyle}>Mark</th><th style={thStyle}>Slab Type</th><th style={thStyle}>Length</th><th style={thStyle}>Width</th><th style={thStyle}>Qty</th><th style={thStyle}>Area</th><th style={thStyle}>Actions</th></tr>
+        </thead>
         <tbody>
           {slabMeasurements.map((m) => {
             const slab = slabTypes.find((s) => s.id === m.slabTypeId);
-            return <tr key={m.id}><td style={tdStyle}>{m.mark}</td><td style={tdStyle}>{slab?.name}</td><td style={tdStyle}>{m.length}</td><td style={tdStyle}>{m.width}</td><td style={tdStyle}>{m.quantity}</td><td style={tdStyle}>{m.area}</td></tr>;
+            return (
+              <tr key={m.id}>
+                <td style={tdStyle}>{m.mark}</td>
+                <td style={tdStyle}>{slab?.name}</td>
+                <td style={tdStyle}>{m.length}</td>
+                <td style={tdStyle}>{m.width}</td>
+                <td style={tdStyle}>{m.quantity}</td>
+                <td style={tdStyle}>{m.area}</td>
+                <td style={tdStyle}>
+                  <button onClick={() => editSlabMeasurement(m.id)}>Edit</button>
+                  <button onClick={() => deleteSlabMeasurement(m.id)}>Delete</button>
+                </td>
+              </tr>
+            );
           })}
         </tbody>
       </table>

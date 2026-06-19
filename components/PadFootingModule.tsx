@@ -15,6 +15,8 @@ interface PadFootingModuleProps {
   newPadFootingMeas: Omit<PadFootingMeasurement, "id">;
   updatePadFootingMeas: (partial: Partial<Omit<PadFootingMeasurement, "id">>) => void;
   resetPadFootingMeas: () => void;
+  editingPadFootingMeasurementId: number | null;
+  setEditingPadFootingMeasurementId: React.Dispatch<React.SetStateAction<number | null>>;
   styles: any;
 }
 
@@ -31,6 +33,8 @@ const PadFootingModule = ({
   newPadFootingMeas,
   updatePadFootingMeas,
   resetPadFootingMeas,
+  editingPadFootingMeasurementId,
+  setEditingPadFootingMeasurementId,
   styles,
 }: PadFootingModuleProps) => {
   const savePadFootingType = () => {
@@ -57,10 +61,38 @@ const PadFootingModule = ({
     setPadFootingMeasurements((prev) => prev.filter((m) => m.padFootingTypeId !== id));
   };
 
-  const addPadFootingMeasurement = () => {
+  const savePadFootingMeasurement = () => {
     if (!newPadFootingMeas.mark.trim() || newPadFootingMeas.padFootingTypeId === 0 || newPadFootingMeas.quantity <= 0) return;
-    setPadFootingMeasurements((prev) => [...prev, { id: Date.now(), ...newPadFootingMeas }]);
+    
+    if (editingPadFootingMeasurementId !== null) {
+      setPadFootingMeasurements((prev) =>
+        prev.map((m) =>
+          m.id === editingPadFootingMeasurementId ? { ...m, ...newPadFootingMeas } : m
+        )
+      );
+      setEditingPadFootingMeasurementId(null);
+    } else {
+      setPadFootingMeasurements((prev) => [...prev, { id: Date.now(), ...newPadFootingMeas }]);
+    }
     resetPadFootingMeas();
+  };
+
+  const editPadFootingMeasurement = (id: number) => {
+    const measurement = padFootingMeasurements.find((m) => m.id === id);
+    if (measurement) {
+      updatePadFootingMeas(measurement);
+      setEditingPadFootingMeasurementId(id);
+    }
+  };
+
+  const deletePadFootingMeasurement = (id: number) => {
+    if (confirm("Are you sure you want to delete this measurement?")) {
+      setPadFootingMeasurements((prev) => prev.filter((m) => m.id !== id));
+      if (editingPadFootingMeasurementId === id) {
+        setEditingPadFootingMeasurementId(null);
+        resetPadFootingMeas();
+      }
+    }
   };
 
   const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles;
@@ -88,9 +120,14 @@ const PadFootingModule = ({
         <label><input type="checkbox" checked={newPadFooting.backfill} onChange={(e) => updatePadFooting({ backfill: e.target.checked })} /> Backfill</label>
         <button onClick={savePadFootingType}>{editingPadFootingId !== null ? "Update" : "Save"}</button>
       </div>
+
       <table style={tableStyle} border={1} cellPadding={8}>
         <thead>
-          <tr><th style={thStyle}>Name</th><th style={thStyle}>Pad Size</th><th style={thStyle}>Excavation</th><th style={thStyle}>Concrete</th><th style={thStyle}>Reinf</th><th style={thStyle}>Formwork</th><th style={thStyle}>Blinding</th><th style={thStyle}>Soil</th><th style={thStyle}>Backfill</th><th style={thStyle}>Actions</th></tr>
+          <tr>
+            <th style={thStyle}>Name</th><th style={thStyle}>Pad Size</th><th style={thStyle}>Excavation</th>
+            <th style={thStyle}>Concrete</th><th style={thStyle}>Reinf</th><th style={thStyle}>Formwork</th>
+            <th style={thStyle}>Blinding</th><th style={thStyle}>Soil</th><th style={thStyle}>Backfill</th><th style={thStyle}>Actions</th>
+          </tr>
         </thead>
         <tbody>
           {padFootingTypes.map((pf) => (
@@ -112,6 +149,7 @@ const PadFootingModule = ({
           ))}
         </tbody>
       </table>
+
       <hr />
       <h2>Pad Footing Measurements</h2>
       <div style={formGridStyle}>
@@ -121,14 +159,32 @@ const PadFootingModule = ({
           {padFootingTypes.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
         <input type="number" placeholder="Quantity" value={newPadFootingMeas.quantity} onChange={(e) => updatePadFootingMeas({ quantity: Number(e.target.value) })} />
-        <button onClick={addPadFootingMeasurement}>Add</button>
+        <button onClick={savePadFootingMeasurement}>
+          {editingPadFootingMeasurementId !== null ? "Update Measurement" : "Add Measurement"}
+        </button>
+        {editingPadFootingMeasurementId !== null && (
+          <button onClick={() => { setEditingPadFootingMeasurementId(null); resetPadFootingMeas(); }}>Cancel</button>
+        )}
       </div>
+
       <table style={tableStyle} border={1} cellPadding={8}>
-        <thead><tr><th style={thStyle}>Mark</th><th style={thStyle}>Pad Type</th><th style={thStyle}>Quantity</th></tr></thead>
+        <thead>
+          <tr><th style={thStyle}>Mark</th><th style={thStyle}>Pad Type</th><th style={thStyle}>Quantity</th><th style={thStyle}>Actions</th></tr>
+        </thead>
         <tbody>
           {padFootingMeasurements.map((m) => {
             const pf = padFootingTypes.find((p) => p.id === m.padFootingTypeId);
-            return <tr key={m.id}><td style={tdStyle}>{m.mark}</td><td style={tdStyle}>{pf?.name}</td><td style={tdStyle}>{m.quantity}</td></tr>;
+            return (
+              <tr key={m.id}>
+                <td style={tdStyle}>{m.mark}</td>
+                <td style={tdStyle}>{pf?.name}</td>
+                <td style={tdStyle}>{m.quantity}</td>
+                <td style={tdStyle}>
+                  <button onClick={() => editPadFootingMeasurement(m.id)}>Edit</button>
+                  <button onClick={() => deletePadFootingMeasurement(m.id)}>Delete</button>
+                </td>
+              </tr>
+            );
           })}
         </tbody>
       </table>

@@ -15,6 +15,8 @@ interface SurfaceBedModuleProps {
   newSurfaceBedMeas: Omit<SurfaceBedMeasurement, "id">;
   updateSurfaceBedMeas: (partial: Partial<Omit<SurfaceBedMeasurement, "id">>) => void;
   resetSurfaceBedMeas: () => void;
+  editingSurfaceBedMeasurementId: number | null;
+  setEditingSurfaceBedMeasurementId: React.Dispatch<React.SetStateAction<number | null>>;
   styles: any;
 }
 
@@ -31,6 +33,8 @@ const SurfaceBedModule = ({
   newSurfaceBedMeas,
   updateSurfaceBedMeas,
   resetSurfaceBedMeas,
+  editingSurfaceBedMeasurementId,
+  setEditingSurfaceBedMeasurementId,
   styles,
 }: SurfaceBedModuleProps) => {
   const saveSurfaceBedType = () => {
@@ -57,10 +61,38 @@ const SurfaceBedModule = ({
     setSurfaceBedMeasurements((prev) => prev.filter((m) => m.surfaceBedTypeId !== id));
   };
 
-  const addSurfaceBedMeasurement = () => {
+  const saveSurfaceBedMeasurement = () => {
     if (!newSurfaceBedMeas.mark.trim() || newSurfaceBedMeas.surfaceBedTypeId === 0 || newSurfaceBedMeas.area <= 0) return;
-    setSurfaceBedMeasurements((prev) => [...prev, { id: Date.now(), ...newSurfaceBedMeas }]);
+    
+    if (editingSurfaceBedMeasurementId !== null) {
+      setSurfaceBedMeasurements((prev) =>
+        prev.map((m) =>
+          m.id === editingSurfaceBedMeasurementId ? { ...m, ...newSurfaceBedMeas } : m
+        )
+      );
+      setEditingSurfaceBedMeasurementId(null);
+    } else {
+      setSurfaceBedMeasurements((prev) => [...prev, { id: Date.now(), ...newSurfaceBedMeas }]);
+    }
     resetSurfaceBedMeas();
+  };
+
+  const editSurfaceBedMeasurement = (id: number) => {
+    const measurement = surfaceBedMeasurements.find((m) => m.id === id);
+    if (measurement) {
+      updateSurfaceBedMeas(measurement);
+      setEditingSurfaceBedMeasurementId(id);
+    }
+  };
+
+  const deleteSurfaceBedMeasurement = (id: number) => {
+    if (confirm("Are you sure you want to delete this measurement?")) {
+      setSurfaceBedMeasurements((prev) => prev.filter((m) => m.id !== id));
+      if (editingSurfaceBedMeasurementId === id) {
+        setEditingSurfaceBedMeasurementId(null);
+        resetSurfaceBedMeas();
+      }
+    }
   };
 
   const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles;
@@ -85,15 +117,15 @@ const SurfaceBedModule = ({
         <label><input type="checkbox" checked={newSurfaceBed.soilPoison} onChange={(e) => updateSurfaceBed({ soilPoison: e.target.checked })} /> Soil Poison</label>
         <h3 style={{ gridColumn: "1 / -1" }}>Layerworks</h3>
         <select value={newSurfaceBed.layer1Material} onChange={(e) => updateSurfaceBed({ layer1Material: e.target.value })}>
-          <option value="">No Layer 1</option><option>G5</option><option>G6</option><option>G7</option><option>Selected Fill</option><option>Imported Fill</option>
+          <option value="">No Layer 1</option><option>G5</option><option>G6</option><option>G7</option>
         </select>
         <input type="number" placeholder="Layer1 thickness" value={newSurfaceBed.layer1Thickness} onChange={(e) => updateSurfaceBed({ layer1Thickness: Number(e.target.value) })} />
         <select value={newSurfaceBed.layer2Material} onChange={(e) => updateSurfaceBed({ layer2Material: e.target.value })}>
-          <option value="">No Layer 2</option><option>G5</option><option>G6</option><option>G7</option><option>Selected Fill</option><option>Imported Fill</option>
+          <option value="">No Layer 2</option><option>G5</option><option>G6</option><option>G7</option>
         </select>
         <input type="number" placeholder="Layer2 thickness" value={newSurfaceBed.layer2Thickness} onChange={(e) => updateSurfaceBed({ layer2Thickness: Number(e.target.value) })} />
         <select value={newSurfaceBed.layer3Material} onChange={(e) => updateSurfaceBed({ layer3Material: e.target.value })}>
-          <option value="">No Layer 3</option><option>G5</option><option>G6</option><option>G7</option><option>Selected Fill</option><option>Imported Fill</option>
+          <option value="">No Layer 3</option><option>G5</option><option>G6</option><option>G7</option>
         </select>
         <input type="number" placeholder="Layer3 thickness" value={newSurfaceBed.layer3Thickness} onChange={(e) => updateSurfaceBed({ layer3Thickness: Number(e.target.value) })} />
         <h3 style={{ gridColumn: "1 / -1" }}>Finishes</h3>
@@ -107,9 +139,16 @@ const SurfaceBedModule = ({
         <input type="number" placeholder="Tile PC Sum R/m²" value={newSurfaceBed.tilePcSum} onChange={(e) => updateSurfaceBed({ tilePcSum: Number(e.target.value) })} />
         <button onClick={saveSurfaceBedType}>{editingSurfaceBedId !== null ? "Update" : "Save"}</button>
       </div>
+
       <table style={tableStyle} border={1} cellPadding={8}>
         <thead>
-          <tr><th style={thStyle}>Name</th><th style={thStyle}>Category</th><th style={thStyle}>Thick</th><th style={thStyle}>Concrete</th><th style={thStyle}>Mesh</th><th style={thStyle}>DPM</th><th style={thStyle}>Soil</th><th style={thStyle}>Layer1</th><th style={thStyle}>Layer2</th><th style={thStyle}>Layer3</th><th style={thStyle}>Powerfloat</th><th style={thStyle}>Screed</th><th style={thStyle}>Tiles</th><th style={thStyle}>Actions</th></tr>
+          <tr>
+            <th style={thStyle}>Name</th><th style={thStyle}>Category</th><th style={thStyle}>Thick</th>
+            <th style={thStyle}>Concrete</th><th style={thStyle}>Mesh</th><th style={thStyle}>DPM</th>
+            <th style={thStyle}>Soil</th><th style={thStyle}>Layer1</th><th style={thStyle}>Layer2</th>
+            <th style={thStyle}>Layer3</th><th style={thStyle}>Powerfloat</th><th style={thStyle}>Screed</th>
+            <th style={thStyle}>Tiles</th><th style={thStyle}>Actions</th>
+          </tr>
         </thead>
         <tbody>
           {surfaceBedTypes.map((sb) => (
@@ -135,6 +174,7 @@ const SurfaceBedModule = ({
           ))}
         </tbody>
       </table>
+
       <hr />
       <h2>Surface Bed Measurements</h2>
       <div style={formGridStyle}>
@@ -144,14 +184,32 @@ const SurfaceBedModule = ({
           {surfaceBedTypes.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
         <input type="number" placeholder="Area (m²)" value={newSurfaceBedMeas.area} onChange={(e) => updateSurfaceBedMeas({ area: Number(e.target.value) })} />
-        <button onClick={addSurfaceBedMeasurement}>Add</button>
+        <button onClick={saveSurfaceBedMeasurement}>
+          {editingSurfaceBedMeasurementId !== null ? "Update Measurement" : "Add Measurement"}
+        </button>
+        {editingSurfaceBedMeasurementId !== null && (
+          <button onClick={() => { setEditingSurfaceBedMeasurementId(null); resetSurfaceBedMeas(); }}>Cancel</button>
+        )}
       </div>
+
       <table style={tableStyle} border={1} cellPadding={8}>
-        <thead><tr><th style={thStyle}>Mark</th><th style={thStyle}>Surface Bed Type</th><th style={thStyle}>Area</th></tr></thead>
+        <thead>
+          <tr><th style={thStyle}>Mark</th><th style={thStyle}>Surface Bed Type</th><th style={thStyle}>Area</th><th style={thStyle}>Actions</th></tr>
+        </thead>
         <tbody>
           {surfaceBedMeasurements.map((m) => {
             const sb = surfaceBedTypes.find((s) => s.id === m.surfaceBedTypeId);
-            return <tr key={m.id}><td style={tdStyle}>{m.mark}</td><td style={tdStyle}>{sb?.name}</td><td style={tdStyle}>{m.area}</td></tr>;
+            return (
+              <tr key={m.id}>
+                <td style={tdStyle}>{m.mark}</td>
+                <td style={tdStyle}>{sb?.name}</td>
+                <td style={tdStyle}>{m.area}</td>
+                <td style={tdStyle}>
+                  <button onClick={() => editSurfaceBedMeasurement(m.id)}>Edit</button>
+                  <button onClick={() => deleteSurfaceBedMeasurement(m.id)}>Delete</button>
+                </td>
+              </tr>
+            );
           })}
         </tbody>
       </table>

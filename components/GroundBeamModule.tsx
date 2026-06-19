@@ -15,6 +15,8 @@ interface GroundBeamModuleProps {
   newGroundBeamMeas: Omit<GroundBeamMeasurement, "id">;
   updateGroundBeamMeas: (partial: Partial<Omit<GroundBeamMeasurement, "id">>) => void;
   resetGroundBeamMeas: () => void;
+  editingGroundBeamMeasurementId: number | null;
+  setEditingGroundBeamMeasurementId: React.Dispatch<React.SetStateAction<number | null>>;
   styles: any;
 }
 
@@ -31,6 +33,8 @@ const GroundBeamModule = ({
   newGroundBeamMeas,
   updateGroundBeamMeas,
   resetGroundBeamMeas,
+  editingGroundBeamMeasurementId,
+  setEditingGroundBeamMeasurementId,
   styles,
 }: GroundBeamModuleProps) => {
   const saveGroundBeamType = () => {
@@ -57,10 +61,38 @@ const GroundBeamModule = ({
     setGroundBeamMeasurements((prev) => prev.filter((m) => m.groundBeamTypeId !== id));
   };
 
-  const addGroundBeamMeasurement = () => {
+  const saveGroundBeamMeasurement = () => {
     if (!newGroundBeamMeas.mark.trim() || newGroundBeamMeas.groundBeamTypeId === 0 || newGroundBeamMeas.length <= 0) return;
-    setGroundBeamMeasurements((prev) => [...prev, { id: Date.now(), ...newGroundBeamMeas }]);
+    
+    if (editingGroundBeamMeasurementId !== null) {
+      setGroundBeamMeasurements((prev) =>
+        prev.map((m) =>
+          m.id === editingGroundBeamMeasurementId ? { ...m, ...newGroundBeamMeas } : m
+        )
+      );
+      setEditingGroundBeamMeasurementId(null);
+    } else {
+      setGroundBeamMeasurements((prev) => [...prev, { id: Date.now(), ...newGroundBeamMeas }]);
+    }
     resetGroundBeamMeas();
+  };
+
+  const editGroundBeamMeasurement = (id: number) => {
+    const measurement = groundBeamMeasurements.find((m) => m.id === id);
+    if (measurement) {
+      updateGroundBeamMeas(measurement);
+      setEditingGroundBeamMeasurementId(id);
+    }
+  };
+
+  const deleteGroundBeamMeasurement = (id: number) => {
+    if (confirm("Are you sure you want to delete this measurement?")) {
+      setGroundBeamMeasurements((prev) => prev.filter((m) => m.id !== id));
+      if (editingGroundBeamMeasurementId === id) {
+        setEditingGroundBeamMeasurementId(null);
+        resetGroundBeamMeas();
+      }
+    }
   };
 
   const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles;
@@ -87,9 +119,15 @@ const GroundBeamModule = ({
         <label><input type="checkbox" checked={newGroundBeam.soilPoisonRequired} onChange={(e) => updateGroundBeam({ soilPoisonRequired: e.target.checked })} /> Soil Poison</label>
         <button onClick={saveGroundBeamType}>{editingGroundBeamId !== null ? "Update" : "Save"}</button>
       </div>
+
       <table style={tableStyle} border={1} cellPadding={8}>
         <thead>
-          <tr><th style={thStyle}>Name</th><th style={thStyle}>Trench</th><th style={thStyle}>Beam</th><th style={thStyle}>Concrete</th><th style={thStyle}>Reinf</th><th style={thStyle}>Formwork</th><th style={thStyle}>Blinding</th><th style={thStyle}>Backfill</th><th style={thStyle}>DPC</th><th style={thStyle}>Soil</th><th style={thStyle}>Actions</th></tr>
+          <tr>
+            <th style={thStyle}>Name</th><th style={thStyle}>Trench</th><th style={thStyle}>Beam</th>
+            <th style={thStyle}>Concrete</th><th style={thStyle}>Reinf</th><th style={thStyle}>Formwork</th>
+            <th style={thStyle}>Blinding</th><th style={thStyle}>Backfill</th><th style={thStyle}>DPC</th>
+            <th style={thStyle}>Soil</th><th style={thStyle}>Actions</th>
+          </tr>
         </thead>
         <tbody>
           {groundBeamTypes.map((gb) => (
@@ -112,6 +150,7 @@ const GroundBeamModule = ({
           ))}
         </tbody>
       </table>
+
       <hr />
       <h2>Ground Beam Measurements</h2>
       <div style={formGridStyle}>
@@ -121,14 +160,32 @@ const GroundBeamModule = ({
           {groundBeamTypes.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
         </select>
         <input type="number" placeholder="Length (m)" value={newGroundBeamMeas.length} onChange={(e) => updateGroundBeamMeas({ length: Number(e.target.value) })} />
-        <button onClick={addGroundBeamMeasurement}>Add</button>
+        <button onClick={saveGroundBeamMeasurement}>
+          {editingGroundBeamMeasurementId !== null ? "Update Measurement" : "Add Measurement"}
+        </button>
+        {editingGroundBeamMeasurementId !== null && (
+          <button onClick={() => { setEditingGroundBeamMeasurementId(null); resetGroundBeamMeas(); }}>Cancel</button>
+        )}
       </div>
+
       <table style={tableStyle} border={1} cellPadding={8}>
-        <thead><tr><th style={thStyle}>Mark</th><th style={thStyle}>Ground Beam Type</th><th style={thStyle}>Length</th></tr></thead>
+        <thead>
+          <tr><th style={thStyle}>Mark</th><th style={thStyle}>Ground Beam Type</th><th style={thStyle}>Length</th><th style={thStyle}>Actions</th></tr>
+        </thead>
         <tbody>
           {groundBeamMeasurements.map((m) => {
             const gb = groundBeamTypes.find((g) => g.id === m.groundBeamTypeId);
-            return <tr key={m.id}><td style={tdStyle}>{m.mark}</td><td style={tdStyle}>{gb?.name}</td><td style={tdStyle}>{m.length}</td></tr>;
+            return (
+              <tr key={m.id}>
+                <td style={tdStyle}>{m.mark}</td>
+                <td style={tdStyle}>{gb?.name}</td>
+                <td style={tdStyle}>{m.length}</td>
+                <td style={tdStyle}>
+                  <button onClick={() => editGroundBeamMeasurement(m.id)}>Edit</button>
+                  <button onClick={() => deleteGroundBeamMeasurement(m.id)}>Delete</button>
+                </td>
+              </tr>
+            );
           })}
         </tbody>
       </table>

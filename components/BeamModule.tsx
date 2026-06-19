@@ -15,6 +15,8 @@ interface BeamModuleProps {
   newBeamMeas: Omit<BeamMeasurement, "id">;
   updateBeamMeas: (partial: Partial<Omit<BeamMeasurement, "id">>) => void;
   resetBeamMeas: () => void;
+  editingBeamMeasurementId: number | null;
+  setEditingBeamMeasurementId: React.Dispatch<React.SetStateAction<number | null>>;
   styles: any;
 }
 
@@ -31,6 +33,8 @@ const BeamModule = ({
   newBeamMeas,
   updateBeamMeas,
   resetBeamMeas,
+  editingBeamMeasurementId,
+  setEditingBeamMeasurementId,
   styles,
 }: BeamModuleProps) => {
   const saveBeamType = () => {
@@ -57,21 +61,41 @@ const BeamModule = ({
     setBeamMeasurements((prev) => prev.filter((m) => m.beamTypeId !== id));
   };
 
-  const addBeamMeasurement = () => {
+  const saveBeamMeasurement = () => {
     if (!newBeamMeas.mark.trim() || newBeamMeas.beamTypeId === 0 || newBeamMeas.length <= 0) return;
-    setBeamMeasurements((prev) => [...prev, { id: Date.now(), ...newBeamMeas }]);
+    
+    if (editingBeamMeasurementId !== null) {
+      setBeamMeasurements((prev) =>
+        prev.map((m) =>
+          m.id === editingBeamMeasurementId ? { ...m, ...newBeamMeas } : m
+        )
+      );
+      setEditingBeamMeasurementId(null);
+    } else {
+      setBeamMeasurements((prev) => [...prev, { id: Date.now(), ...newBeamMeas }]);
+    }
     resetBeamMeas();
   };
 
-  const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles;
-
-  // Helper to get propping height description
-  const getProppingHeightDescription = (band: ProppingHeightBand, customDesc?: string) => {
-    if (band === "Custom" && customDesc) {
-      return customDesc;
+  const editBeamMeasurement = (id: number) => {
+    const measurement = beamMeasurements.find((m) => m.id === id);
+    if (measurement) {
+      updateBeamMeas(measurement);
+      setEditingBeamMeasurementId(id);
     }
-    return band;
   };
+
+  const deleteBeamMeasurement = (id: number) => {
+    if (confirm("Are you sure you want to delete this measurement?")) {
+      setBeamMeasurements((prev) => prev.filter((m) => m.id !== id));
+      if (editingBeamMeasurementId === id) {
+        setEditingBeamMeasurementId(null);
+        resetBeamMeas();
+      }
+    }
+  };
+
+  const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles;
 
   return (
     <div style={cardStyle}>
@@ -82,87 +106,50 @@ const BeamModule = ({
         <input type="number" placeholder="Width mm" value={newBeam.width} onChange={(e) => updateBeam({ width: Number(e.target.value) })} />
         <input type="number" placeholder="Depth mm" value={newBeam.depth} onChange={(e) => updateBeam({ depth: Number(e.target.value) })} />
         <input type="number" placeholder="Reinf kg/m³" value={newBeam.reinfKg} onChange={(e) => updateBeam({ reinfKg: Number(e.target.value) })} />
-        
         <select value={newBeam.formworkFinish} onChange={(e) => updateBeam({ formworkFinish: e.target.value })}>
-          <option>Smooth</option>
-          <option>Rough</option>
-          <option>Special</option>
+          <option>Smooth</option><option>Rough</option><option>Special</option>
         </select>
-        
         <select value={newBeam.concreteClass} onChange={(e) => updateBeam({ concreteClass: e.target.value })}>
-          <option>25MPa/19mm</option>
-          <option>30MPa/19mm</option>
-          <option>35MPa/19mm</option>
+          <option>25MPa/19mm</option><option>30MPa/19mm</option><option>35MPa/19mm</option>
         </select>
-
-        {/* NEW: Beam Form Type */}
-        <select 
-          value={newBeam.beamFormType || "Downstand beam"} 
-          onChange={(e) => updateBeam({ beamFormType: e.target.value as BeamFormType })}
-        >
+        <select value={newBeam.beamFormType || "Downstand beam"} onChange={(e) => updateBeam({ beamFormType: e.target.value as BeamFormType })}>
           <option value="Downstand beam">Downstand beam</option>
           <option value="Perimeter downstand beam">Perimeter downstand beam</option>
           <option value="Upstand beam">Upstand beam</option>
           <option value="Integrated slab beam / no beam formwork">Integrated slab beam / no beam formwork</option>
         </select>
-
-        {/* NEW: Formwork Measurement */}
         {newBeam.beamFormType !== "Integrated slab beam / no beam formwork" && (
-          <select 
-            value={newBeam.formworkMeasurement || "Sides and soffit together"} 
-            onChange={(e) => updateBeam({ formworkMeasurement: e.target.value as FormworkMeasurement })}
-          >
+          <select value={newBeam.formworkMeasurement || "Sides and soffit together"} onChange={(e) => updateBeam({ formworkMeasurement: e.target.value as FormworkMeasurement })}>
             <option value="Sides and soffit together">Sides and soffit together</option>
             <option value="Sides only">Sides only</option>
-            {newBeam.beamFormType === "Downstand beam" && (
-              <option value="Soffit only">Soffit only</option>
-            )}
+            {newBeam.beamFormType === "Downstand beam" && <option value="Soffit only">Soffit only</option>}
             <option value="None">None</option>
           </select>
         )}
-
-        {/* NEW: Propping Height Band */}
-        {newBeam.beamFormType !== "Integrated slab beam / no beam formwork" && 
-         newBeam.formworkMeasurement !== "None" && (
+        {newBeam.beamFormType !== "Integrated slab beam / no beam formwork" && newBeam.formworkMeasurement !== "None" && (
           <>
-            <select 
-              value={newBeam.proppingHeightBand || "Not exceeding 1.5m"} 
-              onChange={(e) => updateBeam({ proppingHeightBand: e.target.value as ProppingHeightBand })}
-            >
+            <select value={newBeam.proppingHeightBand || "Not exceeding 1.5m"} onChange={(e) => updateBeam({ proppingHeightBand: e.target.value as ProppingHeightBand })}>
               <option value="Not exceeding 1.5m">Not exceeding 1.5m</option>
               <option value="Exceeding 1.5m and not exceeding 3.5m">Exceeding 1.5m and not exceeding 3.5m</option>
               <option value="Exceeding 3.5m and not exceeding 5.0m">Exceeding 3.5m and not exceeding 5.0m</option>
               <option value="Exceeding 5.0m and not exceeding 6.5m">Exceeding 5.0m and not exceeding 6.5m</option>
               <option value="Custom">Custom</option>
             </select>
-            
             {newBeam.proppingHeightBand === "Custom" && (
-              <input 
-                placeholder="Custom propping height description" 
-                value={newBeam.customProppingHeightDescription || ""} 
-                onChange={(e) => updateBeam({ customProppingHeightDescription: e.target.value })}
-              />
+              <input placeholder="Custom propping height description" value={newBeam.customProppingHeightDescription || ""} onChange={(e) => updateBeam({ customProppingHeightDescription: e.target.value })} />
             )}
           </>
         )}
-
         <button onClick={saveBeamType}>{editingBeamId !== null ? "Update" : "Save"}</button>
       </div>
 
-      {/* BEAM TYPE TABLE - Updated with new columns */}
       <table style={tableStyle} border={1} cellPadding={8}>
         <thead>
           <tr>
-            <th style={thStyle}>Name</th>
-            <th style={thStyle}>Width</th>
-            <th style={thStyle}>Depth</th>
-            <th style={thStyle}>Reinf</th>
-            <th style={thStyle}>Formwork</th>
-            <th style={thStyle}>Concrete</th>
-            <th style={thStyle}>Beam Form</th>
-            <th style={thStyle}>Formwork Meas.</th>
-            <th style={thStyle}>Propping Height</th>
-            <th style={thStyle}>Actions</th>
+            <th style={thStyle}>Name</th><th style={thStyle}>Width</th><th style={thStyle}>Depth</th>
+            <th style={thStyle}>Reinf</th><th style={thStyle}>Formwork</th><th style={thStyle}>Concrete</th>
+            <th style={thStyle}>Beam Form</th><th style={thStyle}>Formwork Meas.</th>
+            <th style={thStyle}>Propping Height</th><th style={thStyle}>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -192,21 +179,20 @@ const BeamModule = ({
         <input placeholder="Mark" value={newBeamMeas.mark} onChange={(e) => updateBeamMeas({ mark: e.target.value })} />
         <select value={newBeamMeas.beamTypeId} onChange={(e) => updateBeamMeas({ beamTypeId: Number(e.target.value) })}>
           <option value={0}>Select Type</option>
-          {beamTypes.map((b) => (
-            <option key={b.id} value={b.id}>{b.name}</option>
-          ))}
+          {beamTypes.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
         </select>
         <input type="number" placeholder="Length (m)" value={newBeamMeas.length} onChange={(e) => updateBeamMeas({ length: Number(e.target.value) })} />
-        <button onClick={addBeamMeasurement}>Add</button>
+        <button onClick={saveBeamMeasurement}>
+          {editingBeamMeasurementId !== null ? "Update Measurement" : "Add Measurement"}
+        </button>
+        {editingBeamMeasurementId !== null && (
+          <button onClick={() => { setEditingBeamMeasurementId(null); resetBeamMeas(); }}>Cancel</button>
+        )}
       </div>
 
       <table style={tableStyle} border={1} cellPadding={8}>
         <thead>
-          <tr>
-            <th style={thStyle}>Mark</th>
-            <th style={thStyle}>Beam Type</th>
-            <th style={thStyle}>Length</th>
-          </tr>
+          <tr><th style={thStyle}>Mark</th><th style={thStyle}>Beam Type</th><th style={thStyle}>Length</th><th style={thStyle}>Actions</th></tr>
         </thead>
         <tbody>
           {beamMeasurements.map((m) => {
@@ -216,6 +202,10 @@ const BeamModule = ({
                 <td style={tdStyle}>{m.mark}</td>
                 <td style={tdStyle}>{beam?.name}</td>
                 <td style={tdStyle}>{m.length}</td>
+                <td style={tdStyle}>
+                  <button onClick={() => editBeamMeasurement(m.id)}>Edit</button>
+                  <button onClick={() => deleteBeamMeasurement(m.id)}>Delete</button>
+                </td>
               </tr>
             );
           })}

@@ -16,6 +16,8 @@ interface WallModuleProps {
   newWallMeas: Omit<WallMeasurement, "id">;
   updateWallMeas: (partial: Partial<Omit<WallMeasurement, "id">>) => void;
   resetWallMeas: () => void;
+  editingWallMeasurementId: number | null;
+  setEditingWallMeasurementId: React.Dispatch<React.SetStateAction<number | null>>;
   styles: any;
 }
 
@@ -32,6 +34,8 @@ const WallModule = ({
   newWallMeas,
   updateWallMeas,
   resetWallMeas,
+  editingWallMeasurementId,
+  setEditingWallMeasurementId,
   styles,
 }: WallModuleProps) => {
   const handleThicknessTypeChange = (type: WallThicknessType) => {
@@ -68,11 +72,41 @@ const WallModule = ({
     setWallMeasurements((prev) => prev.filter((m) => m.wallTypeId !== id));
   };
 
-  const addWallMeasurement = () => {
+  const saveWallMeasurement = () => {
     if (!newWallMeas.mark.trim() || newWallMeas.wallTypeId === 0 || newWallMeas.length <= 0 || newWallMeas.height <= 0) return;
+    
     const area = newWallMeas.length * newWallMeas.height;
-    setWallMeasurements((prev) => [...prev, { id: Date.now(), ...newWallMeas, area }]);
+    const measurementData = { ...newWallMeas, area };
+    
+    if (editingWallMeasurementId !== null) {
+      setWallMeasurements((prev) =>
+        prev.map((m) =>
+          m.id === editingWallMeasurementId ? { ...m, ...measurementData } : m
+        )
+      );
+      setEditingWallMeasurementId(null);
+    } else {
+      setWallMeasurements((prev) => [...prev, { id: Date.now(), ...measurementData }]);
+    }
     resetWallMeas();
+  };
+
+  const editWallMeasurement = (id: number) => {
+    const measurement = wallMeasurements.find((m) => m.id === id);
+    if (measurement) {
+      updateWallMeas(measurement);
+      setEditingWallMeasurementId(id);
+    }
+  };
+
+  const deleteWallMeasurement = (id: number) => {
+    if (confirm("Are you sure you want to delete this measurement?")) {
+      setWallMeasurements((prev) => prev.filter((m) => m.id !== id));
+      if (editingWallMeasurementId === id) {
+        setEditingWallMeasurementId(null);
+        resetWallMeas();
+      }
+    }
   };
 
   const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles;
@@ -107,9 +141,15 @@ const WallModule = ({
         )}
         <button onClick={saveWallType}>{editingWallId !== null ? "Update" : "Save"}</button>
       </div>
+
       <table style={tableStyle} border={1} cellPadding={8}>
         <thead>
-          <tr><th style={thStyle}>Name</th><th style={thStyle}>Brick Type</th><th style={thStyle}>Wall Type</th><th style={thStyle}>Thick</th><th style={thStyle}>Plaster</th><th style={thStyle}>Paint</th><th style={thStyle}>DPC</th><th style={thStyle}>Reinf</th><th style={thStyle}>Int Tiles</th><th style={thStyle}>Ext Tiles</th><th style={thStyle}>Actions</th></tr>
+          <tr>
+            <th style={thStyle}>Name</th><th style={thStyle}>Brick Type</th><th style={thStyle}>Wall Type</th>
+            <th style={thStyle}>Thick</th><th style={thStyle}>Plaster</th><th style={thStyle}>Paint</th>
+            <th style={thStyle}>DPC</th><th style={thStyle}>Reinf</th><th style={thStyle}>Int Tiles</th>
+            <th style={thStyle}>Ext Tiles</th><th style={thStyle}>Actions</th>
+          </tr>
         </thead>
         <tbody>
           {wallTypes.map((wall) => (
@@ -132,6 +172,7 @@ const WallModule = ({
           ))}
         </tbody>
       </table>
+
       <hr />
       <h2>Wall Measurements</h2>
       <div style={formGridStyle}>
@@ -142,14 +183,34 @@ const WallModule = ({
         </select>
         <input type="number" placeholder="Length (m)" value={newWallMeas.length} onChange={(e) => updateWallMeas({ length: Number(e.target.value) })} />
         <input type="number" placeholder="Height (m)" value={newWallMeas.height} onChange={(e) => updateWallMeas({ height: Number(e.target.value) })} />
-        <button onClick={addWallMeasurement}>Add</button>
+        <button onClick={saveWallMeasurement}>
+          {editingWallMeasurementId !== null ? "Update Measurement" : "Add Measurement"}
+        </button>
+        {editingWallMeasurementId !== null && (
+          <button onClick={() => { setEditingWallMeasurementId(null); resetWallMeas(); }}>Cancel</button>
+        )}
       </div>
+
       <table style={tableStyle} border={1} cellPadding={8}>
-        <thead><tr><th style={thStyle}>Mark</th><th style={thStyle}>Wall Type</th><th style={thStyle}>Length</th><th style={thStyle}>Height</th><th style={thStyle}>Area (m²)</th></tr></thead>
+        <thead>
+          <tr><th style={thStyle}>Mark</th><th style={thStyle}>Wall Type</th><th style={thStyle}>Length</th><th style={thStyle}>Height</th><th style={thStyle}>Area (m²)</th><th style={thStyle}>Actions</th></tr>
+        </thead>
         <tbody>
           {wallMeasurements.map((m) => {
             const wall = wallTypes.find((w) => w.id === m.wallTypeId);
-            return <tr key={m.id}><td style={tdStyle}>{m.mark}</td><td style={tdStyle}>{wall?.name}</td><td style={tdStyle}>{m.length}</td><td style={tdStyle}>{m.height}</td><td style={tdStyle}>{m.area}</td></tr>;
+            return (
+              <tr key={m.id}>
+                <td style={tdStyle}>{m.mark}</td>
+                <td style={tdStyle}>{wall?.name}</td>
+                <td style={tdStyle}>{m.length}</td>
+                <td style={tdStyle}>{m.height}</td>
+                <td style={tdStyle}>{m.area}</td>
+                <td style={tdStyle}>
+                  <button onClick={() => editWallMeasurement(m.id)}>Edit</button>
+                  <button onClick={() => deleteWallMeasurement(m.id)}>Delete</button>
+                </td>
+              </tr>
+            );
           })}
         </tbody>
       </table>

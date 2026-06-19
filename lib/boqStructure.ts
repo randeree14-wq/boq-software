@@ -75,6 +75,7 @@ export const SECTIONS = {
   WINDOWS: "Windows",
   FRAMES: "Frames",
   SILLS: "Sills",
+  IRONMONGERY: "Ironmongery",
 } as const;
 
 // ============================================
