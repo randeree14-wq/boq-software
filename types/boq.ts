@@ -1,15 +1,29 @@
+export type BeamProfileType = 
+  | "Downstand Beam"
+  | "Upstand Beam"
+  | "Perimeter Beam (Downstand Only)"
+  | "Perimeter Beam (Downstand + Upstand)"
+  | "Combined Downstand / Inverted Beam"
+  | "Integrated Beam / No Separate Beam Formwork";
+
+// Update BeamType to include slabThicknessMm for combined beams
 export type BeamType = {
   id: number;
   name: string;
   width: number;
-  depth: number;
+  depth: number; // Backward compatibility
   reinfKg: number;
   formworkFinish: string;
   concreteClass: string;
-  beamFormType: BeamFormType;
-  formworkMeasurement: FormworkMeasurement;
+  // Profile fields
+  beamProfileType: BeamProfileType;
+  beamWidthMm: number;
+  downstandDepthMm: number;
+  upstandHeightMm: number;
+  slabThicknessMm?: number; // NEW: Only for Combined Downstand / Inverted Beam
+  formworkFinish: string;
   proppingHeightBand: ProppingHeightBand;
-  customProppingHeightDescription?: string; // only used if proppingHeightBand is "Custom"
+  customProppingHeightDescription?: string;
 };
 
 export type BeamMeasurement = {
