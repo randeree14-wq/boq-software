@@ -10,18 +10,16 @@ export type BeamProfileType =
 export type BeamType = {
   id: number;
   name: string;
-  width: number;
-  depth: number; // Backward compatibility
-  reinfKg: number;
+  width?: number;           // <-- optional
+  depth?: number;           // <-- optional
+  reinfKg?: number;         // <-- optional
   formworkFinish: string;
   concreteClass: string;
-  // Profile fields
   beamProfileType: BeamProfileType;
-  beamWidthMm: number;
-  downstandDepthMm: number;
-  upstandHeightMm: number;
-  slabThicknessMm?: number; // NEW: Only for Combined Downstand / Inverted Beam
-  formworkFinish: string;
+  beamWidthMm?: number;     // <-- optional
+  downstandDepthMm?: number; // <-- optional
+  upstandHeightMm?: number;  // <-- optional
+  slabThicknessMm?: number;  // <-- optional
   proppingHeightBand: ProppingHeightBand;
   customProppingHeightDescription?: string;
 };
@@ -312,7 +310,7 @@ export type OpeningMeasurement = {
   id: number;
   mark: string;
   openingTypeId: number;
-  quantity: number; // overrides type.quantity
+  quantity?: number; // overrides type.quantity
   linkedWallId?: number; // for future wall deduction
 };
 

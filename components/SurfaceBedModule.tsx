@@ -106,7 +106,7 @@ const SurfaceBedModule = ({
         <select value={newSurfaceBed.category} onChange={(e) => updateSurfaceBed({ category: e.target.value })}>
           <option>Internal</option><option>External</option><option>Wet Area</option><option>Balcony</option><option>Roof Slab</option>
         </select>
-        <input type="number" placeholder="Thickness mm" value={newSurfaceBed.thickness} onChange={(e) => updateSurfaceBed({ thickness: Number(e.target.value) })} />
+        <input type="number" placeholder="Thickness (mm) e.g., 170" value={newSurfaceBed.thickness} onChange={(e) => updateSurfaceBed({ thickness: Number(e.target.value) })} />
         <select value={newSurfaceBed.concreteClass} onChange={(e) => updateSurfaceBed({ concreteClass: e.target.value })}>
           <option>25MPa/19mm</option><option>30MPa/19mm</option><option>35MPa/19mm</option>
         </select>
@@ -119,24 +119,24 @@ const SurfaceBedModule = ({
         <select value={newSurfaceBed.layer1Material} onChange={(e) => updateSurfaceBed({ layer1Material: e.target.value })}>
           <option value="">No Layer 1</option><option>G5</option><option>G6</option><option>G7</option>
         </select>
-        <input type="number" placeholder="Layer1 thickness" value={newSurfaceBed.layer1Thickness} onChange={(e) => updateSurfaceBed({ layer1Thickness: Number(e.target.value) })} />
+        <input type="number" placeholder="Layer1 thickness (mm) e.g., 150" value={newSurfaceBed.layer1Thickness} onChange={(e) => updateSurfaceBed({ layer1Thickness: Number(e.target.value) })} />
         <select value={newSurfaceBed.layer2Material} onChange={(e) => updateSurfaceBed({ layer2Material: e.target.value })}>
           <option value="">No Layer 2</option><option>G5</option><option>G6</option><option>G7</option>
         </select>
-        <input type="number" placeholder="Layer2 thickness" value={newSurfaceBed.layer2Thickness} onChange={(e) => updateSurfaceBed({ layer2Thickness: Number(e.target.value) })} />
+        <input type="number" placeholder="Layer2 thickness (mm) e.g., 150" value={newSurfaceBed.layer2Thickness} onChange={(e) => updateSurfaceBed({ layer2Thickness: Number(e.target.value) })} />
         <select value={newSurfaceBed.layer3Material} onChange={(e) => updateSurfaceBed({ layer3Material: e.target.value })}>
           <option value="">No Layer 3</option><option>G5</option><option>G6</option><option>G7</option>
         </select>
-        <input type="number" placeholder="Layer3 thickness" value={newSurfaceBed.layer3Thickness} onChange={(e) => updateSurfaceBed({ layer3Thickness: Number(e.target.value) })} />
+        <input type="number" placeholder="Layer3 thickness (mm) e.g., 150" value={newSurfaceBed.layer3Thickness} onChange={(e) => updateSurfaceBed({ layer3Thickness: Number(e.target.value) })} />
         <h3 style={{ gridColumn: "1 / -1" }}>Finishes</h3>
         <label><input type="checkbox" checked={newSurfaceBed.powerfloat} onChange={(e) => updateSurfaceBed({ powerfloat: e.target.checked })} /> Powerfloat</label>
         <label><input type="checkbox" checked={newSurfaceBed.screedRequired} onChange={(e) => updateSurfaceBed({ screedRequired: e.target.checked })} /> Screed</label>
-        <input type="number" placeholder="Screed thickness" value={newSurfaceBed.screedThickness} onChange={(e) => updateSurfaceBed({ screedThickness: Number(e.target.value) })} />
+        <input type="number" placeholder="Screed thickness (mm) e.g., 50" value={newSurfaceBed.screedThickness} onChange={(e) => updateSurfaceBed({ screedThickness: Number(e.target.value) })} />
         <select value={newSurfaceBed.screedType} onChange={(e) => updateSurfaceBed({ screedType: e.target.value })}>
           <option>Normal</option><option>To Falls</option>
         </select>
         <label><input type="checkbox" checked={newSurfaceBed.tileRequired} onChange={(e) => updateSurfaceBed({ tileRequired: e.target.checked })} /> Tiles</label>
-        <input type="number" placeholder="Tile PC Sum R/m²" value={newSurfaceBed.tilePcSum} onChange={(e) => updateSurfaceBed({ tilePcSum: Number(e.target.value) })} />
+        <input type="number"  placeholder="Tile PC Sum (R/m²) e.g., 250" value={newSurfaceBed.tilePcSum} onChange={(e) => updateSurfaceBed({ tilePcSum: Number(e.target.value) })} />
         <button onClick={saveSurfaceBedType}>{editingSurfaceBedId !== null ? "Update" : "Save"}</button>
       </div>
 

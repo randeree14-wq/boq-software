@@ -129,7 +129,12 @@ const WallModule = ({
         <label><input type="checkbox" checked={newWall.dpcRequired} onChange={(e) => updateWall({ dpcRequired: e.target.checked })} /> DPC required</label>
         <label><input type="checkbox" checked={newWall.reinforcementRequired} onChange={(e) => updateWall({ reinforcementRequired: e.target.checked })} /> Bed joint reinforcement</label>
         {newWall.reinforcementRequired && (
-          <input type="number" placeholder="Courses per layer e.g., 4" value={newWall.coursesPerReinforcement || ''} onChange={(e) => updateWall({ coursesPerReinforcement: Number(e.target.value) })} />
+         <input 
+        type="number" 
+        placeholder="Courses per reinforcement layer e.g., 4" 
+        value={newWall.coursesPerReinforcement || ''} 
+        onChange={(e) => updateWall({ coursesPerReinforcement: Number(e.target.value) })} 
+         />
         )}
         <label><input type="checkbox" checked={newWall.tilesInternal} onChange={(e) => updateWall({ tilesInternal: e.target.checked })} /> Tiles internal</label>
         {newWall.tilesInternal && (

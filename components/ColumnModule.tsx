@@ -103,13 +103,13 @@ const ColumnModule = ({
       <h2>Column Type Library</h2>
       <div style={formGridStyle}>
         <input placeholder="Name" value={newColumn.name} onChange={(e) => updateColumn({ name: e.target.value })} />
-        <input type="number" placeholder="Width mm" value={newColumn.width} onChange={(e) => updateColumn({ width: Number(e.target.value) })} />
-        <input type="number" placeholder="Depth mm" value={newColumn.depth} onChange={(e) => updateColumn({ depth: Number(e.target.value) })} />
-        <input type="number" placeholder="Height mm" value={newColumn.height} onChange={(e) => updateColumn({ height: Number(e.target.value) })} />
+        <input type="number" placeholder="Width (mm) e.g., 300" value={newColumn.width} onChange={(e) => updateColumn({ width: Number(e.target.value) })} />
+        <input type="number" placeholder="Depth (mm) e.g., 400" value={newColumn.depth} onChange={(e) => updateColumn({ depth: Number(e.target.value) })} />
+        <input type="number" placeholder="Height (mm) e.g., 3000" value={newColumn.height} onChange={(e) => updateColumn({ height: Number(e.target.value) })} />
         <select value={newColumn.concreteClass} onChange={(e) => updateColumn({ concreteClass: e.target.value })}>
           <option>25MPa/19mm</option><option>30MPa/19mm</option><option>35MPa/19mm</option>
         </select>
-        <input type="number" placeholder="Reinf kg/m³" value={newColumn.reinfKgPerM3} onChange={(e) => updateColumn({ reinfKgPerM3: Number(e.target.value) })} />
+        <input type="number" placeholder="Reinforcement (kg/m³) e.g., 200" value={newColumn.reinfKgPerM3} onChange={(e) => updateColumn({ reinfKgPerM3: Number(e.target.value) })} />
         <label><input type="checkbox" checked={newColumn.formworkRequired} onChange={(e) => updateColumn({ formworkRequired: e.target.checked })} /> Formwork</label>
         <select value={newColumn.formworkFinish} onChange={(e) => updateColumn({ formworkFinish: e.target.value })}>
           <option>Smooth</option><option>Rough</option><option>Special</option>

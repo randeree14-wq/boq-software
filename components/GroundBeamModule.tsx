@@ -103,17 +103,17 @@ const GroundBeamModule = ({
       <h2>Ground Beam Type Library</h2>
       <div style={formGridStyle}>
         <input placeholder="Name" value={newGroundBeam.name} onChange={(e) => updateGroundBeam({ name: e.target.value })} />
-        <input type="number" placeholder="Trench Width mm" value={newGroundBeam.trenchWidth} onChange={(e) => updateGroundBeam({ trenchWidth: Number(e.target.value) })} />
-        <input type="number" placeholder="Trench Depth mm" value={newGroundBeam.trenchDepth} onChange={(e) => updateGroundBeam({ trenchDepth: Number(e.target.value) })} />
-        <input type="number" placeholder="Beam Width mm" value={newGroundBeam.beamWidth} onChange={(e) => updateGroundBeam({ beamWidth: Number(e.target.value) })} />
-        <input type="number" placeholder="Beam Depth mm" value={newGroundBeam.beamDepth} onChange={(e) => updateGroundBeam({ beamDepth: Number(e.target.value) })} />
+        <input type="number" placeholder="Trench width (mm) e.g., 600" value={newGroundBeam.trenchWidth} onChange={(e) => updateGroundBeam({ trenchWidth: Number(e.target.value) })} />
+        <input type="number" placeholder="Trench depth (mm) e.g., 1000" value={newGroundBeam.trenchDepth} onChange={(e) => updateGroundBeam({ trenchDepth: Number(e.target.value) })} />
+        <input type="number"  placeholder="Beam width (mm) e.g., 350" value={newGroundBeam.beamWidth} onChange={(e) => updateGroundBeam({ beamWidth: Number(e.target.value) })} />
+        <input type="number" placeholder="Beam depth (mm) e.g., 600" value={newGroundBeam.beamDepth} onChange={(e) => updateGroundBeam({ beamDepth: Number(e.target.value) })} />
         <select value={newGroundBeam.concreteClass} onChange={(e) => updateGroundBeam({ concreteClass: e.target.value })}>
           <option>25MPa/19mm</option><option>30MPa/19mm</option><option>35MPa/19mm</option>
         </select>
-        <input type="number" placeholder="Reinf kg/m³" value={newGroundBeam.reinfKgPerM3} onChange={(e) => updateGroundBeam({ reinfKgPerM3: Number(e.target.value) })} />
+        <input type="number" placeholder="Reinforcement (kg/m³) e.g., 150" value={newGroundBeam.reinfKgPerM3} onChange={(e) => updateGroundBeam({ reinfKgPerM3: Number(e.target.value) })} />
         <label><input type="checkbox" checked={newGroundBeam.formworkRequired} onChange={(e) => updateGroundBeam({ formworkRequired: e.target.checked })} /> Formwork</label>
         <label><input type="checkbox" checked={newGroundBeam.blindingRequired} onChange={(e) => updateGroundBeam({ blindingRequired: e.target.checked })} /> Blinding</label>
-        <input type="number" placeholder="Blinding thickness mm" value={newGroundBeam.blindingThickness} onChange={(e) => updateGroundBeam({ blindingThickness: Number(e.target.value) })} />
+        <input type="number" placeholder="Blinding thickness (mm) e.g., 50" value={newGroundBeam.blindingThickness} onChange={(e) => updateGroundBeam({ blindingThickness: Number(e.target.value) })} />
         <label><input type="checkbox" checked={newGroundBeam.backfillRequired} onChange={(e) => updateGroundBeam({ backfillRequired: e.target.checked })} /> Backfill</label>
         <label><input type="checkbox" checked={newGroundBeam.dpcRequired} onChange={(e) => updateGroundBeam({ dpcRequired: e.target.checked })} /> DPC</label>
         <label><input type="checkbox" checked={newGroundBeam.soilPoisonRequired} onChange={(e) => updateGroundBeam({ soilPoisonRequired: e.target.checked })} /> Soil Poison</label>
