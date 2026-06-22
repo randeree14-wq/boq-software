@@ -129,15 +129,15 @@ const WallModule = ({
         <label><input type="checkbox" checked={newWall.dpcRequired} onChange={(e) => updateWall({ dpcRequired: e.target.checked })} /> DPC required</label>
         <label><input type="checkbox" checked={newWall.reinforcementRequired} onChange={(e) => updateWall({ reinforcementRequired: e.target.checked })} /> Bed joint reinforcement</label>
         {newWall.reinforcementRequired && (
-          <input type="number" placeholder="Courses per layer" value={newWall.coursesPerReinforcement} onChange={(e) => updateWall({ coursesPerReinforcement: Number(e.target.value) })} />
+          <input type="number" placeholder="Courses per layer e.g., 4" value={newWall.coursesPerReinforcement || ''} onChange={(e) => updateWall({ coursesPerReinforcement: Number(e.target.value) })} />
         )}
         <label><input type="checkbox" checked={newWall.tilesInternal} onChange={(e) => updateWall({ tilesInternal: e.target.checked })} /> Tiles internal</label>
         {newWall.tilesInternal && (
-          <input type="number" placeholder="PC sum internal (R/m²)" value={newWall.tilePcSumInternal} onChange={(e) => updateWall({ tilePcSumInternal: Number(e.target.value) })} />
+          <input type="number" placeholder="Tile PC sum internal (R/m²) e.g., 350"  value={newWall.tilePcSumInternal || ''} onChange={(e) => updateWall({ tilePcSumInternal: Number(e.target.value) })} />
         )}
         <label><input type="checkbox" checked={newWall.tilesExternal} onChange={(e) => updateWall({ tilesExternal: e.target.checked })} /> Tiles external</label>
         {newWall.tilesExternal && (
-          <input type="number" placeholder="PC sum external (R/m²)" value={newWall.tilePcSumExternal} onChange={(e) => updateWall({ tilePcSumExternal: Number(e.target.value) })} />
+          <input type="number" placeholder="Tile PC sum external (R/m²) e.g., 400" value={newWall.tilePcSumExternal || ''} onChange={(e) => updateWall({ tilePcSumExternal: Number(e.target.value) })} />
         )}
         <button onClick={saveWallType}>{editingWallId !== null ? "Update" : "Save"}</button>
       </div>

@@ -103,19 +103,19 @@ const PadFootingModule = ({
       <h2>Pad Footing Type Library</h2>
       <div style={formGridStyle}>
         <input placeholder="Name" value={newPadFooting.name} onChange={(e) => updatePadFooting({ name: e.target.value })} />
-        <input type="number" placeholder="Pad Length mm" value={newPadFooting.padLength} onChange={(e) => updatePadFooting({ padLength: Number(e.target.value) })} />
-        <input type="number" placeholder="Pad Width mm" value={newPadFooting.padWidth} onChange={(e) => updatePadFooting({ padWidth: Number(e.target.value) })} />
-        <input type="number" placeholder="Pad Depth mm" value={newPadFooting.padDepth} onChange={(e) => updatePadFooting({ padDepth: Number(e.target.value) })} />
-        <input type="number" placeholder="Excavation Length mm" value={newPadFooting.excavationLength} onChange={(e) => updatePadFooting({ excavationLength: Number(e.target.value) })} />
-        <input type="number" placeholder="Excavation Width mm" value={newPadFooting.excavationWidth} onChange={(e) => updatePadFooting({ excavationWidth: Number(e.target.value) })} />
-        <input type="number" placeholder="Excavation Depth mm" value={newPadFooting.excavationDepth} onChange={(e) => updatePadFooting({ excavationDepth: Number(e.target.value) })} />
+        <input type="number" placeholder="Pad length (mm) e.g., 1200"  value={newPadFooting.padLength} onChange={(e) => updatePadFooting({ padLength: Number(e.target.value) })} />
+        <input type="number" placeholder="Pad width (mm) e.g., 1000" value={newPadFooting.padWidth} onChange={(e) => updatePadFooting({ padWidth: Number(e.target.value) })} />
+        <input type="number" placeholder="Pad Depth (mm) e.g., 300" value={newPadFooting.padDepth} onChange={(e) => updatePadFooting({ padDepth: Number(e.target.value) })} />
+        <input type="number" placeholder="Excavation Length (mm) e.g., 1800" value={newPadFooting.excavationLength} onChange={(e) => updatePadFooting({ excavationLength: Number(e.target.value) })} />
+        <input type="number" placeholder="Excavation Width (mm) e.g., 1600" value={newPadFooting.excavationWidth} onChange={(e) => updatePadFooting({ excavationWidth: Number(e.target.value) })} />
+        <input type="number" placeholder="Excavation Depth (mm) e.g., 600" value={newPadFooting.excavationDepth} onChange={(e) => updatePadFooting({ excavationDepth: Number(e.target.value) })} />
         <select value={newPadFooting.concreteClass} onChange={(e) => updatePadFooting({ concreteClass: e.target.value })}>
           <option>25MPa/19mm</option><option>30MPa/19mm</option><option>35MPa/19mm</option>
         </select>
-        <input type="number" placeholder="Reinf kg/m³" value={newPadFooting.reinfKg} onChange={(e) => updatePadFooting({ reinfKg: Number(e.target.value) })} />
+        <input type="number"   placeholder="Reinforcement (kg/m³) e.g., 120" value={newPadFooting.reinfKg} onChange={(e) => updatePadFooting({ reinfKg: Number(e.target.value) })} />
         <label><input type="checkbox" checked={newPadFooting.formworkRequired} onChange={(e) => updatePadFooting({ formworkRequired: e.target.checked })} /> Formwork Required</label>
         <label><input type="checkbox" checked={newPadFooting.blindingRequired} onChange={(e) => updatePadFooting({ blindingRequired: e.target.checked })} /> Blinding Required</label>
-        <input type="number" placeholder="Blinding thickness mm" value={newPadFooting.blindingThickness} onChange={(e) => updatePadFooting({ blindingThickness: Number(e.target.value) })} />
+        <input type="number"  placeholder="Blinding thickness (mm) e.g., 50" value={newPadFooting.blindingThickness} onChange={(e) => updatePadFooting({ blindingThickness: Number(e.target.value) })} />
         <label><input type="checkbox" checked={newPadFooting.soilPoison} onChange={(e) => updatePadFooting({ soilPoison: e.target.checked })} /> Soil Poison</label>
         <label><input type="checkbox" checked={newPadFooting.backfill} onChange={(e) => updatePadFooting({ backfill: e.target.checked })} /> Backfill</label>
         <button onClick={savePadFootingType}>{editingPadFootingId !== null ? "Update" : "Save"}</button>

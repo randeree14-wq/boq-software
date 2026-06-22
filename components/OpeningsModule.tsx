@@ -121,9 +121,8 @@ const OpeningsModule = ({
           <option value="Window">Window</option>
         </select>
 
-        <input type="number" placeholder="Width (mm)" value={newOpening.widthMm} onChange={(e) => updateOpening({ widthMm: Number(e.target.value) })} />
-        <input type="number" placeholder="Height (mm)" value={newOpening.heightMm} onChange={(e) => updateOpening({ heightMm: Number(e.target.value) })} />
-        <input type="number" placeholder="Default Quantity" value={newOpening.quantity} onChange={(e) => updateOpening({ quantity: Number(e.target.value) })} />
+        <input type="number"  placeholder="Width (mm) e.g., 900" value={newOpening.widthMm || ''} onChange={(e) => updateOpening({ widthMm: Number(e.target.value) })} />
+        <input type="number" placeholder="Height (mm) e.g., 2100" value={newOpening.heightMm} onChange={(e) => updateOpening({ heightMm: Number(e.target.value) })} />
 
         <select value={newOpening.wallThicknessOption} onChange={(e) => updateOpening({ wallThicknessOption: e.target.value as WallThicknessOption })}>
           <option value="Half brick">Half brick</option>
@@ -131,12 +130,12 @@ const OpeningsModule = ({
           <option value="Other mm">Other mm</option>
         </select>
         {newOpening.wallThicknessOption === "Other mm" && (
-          <input type="number" placeholder="Wall thickness (mm)" value={newOpening.wallThicknessMm || 0} onChange={(e) => updateOpening({ wallThicknessMm: Number(e.target.value) })} />
+          <input type="number" placeholder="Wall thickness (mm) e.g., 102" value={newOpening.wallThicknessMm || 0} onChange={(e) => updateOpening({ wallThicknessMm: Number(e.target.value) })} />
         )}
 
         <label><input type="checkbox" checked={newOpening.includeLintel} onChange={(e) => updateOpening({ includeLintel: e.target.checked })} /> Include Lintel</label>
         {newOpening.includeLintel && (
-          <input type="number" placeholder="Lintel bearing (mm)" value={newOpening.lintelBearingMm} onChange={(e) => updateOpening({ lintelBearingMm: Number(e.target.value) })} />
+          <input type="number" placeholder="Lintel bearing (mm) e.g., 230" value={newOpening.lintelBearingMm || ''} onChange={(e) => updateOpening({ lintelBearingMm: Number(e.target.value) })} />
         )}
         <label><input type="checkbox" checked={newOpening.includeRevealPlaster} onChange={(e) => updateOpening({ includeRevealPlaster: e.target.checked })} /> Include Reveal Plaster</label>
 

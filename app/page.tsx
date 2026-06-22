@@ -117,149 +117,203 @@ const styles = { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle };
 // MAIN COMPONENT
 // ============================================
 export default function Home() {
-  // ---------- BEAM ----------
-  const [beamTypes, setBeamTypes] = useState<BeamType[]>([
-    { 
-        id: 1, 
-        name: "Main Roof Beam", 
-        width: 230, 
-        depth: 400, 
-        reinfKg: 120, 
-        formworkFinish: "Smooth", 
-        concreteClass: "25MPa/19mm",
-        beamProfileType: "Downstand Beam",
-        beamWidthMm: 230,
-        downstandDepthMm: 400,
-        upstandHeightMm: 0,
-        slabThicknessMm: 0,
-        proppingHeightBand: "Not exceeding 1.5m",
-        customProppingHeightDescription: undefined, 
-    },
-  ]);
-  const [editingBeamId, setEditingBeamId] = useState<number | null>(null);
+// ---------- BEAM ----------
+const [beamTypes, setBeamTypes] = useState<BeamType[]>([]);
+const [editingBeamId, setEditingBeamId] = useState<number | null>(null);
+const { values: newBeam, update: updateBeam, reset: resetBeam } = useFormState({
+  name: "",
+  width: undefined,
+  depth: undefined,
+  reinfKg: undefined,
+  formworkFinish: "Smooth",
+  concreteClass: "25MPa/19mm",
+  beamProfileType: "Downstand Beam",
+  beamWidthMm: undefined,
+  downstandDepthMm: undefined,
+  upstandHeightMm: undefined,
+  slabThicknessMm: undefined,
+  proppingHeightBand: "Not exceeding 1.5m",
+  customProppingHeightDescription: undefined,
+});
+const [beamMeasurements, setBeamMeasurements] = useState<BeamMeasurement[]>([]);
+const { values: newBeamMeas, update: updateBeamMeas, reset: resetBeamMeas } = useFormState({
+  mark: "",
+  beamTypeId: 0,
+  length: undefined,
+});
 
-  const { values: newBeam, update: updateBeam, reset: resetBeam } = useFormState({
-      name: "", 
-      width: 230, 
-      depth: 400, 
-      reinfKg: 120, 
-      formworkFinish: "Smooth", 
-      concreteClass: "25MPa/19mm",
-      beamProfileType: "Downstand Beam",
-      beamWidthMm: 230,
-      downstandDepthMm: 400,
-      upstandHeightMm: 0,
-      slabThicknessMm: 0,
-      proppingHeightBand: "Not exceeding 1.5m",
-      customProppingHeightDescription: undefined,
-  });
-  const [beamMeasurements, setBeamMeasurements] = useState<BeamMeasurement[]>([]);
-  const { values: newBeamMeas, update: updateBeamMeas, reset: resetBeamMeas } = useFormState({
-    mark: "", beamTypeId: 0, length: 0,
-  });
+// ---------- SURFACE BED ----------
+const [surfaceBedTypes, setSurfaceBedTypes] = useState<SurfaceBedType[]>([]);
+const [editingSurfaceBedId, setEditingSurfaceBedId] = useState<number | null>(null);
+const { values: newSurfaceBed, update: updateSurfaceBed, reset: resetSurfaceBed } = useFormState({
+  name: "",
+  category: "Internal",
+  thickness: undefined,
+  concreteClass: "35MPa/19mm",
+  meshType: "Ref193",
+  dpm: true,
+  soilPoison: true,
+  layer1Material: "",
+  layer1Thickness: undefined,
+  layer2Material: "",
+  layer2Thickness: undefined,
+  layer3Material: "",
+  layer3Thickness: undefined,
+  powerfloat: true,
+  screedRequired: false,
+  screedThickness: undefined,
+  screedType: "Normal",
+  tileRequired: false,
+  tilePcSum: undefined,
+});
+const [surfaceBedMeasurements, setSurfaceBedMeasurements] = useState<SurfaceBedMeasurement[]>([]);
+const { values: newSurfaceBedMeas, update: updateSurfaceBedMeas, reset: resetSurfaceBedMeas } = useFormState({
+  mark: "",
+  surfaceBedTypeId: 0,
+  area: undefined,
+});
 
-  // ---------- SURFACE BED ----------
-  const [surfaceBedTypes, setSurfaceBedTypes] = useState<SurfaceBedType[]>([]);
-  const [editingSurfaceBedId, setEditingSurfaceBedId] = useState<number | null>(null);
-  const defaultSurfaceBed = {
-    name: "", category: "Internal", thickness: 170, concreteClass: "35MPa/19mm", meshType: "Ref193",
-    dpm: true, soilPoison: true, layer1Material: "", layer1Thickness: 0, layer2Material: "", layer2Thickness: 0,
-    layer3Material: "", layer3Thickness: 0, powerfloat: true, screedRequired: false, screedThickness: 40,
-    screedType: "Normal", tileRequired: false, tilePcSum: 0,
-  };
-  const { values: newSurfaceBed, update: updateSurfaceBed, reset: resetSurfaceBed } = useFormState(defaultSurfaceBed);
-  const [surfaceBedMeasurements, setSurfaceBedMeasurements] = useState<SurfaceBedMeasurement[]>([]);
-  const { values: newSurfaceBedMeas, update: updateSurfaceBedMeas, reset: resetSurfaceBedMeas } = useFormState({
-    mark: "", surfaceBedTypeId: 0, area: 0,
-  });
+// ---------- PAD FOOTING ----------
+const [padFootingTypes, setPadFootingTypes] = useState<PadFootingType[]>([]);
+const [editingPadFootingId, setEditingPadFootingId] = useState<number | null>(null);
+const { values: newPadFooting, update: updatePadFooting, reset: resetPadFooting } = useFormState({
+  name: "",
+  padLength: undefined,
+  padWidth: undefined,
+  padDepth: undefined,
+  excavationLength: undefined,
+  excavationWidth: undefined,
+  excavationDepth: undefined,
+  concreteClass: "30MPa/19mm",
+  reinfKg: undefined,
+  formworkRequired: true,
+  blindingRequired: true,
+  blindingThickness: undefined,
+  soilPoison: false,
+  backfill: true,
+});
+const [padFootingMeasurements, setPadFootingMeasurements] = useState<PadFootingMeasurement[]>([]);
+const { values: newPadFootingMeas, update: updatePadFootingMeas, reset: resetPadFootingMeas } = useFormState({
+  mark: "",
+  padFootingTypeId: 0,
+  quantity: undefined,
+});
 
-  // ---------- PAD FOOTING ----------
-  const [padFootingTypes, setPadFootingTypes] = useState<PadFootingType[]>([]);
-  const [editingPadFootingId, setEditingPadFootingId] = useState<number | null>(null);
-  const defaultPadFooting = {
-    name: "", padLength: 1200, padWidth: 1200, padDepth: 400, excavationLength: 1800, excavationWidth: 1800,
-    excavationDepth: 800, concreteClass: "30MPa/19mm", reinfKg: 120, formworkRequired: true, blindingRequired: true,
-    blindingThickness: 50, soilPoison: false, backfill: true,
-  };
-  const { values: newPadFooting, update: updatePadFooting, reset: resetPadFooting } = useFormState(defaultPadFooting);
-  const [padFootingMeasurements, setPadFootingMeasurements] = useState<PadFootingMeasurement[]>([]);
-  const { values: newPadFootingMeas, update: updatePadFootingMeas, reset: resetPadFootingMeas } = useFormState({
-    mark: "", padFootingTypeId: 0, quantity: 0,
-  });
+// ---------- GROUND BEAM ----------
+const [groundBeamTypes, setGroundBeamTypes] = useState<GroundBeamType[]>([]);
+const [editingGroundBeamId, setEditingGroundBeamId] = useState<number | null>(null);
+const { values: newGroundBeam, update: updateGroundBeam, reset: resetGroundBeam } = useFormState({
+  name: "",
+  trenchWidth: undefined,
+  trenchDepth: undefined,
+  beamWidth: undefined,
+  beamDepth: undefined,
+  concreteClass: "30MPa/19mm",
+  reinfKgPerM3: undefined,
+  formworkRequired: true,
+  blindingRequired: true,
+  blindingThickness: undefined,
+  backfillRequired: true,
+  dpcRequired: false,
+  soilPoisonRequired: false,
+});
+const [groundBeamMeasurements, setGroundBeamMeasurements] = useState<GroundBeamMeasurement[]>([]);
+const { values: newGroundBeamMeas, update: updateGroundBeamMeas, reset: resetGroundBeamMeas } = useFormState({
+  mark: "",
+  groundBeamTypeId: 0,
+  length: undefined,
+});
 
-  // ---------- GROUND BEAM ----------
-  const [groundBeamTypes, setGroundBeamTypes] = useState<GroundBeamType[]>([]);
-  const [editingGroundBeamId, setEditingGroundBeamId] = useState<number | null>(null);
-  const defaultGroundBeam = {
-    name: "", trenchWidth: 600, trenchDepth: 1000, beamWidth: 350, beamDepth: 600,
-    concreteClass: "30MPa/19mm", reinfKgPerM3: 150, formworkRequired: true,
-    blindingRequired: true, blindingThickness: 50, backfillRequired: true,
-    dpcRequired: false, soilPoisonRequired: false,
-  };
-  const { values: newGroundBeam, update: updateGroundBeam, reset: resetGroundBeam } = useFormState(defaultGroundBeam);
-  const [groundBeamMeasurements, setGroundBeamMeasurements] = useState<GroundBeamMeasurement[]>([]);
-  const { values: newGroundBeamMeas, update: updateGroundBeamMeas, reset: resetGroundBeamMeas } = useFormState({
-    mark: "", groundBeamTypeId: 0, length: 0,
-  });
+// ---------- COLUMN ----------
+const [columnTypes, setColumnTypes] = useState<ColumnType[]>([]);
+const [editingColumnId, setEditingColumnId] = useState<number | null>(null);
+const { values: newColumn, update: updateColumn, reset: resetColumn } = useFormState({
+  name: "",
+  width: undefined,
+  depth: undefined,
+  height: undefined,
+  concreteClass: "35MPa/19mm",
+  reinfKgPerM3: undefined,
+  formworkRequired: true,
+  formworkFinish: "Smooth",
+});
+const [columnMeasurements, setColumnMeasurements] = useState<ColumnMeasurement[]>([]);
+const { values: newColumnMeas, update: updateColumnMeas, reset: resetColumnMeas } = useFormState({
+  mark: "",
+  columnTypeId: 0,
+  quantity: undefined,
+});
 
-  // ---------- COLUMN ----------
-  const [columnTypes, setColumnTypes] = useState<ColumnType[]>([]);
-  const [editingColumnId, setEditingColumnId] = useState<number | null>(null);
-  const defaultColumn = {
-    name: "", width: 300, depth: 300, height: 3000, concreteClass: "35MPa/19mm",
-    reinfKgPerM3: 200, formworkRequired: true, formworkFinish: "Smooth",
-  };
-  const { values: newColumn, update: updateColumn, reset: resetColumn } = useFormState(defaultColumn);
-  const [columnMeasurements, setColumnMeasurements] = useState<ColumnMeasurement[]>([]);
-  const { values: newColumnMeas, update: updateColumnMeas, reset: resetColumnMeas } = useFormState({
-    mark: "", columnTypeId: 0, quantity: 0,
-  });
+// ---------- WALL ----------
+const [wallTypes, setWallTypes] = useState<WallType[]>([]);
+const [editingWallId, setEditingWallId] = useState<number | null>(null);
+const { values: newWall, update: updateWall, reset: resetWall } = useFormState({
+  name: "",
+  brickType: "Common",
+  thicknessType: "Single Skin (Half Brick)",
+  thicknessMm: undefined,
+  courseHeight: 75,              // <-- restored default
+  plasterBothSides: true,
+  plasterThickness: undefined,
+  paintRequired: true,
+  dpcRequired: true,
+  reinforcementRequired: false,
+  coursesPerReinforcement: 4,    // <-- restored default
+  reinforcementType: "Galvanised mesh",
+  tilesInternal: false,
+  tilesExternal: false,
+  tilePcSumInternal: undefined,
+  tilePcSumExternal: undefined,
+});
+const [wallMeasurements, setWallMeasurements] = useState<WallMeasurement[]>([]);
+const { values: newWallMeas, update: updateWallMeas, reset: resetWallMeas } = useFormState({
+  mark: "",
+  wallTypeId: 0,
+  length: undefined,
+  height: undefined,
+  area: undefined,
+});
 
-  // ---------- WALL ----------
-  const [wallTypes, setWallTypes] = useState<WallType[]>([]);
-  const [editingWallId, setEditingWallId] = useState<number | null>(null);
-  const defaultWall: Omit<WallType, "id"> = {
-    name: "", brickType: "Common", thicknessType: "Single Skin (Half Brick)", thicknessMm: 102,
-    courseHeight: 75, plasterBothSides: true, plasterThickness: 13, paintRequired: true, dpcRequired: true,
-    reinforcementRequired: false, coursesPerReinforcement: 4, reinforcementType: "Galvanised mesh",
-    tilesInternal: false, tilesExternal: false, tilePcSumInternal: 0, tilePcSumExternal: 0,
-  };
-  const { values: newWall, update: updateWall, reset: resetWall } = useFormState(defaultWall);
-  const [wallMeasurements, setWallMeasurements] = useState<WallMeasurement[]>([]);
-  const { values: newWallMeas, update: updateWallMeas, reset: resetWallMeas } = useFormState({
-    mark: "", wallTypeId: 0, length: 0, height: 0, area: 0,
-  });
+// ---------- SLAB ----------
+const [slabTypes, setSlabTypes] = useState<SlabType[]>([]);
+const [editingSlabId, setEditingSlabId] = useState<number | null>(null);
+const { values: newSlab, update: updateSlab, reset: resetSlab } = useFormState({
+  name: "",
+  thickness: undefined,
+  concreteClass: "30MPa/19mm",
+  reinfType: "Rebar",
+  reinfKgPerM3: undefined,
+  meshType: "A193",
+  formworkToEdges: true,
+  screedRequired: false,
+  screedThickness: undefined,
+  floorFinishPcSum: undefined,
+  floorFinishDescription: "Tiles",
+});
+const [slabMeasurements, setSlabMeasurements] = useState<SlabMeasurement[]>([]);
+const { values: newSlabMeas, update: updateSlabMeas, reset: resetSlabMeas } = useFormState({
+  mark: "",
+  slabTypeId: 0,
+  length: undefined,
+  width: undefined,
+  quantity: undefined,
+  area: undefined,
+});
 
-  // ---------- SLAB ----------
-  const [slabTypes, setSlabTypes] = useState<SlabType[]>([]);
-  const [editingSlabId, setEditingSlabId] = useState<number | null>(null);
-  const defaultSlab: Omit<SlabType, "id"> = {
-    name: "", thickness: 175, concreteClass: "30MPa/19mm", reinfType: "Rebar", reinfKgPerM3: 120,
-    meshType: "A193", formworkToEdges: true, screedRequired: false, screedThickness: 50,
-    floorFinishPcSum: 0, floorFinishDescription: "Tiles",
-  };
-  const { values: newSlab, update: updateSlab, reset: resetSlab } = useFormState(defaultSlab);
-  const [slabMeasurements, setSlabMeasurements] = useState<SlabMeasurement[]>([]);
-  const { values: newSlabMeas, update: updateSlabMeas, reset: resetSlabMeas } = useFormState({
-    mark: "", slabTypeId: 0, length: 0, width: 0, quantity: 1, area: 0,
-  });
-
-  // ---------- OPENINGS ----------
+// ---------- OPENINGS ----------
 const [openingTypes, setOpeningTypes] = useState<OpeningType[]>([]);
 const [editingOpeningId, setEditingOpeningId] = useState<number | null>(null);
-const defaultOpening: Omit<OpeningType, "id"> = {
+const { values: newOpening, update: updateOpening, reset: resetOpening } = useFormState({
   name: "",
   category: "Door",
-  widthMm: 900,
-  heightMm: 2100,
-  quantity: 1,
+  widthMm: undefined,
+  heightMm: undefined,
+  quantity: undefined,
   wallThicknessOption: "Half brick",
   wallThicknessMm: undefined,
   includeLintel: true,
   lintelBearingMm: 230,
   includeRevealPlaster: true,
-   includeIronmongery: true, // or false, but set a default
-  // Door defaults
   doorConfiguration: "Single",
   doorLeafType: "Hollow core timber door",
   doorFrameType: "Timber frame",
@@ -267,21 +321,18 @@ const defaultOpening: Omit<OpeningType, "id"> = {
   paintFrame: false,
   includeIronmongery: false,
   includeThreshold: false,
-  // Window defaults
   windowType: "Aluminium window",
   windowFrameType: "Aluminium",
   externalSill: false,
   internalSill: false,
-};
-const { values: newOpening, update: updateOpening, reset: resetOpening } = useFormState(defaultOpening);
+});
 const [openingMeasurements, setOpeningMeasurements] = useState<OpeningMeasurement[]>([]);
 const { values: newOpeningMeas, update: updateOpeningMeas, reset: resetOpeningMeas } = useFormState({
   mark: "",
   openingTypeId: 0,
-  quantity: 1,
+  quantity: undefined,
   linkedWallId: undefined,
 });
-
   // ============================================
   // MEASUREMENT EDITING STATES  <-- PUT IT HERE
   // ============================================
@@ -1304,18 +1355,41 @@ beamMeasurements.forEach((m) => {
       );
     }
 
-    // Bed joint reinforcement
-    if (wall.reinforcementRequired) {
-      const numberOfLayers = Math.floor((m.height * 1000) / (wall.courseHeight * wall.coursesPerReinforcement));
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "MASONRY",
-        SECTIONS.MASONRY_REINFORCEMENT,
-        `Bed joint reinforcement (${wall.reinforcementType})`,
-        "m",
-        m.length * numberOfLayers
-      );
+// Bed joint reinforcement (split by width)
+if (wall.reinforcementRequired && wall.courseHeight && wall.coursesPerReinforcement) {
+  // Determine wall thickness in mm
+  let wallThicknessMm = 0;
+  if (wall.thicknessType === "Single Skin (Half Brick)") {
+    wallThicknessMm = 102;
+  } else if (wall.thicknessType === "Double Skin (One Brick)") {
+    wallThicknessMm = 215;
+  } else if (wall.thicknessType === "Cavity Wall") {
+    wallThicknessMm = 275;
+  } else if (wall.thicknessType === "Triple Skin") {
+    wallThicknessMm = 327;
+  } else if (wall.thicknessMm) {
+    wallThicknessMm = wall.thicknessMm;
+  }
+
+  const numberOfLayers = Math.floor((m.height * 1000) / (wall.courseHeight * wall.coursesPerReinforcement));
+  const totalLength = m.length * numberOfLayers;
+
+  if (totalLength > 0) {
+    let reinforcementWidth = "75mm";
+    if (wallThicknessMm > 102) {
+      reinforcementWidth = "150mm";
     }
+    const description = `${reinforcementWidth} ${wall.reinforcementType} bed joint reinforcement`;
+    addBoqItemFromBillKey(
+      masterBoqItems,
+      "MASONRY",
+      SECTIONS.MASONRY_REINFORCEMENT,
+      description,
+      "m",
+      totalLength
+    );
+  }
+}
 
     // Tiles Internal
     if (wall.tilesInternal) {

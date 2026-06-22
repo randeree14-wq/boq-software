@@ -44,6 +44,13 @@ const BeamModule = ({
 }: BeamModuleProps) => {
   const saveBeamType = () => {
     if (!newBeam.name.trim()) return;
+    
+    // Validate required fields
+    if (!newBeam.beamWidthMm || newBeam.beamWidthMm <= 0) {
+      alert("Please enter a valid Beam Width");
+      return;
+    }
+    
     if (editingBeamId !== null) {
       setBeamTypes((prev) => prev.map((b) => (b.id === editingBeamId ? { ...b, ...newBeam } : b)));
       setEditingBeamId(null);
@@ -67,7 +74,7 @@ const BeamModule = ({
   };
 
   const saveBeamMeasurement = () => {
-    if (!newBeamMeas.mark.trim() || newBeamMeas.beamTypeId === 0 || newBeamMeas.length <= 0) return;
+    if (!newBeamMeas.mark.trim() || newBeamMeas.beamTypeId === 0 || !newBeamMeas.length || newBeamMeas.length <= 0) return;
     
     if (editingBeamMeasurementId !== null) {
       setBeamMeasurements((prev) =>
@@ -102,7 +109,6 @@ const BeamModule = ({
 
   const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles;
 
-  // Determine if formwork is applicable
   const profileType = newBeam.beamProfileType || "Downstand Beam";
   const showFormwork = profileType !== "Integrated Beam / No Separate Beam Formwork";
   const showPropping = showFormwork;
@@ -112,20 +118,25 @@ const BeamModule = ({
       <h1>Beam Module</h1>
       <h2>Beam Type Library</h2>
       <div style={formGridStyle}>
-        {/* Name */}
-        <input placeholder="Name" value={newBeam.name} onChange={(e) => updateBeam({ name: e.target.value })} />
+        <input 
+          placeholder="Beam type name (e.g., Main Roof Beam)" 
+          value={newBeam.name} 
+          onChange={(e) => updateBeam({ name: e.target.value })} 
+        />
         
-        {/* Reinforcement */}
-        <input type="number" placeholder="Reinf kg/m³" value={newBeam.reinfKg} onChange={(e) => updateBeam({ reinfKg: Number(e.target.value) })} />
+        <input 
+          type="number" 
+          placeholder="Reinforcement kg/m³ (e.g., 120)" 
+          value={newBeam.reinfKg || ''} 
+          onChange={(e) => updateBeam({ reinfKg: Number(e.target.value) })} 
+        />
         
-        {/* Concrete Class */}
         <select value={newBeam.concreteClass} onChange={(e) => updateBeam({ concreteClass: e.target.value })}>
           <option>25MPa/19mm</option>
           <option>30MPa/19mm</option>
           <option>35MPa/19mm</option>
         </select>
 
-        {/* Beam Profile Type */}
         <select 
           value={profileType} 
           onChange={(e) => updateBeam({ beamProfileType: e.target.value as BeamProfileType })}
@@ -135,53 +146,48 @@ const BeamModule = ({
           <option value="Perimeter Beam (Downstand Only)">Perimeter Beam (Downstand Only)</option>
           <option value="Perimeter Beam (Downstand + Upstand)">Perimeter Beam (Downstand + Upstand)</option>
           <option value="Combined Downstand / Inverted Beam">Combined Downstand / Inverted Beam</option>
-          <option value="Integrated Beam / No Separate Beam Formwork">Integrated Beam / No Separate Beam Formwork</option>
+          <option value="Integrated Beam / No Separate Beam Formwork">Integrated Beam (no separate formwork)</option>
         </select>
 
-        {/* Beam Width */}
         <input 
           type="number" 
-          placeholder="Beam Width (mm)" 
-          value={newBeam.beamWidthMm || 230} 
+          placeholder="Beam width (mm) e.g., 230" 
+          value={newBeam.beamWidthMm || ''} 
           onChange={(e) => updateBeam({ beamWidthMm: Number(e.target.value) })} 
         />
 
-        {/* Downstand Depth (conditional) */}
         {(profileType === "Downstand Beam" || 
           profileType === "Perimeter Beam (Downstand Only)" || 
           profileType === "Perimeter Beam (Downstand + Upstand)" ||
           profileType === "Combined Downstand / Inverted Beam") && (
           <input 
             type="number" 
-            placeholder="Downstand Depth (mm)" 
-            value={newBeam.downstandDepthMm || 400} 
+            placeholder="Downstand depth (mm) e.g., 400" 
+            value={newBeam.downstandDepthMm || ''} 
             onChange={(e) => updateBeam({ downstandDepthMm: Number(e.target.value) })} 
           />
         )}
 
-        {/* Upstand Height (conditional) */}
         {(profileType === "Upstand Beam" || 
           profileType === "Perimeter Beam (Downstand + Upstand)" ||
           profileType === "Combined Downstand / Inverted Beam") && (
           <input 
             type="number" 
-            placeholder="Upstand Height (mm)" 
-            value={newBeam.upstandHeightMm || 0} 
+            placeholder="Upstand height (mm) e.g., 300" 
+            value={newBeam.upstandHeightMm || ''} 
             onChange={(e) => updateBeam({ upstandHeightMm: Number(e.target.value) })} 
           />
         )}
 
-        {/* Slab Thickness (only for Combined) */}
         {profileType === "Combined Downstand / Inverted Beam" && (
           <input 
             type="number" 
-            placeholder="Slab Thickness (mm)" 
-            value={newBeam.slabThicknessMm || 150} 
+            placeholder="Slab thickness (mm) e.g., 150" 
+            value={newBeam.slabThicknessMm || ''} 
             onChange={(e) => updateBeam({ slabThicknessMm: Number(e.target.value) })} 
           />
         )}
 
-        {/* Formwork Finish */}
         {showFormwork && (
           <select value={newBeam.formworkFinish || "Smooth"} onChange={(e) => updateBeam({ formworkFinish: e.target.value })}>
             <option>Smooth</option>
@@ -190,7 +196,6 @@ const BeamModule = ({
           </select>
         )}
 
-        {/* Propping Height (only if formwork applies) */}
         {showPropping && (
           <>
             <select 
@@ -206,7 +211,7 @@ const BeamModule = ({
             
             {newBeam.proppingHeightBand === "Custom" && (
               <input 
-                placeholder="Custom propping height description" 
+                placeholder="Custom propping height (e.g., 2.8m high)" 
                 value={newBeam.customProppingHeightDescription || ""} 
                 onChange={(e) => updateBeam({ customProppingHeightDescription: e.target.value })}
               />
@@ -217,7 +222,6 @@ const BeamModule = ({
         <button onClick={saveBeamType}>{editingBeamId !== null ? "Update" : "Save"}</button>
       </div>
 
-      {/* Type Table */}
       <table style={tableStyle} border={1} cellPadding={8}>
         <thead>
           <tr>
@@ -240,8 +244,8 @@ const BeamModule = ({
               <td style={tdStyle}>{beam.name}</td>
               <td style={tdStyle}>{beam.reinfKg}</td>
               <td style={tdStyle}>{beam.beamProfileType || "Downstand Beam"}</td>
-              <td style={tdStyle}>{beam.beamWidthMm || beam.width || 230}mm</td>
-              <td style={tdStyle}>{beam.downstandDepthMm || beam.depth || 400}mm</td>
+              <td style={tdStyle}>{beam.beamWidthMm || "-"}mm</td>
+              <td style={tdStyle}>{beam.downstandDepthMm || "-"}mm</td>
               <td style={tdStyle}>{beam.upstandHeightMm || "-"}mm</td>
               <td style={tdStyle}>{beam.slabThicknessMm || "-"}mm</td>
               <td style={tdStyle}>{beam.formworkFinish}</td>
@@ -259,12 +263,21 @@ const BeamModule = ({
       <hr />
       <h2>Beam Measurements</h2>
       <div style={formGridStyle}>
-        <input placeholder="Mark" value={newBeamMeas.mark} onChange={(e) => updateBeamMeas({ mark: e.target.value })} />
+        <input 
+          placeholder="Mark (e.g., B1, B2)" 
+          value={newBeamMeas.mark} 
+          onChange={(e) => updateBeamMeas({ mark: e.target.value })} 
+        />
         <select value={newBeamMeas.beamTypeId} onChange={(e) => updateBeamMeas({ beamTypeId: Number(e.target.value) })}>
           <option value={0}>Select Type</option>
           {beamTypes.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
         </select>
-        <input type="number" placeholder="Length (m)" value={newBeamMeas.length} onChange={(e) => updateBeamMeas({ length: Number(e.target.value) })} />
+        <input 
+          type="number" 
+          placeholder="Length (m) e.g., 5.5" 
+          value={newBeamMeas.length || ''} 
+          onChange={(e) => updateBeamMeas({ length: Number(e.target.value) })} 
+        />
         <button onClick={saveBeamMeasurement}>
           {editingBeamMeasurementId !== null ? "Update Measurement" : "Add Measurement"}
         </button>

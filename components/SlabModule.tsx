@@ -106,7 +106,7 @@ const SlabModule = ({
       <h2>Slab Type Library</h2>
       <div style={formGridStyle}>
         <input placeholder="Name" value={newSlab.name} onChange={(e) => updateSlab({ name: e.target.value })} />
-        <input type="number" placeholder="Thickness mm" value={newSlab.thickness} onChange={(e) => updateSlab({ thickness: Number(e.target.value) })} />
+        <input type="number" placeholder="Thickness (mm) e.g., 175" value={newSlab.thickness} onChange={(e) => updateSlab({ thickness: Number(e.target.value) })} />
         <select value={newSlab.concreteClass} onChange={(e) => updateSlab({ concreteClass: e.target.value })}>
           <option>25MPa/19mm</option><option>30MPa/19mm</option><option>35MPa/19mm</option>
         </select>
@@ -114,7 +114,7 @@ const SlabModule = ({
           <option>Rebar</option><option>Mesh</option>
         </select>
         {newSlab.reinfType === "Rebar" && (
-          <input type="number" placeholder="Reinf kg/m³" value={newSlab.reinfKgPerM3} onChange={(e) => updateSlab({ reinfKgPerM3: Number(e.target.value) })} />
+          <input type="number" placeholder="Reinforcement (kg/m³) e.g., 120" value={newSlab.reinfKgPerM3} onChange={(e) => updateSlab({ reinfKgPerM3: Number(e.target.value) })} />
         )}
         {newSlab.reinfType === "Mesh" && (
           <select value={newSlab.meshType} onChange={(e) => updateSlab({ meshType: e.target.value })}>
@@ -124,9 +124,9 @@ const SlabModule = ({
         <label><input type="checkbox" checked={newSlab.formworkToEdges} onChange={(e) => updateSlab({ formworkToEdges: e.target.checked })} /> Formwork to edges</label>
         <label><input type="checkbox" checked={newSlab.screedRequired} onChange={(e) => updateSlab({ screedRequired: e.target.checked })} /> Screed</label>
         {newSlab.screedRequired && (
-          <input type="number" placeholder="Screed thickness mm" value={newSlab.screedThickness} onChange={(e) => updateSlab({ screedThickness: Number(e.target.value) })} />
+          <input type="number" placeholder="Screed thickness (mm) e.g., 50" value={newSlab.screedThickness} onChange={(e) => updateSlab({ screedThickness: Number(e.target.value) })} />
         )}
-        <input type="number" placeholder="Floor finish PC sum (R/m²)" value={newSlab.floorFinishPcSum} onChange={(e) => updateSlab({ floorFinishPcSum: Number(e.target.value) })} />
+        <input type="number" placeholder="Floor finish PC sum (R/m²) e.g., 450" value={newSlab.floorFinishPcSum} onChange={(e) => updateSlab({ floorFinishPcSum: Number(e.target.value) })} />
         <input placeholder="Finish description" value={newSlab.floorFinishDescription} onChange={(e) => updateSlab({ floorFinishDescription: e.target.value })} />
         <button onClick={saveSlabType}>{editingSlabId !== null ? "Update" : "Save"}</button>
       </div>
