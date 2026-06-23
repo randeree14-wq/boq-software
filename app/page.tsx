@@ -37,7 +37,7 @@ import {
 } from "@/lib/projectStorage";
 import { SECTIONS } from "@/lib/boqStructure";
 import BoqSummary from "@/components/BoqSummary";
-
+import { exportBOQToExcel } from "@/lib/exportHelpers";
 // Import all module components
 import BeamModule from "@/components/BeamModule";
 import SurfaceBedModule from "@/components/SurfaceBedModule";
@@ -181,6 +181,8 @@ export default function Home() {
     blindingThickness: undefined,
     soilPoison: false,
     backfill: true,
+    workingSpaceRequired: false,
+    riskOfCollapseRequired: false,
   });
   const [padFootingMeasurements, setPadFootingMeasurements] = useState<PadFootingMeasurement[]>([]);
   const { values: newPadFootingMeas, update: updatePadFootingMeas, reset: resetPadFootingMeas } = useFormState({
@@ -206,6 +208,8 @@ export default function Home() {
     backfillRequired: true,
     dpcRequired: false,
     soilPoisonRequired: false,
+    workingSpaceRequired: false,
+    riskOfCollapseRequired: false,
   });
   const [groundBeamMeasurements, setGroundBeamMeasurements] = useState<GroundBeamMeasurement[]>([]);
   const { values: newGroundBeamMeas, update: updateGroundBeamMeas, reset: resetGroundBeamMeas } = useFormState({
@@ -425,6 +429,16 @@ export default function Home() {
       setOpeningMeasurements([]);
     }
   };
+
+  // Handle Excel export
+const handleExportExcel = () => {
+  if (Object.keys(masterBoqItems).length === 0) {
+    alert("No BOQ items to export. Add measurements first.");
+    return;
+  }
+  // You can replace "My Project" with a dynamic project name later
+  exportBOQToExcel(masterBoqItems, "My Project");
+};
 
   // ============================================
   // HANDLERS
@@ -1181,248 +1195,335 @@ export default function Home() {
     }
   });
 
-  // ---------- PAD FOOTINGS ----------
-  padFootingMeasurements.forEach((m) => {
-    const pf = padFootingTypes.find((p) => p.id === m.padFootingTypeId);
-    if (!pf) return;
+// ---------- PAD FOOTINGS ----------
+padFootingMeasurements.forEach((m) => {
+  const pf = padFootingTypes.find((p) => p.id === m.padFootingTypeId);
+  if (!pf) return;
 
-    const qty = m.quantity;
-    const padConcrete = (pf.padLength / 1000) * (pf.padWidth / 1000) * (pf.padDepth / 1000) * qty;
-    const excavationVol = (pf.excavationLength / 1000) * (pf.excavationWidth / 1000) * (pf.excavationDepth / 1000) * qty;
-    const totalReinf = (padConcrete * pf.reinfKg) / 1000;
-    const highTensile = totalReinf * 0.9;
-    const mildSteel = totalReinf * 0.1;
-    const strength = getConcreteStrength(pf.concreteClass);
-    const baseContribution = (q: number) => ({
-      module: "Pad Footings",
-      measurementId: m.id,
-      mark: m.mark,
-      qty: q,
-    });
+  const qty = m.quantity;
+  const padConcrete = (pf.padLength / 1000) * (pf.padWidth / 1000) * (pf.padDepth / 1000) * qty;
+  const excavationVol = (pf.excavationLength / 1000) * (pf.excavationWidth / 1000) * (pf.excavationDepth / 1000) * qty;
+  const totalReinf = (padConcrete * pf.reinfKg) / 1000;
+  const highTensile = totalReinf * 0.9;
+  const mildSteel = totalReinf * 0.1;
+  const strength = getConcreteStrength(pf.concreteClass);
+  const baseContribution = (q: number) => ({
+    module: "Pad Footings",
+    measurementId: m.id,
+    mark: m.mark,
+    qty: q,
+  });
 
-    addBoqItemFromBillKey(
-      masterBoqItems,
-      "EARTHWORKS",
-      SECTIONS.EXCAVATION,
-      "Excavation for pad footings",
-      "m³",
-      excavationVol,
-      baseContribution(excavationVol)
-    );
+  // Excavation
+  addBoqItemFromBillKey(
+    masterBoqItems,
+    "EARTHWORKS",
+    SECTIONS.EXCAVATION,
+    "Excavation for pad footings",
+    "m³",
+    excavationVol,
+    baseContribution(excavationVol)
+  );
 
+  // Concrete
+  addBoqItemFromBillKey(
+    masterBoqItems,
+    "CONCRETE",
+    `Concrete (${strength})`,
+    `${pf.concreteClass} concrete in pad footings`,
+    "m³",
+    padConcrete,
+    baseContribution(padConcrete)
+  );
+
+  // Reinforcement
+  if (highTensile > 0) {
     addBoqItemFromBillKey(
       masterBoqItems,
       "CONCRETE",
-      `Concrete (${strength})`,
-      `${pf.concreteClass} concrete in pad footings`,
-      "m³",
-      padConcrete,
-      baseContribution(padConcrete)
+      SECTIONS.REINFORCEMENT,
+      "High tensile reinforcement",
+      "t",
+      highTensile,
+      baseContribution(highTensile)
     );
+  }
+  if (mildSteel > 0) {
+    addBoqItemFromBillKey(
+      masterBoqItems,
+      "CONCRETE",
+      SECTIONS.REINFORCEMENT,
+      "Mild steel reinforcement",
+      "t",
+      mildSteel,
+      baseContribution(mildSteel)
+    );
+  }
 
-    if (highTensile > 0) {
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "CONCRETE",
-        SECTIONS.REINFORCEMENT,
-        "High tensile reinforcement",
-        "t",
-        highTensile,
-        baseContribution(highTensile)
-      );
-    }
-    if (mildSteel > 0) {
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "CONCRETE",
-        SECTIONS.REINFORCEMENT,
-        "Mild steel reinforcement",
-        "t",
-        mildSteel,
-        baseContribution(mildSteel)
-      );
-    }
+  // Formwork
+  if (pf.formworkRequired) {
+    const formwork = 2 * ((pf.padLength / 1000) + (pf.padWidth / 1000)) * (pf.padDepth / 1000) * qty;
+    addBoqItemFromBillKey(
+      masterBoqItems,
+      "CONCRETE",
+      SECTIONS.FORMWORK,
+      "Formwork to sides of pad footings",
+      "m²",
+      formwork,
+      baseContribution(formwork)
+    );
+  }
 
-    if (pf.formworkRequired) {
-      const formwork = 2 * ((pf.padLength / 1000) + (pf.padWidth / 1000)) * (pf.padDepth / 1000) * qty;
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "CONCRETE",
-        SECTIONS.FORMWORK,
-        "Formwork to sides of pad footings",
-        "m²",
-        formwork,
-        baseContribution(formwork)
-      );
-    }
+  // Blinding
+  if (pf.blindingRequired) {
+    const blinding = (pf.excavationLength / 1000) * (pf.excavationWidth / 1000) * (pf.blindingThickness / 1000) * qty;
+    addBoqItemFromBillKey(
+      masterBoqItems,
+      "EARTHWORKS",
+      SECTIONS.BLINDING,
+      `${pf.blindingThickness}mm blinding under pad footings`,
+      "m³",
+      blinding,
+      baseContribution(blinding)
+    );
+  }
 
-    if (pf.blindingRequired) {
-      const blinding = (pf.excavationLength / 1000) * (pf.excavationWidth / 1000) * (pf.blindingThickness / 1000) * qty;
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "EARTHWORKS",
-        SECTIONS.BLINDING,
-        `${pf.blindingThickness}mm blinding under pad footings`,
-        "m³",
-        blinding,
-        baseContribution(blinding)
-      );
-    }
+  // Soil Poisoning
+  if (pf.soilPoison) {
+    const area = (pf.excavationLength / 1000) * (pf.excavationWidth / 1000) * qty;
+    addBoqItemFromBillKey(
+      masterBoqItems,
+      "EARTHWORKS",
+      SECTIONS.SOIL_POISONING,
+      "Soil poisoning to pad footings",
+      "m²",
+      area,
+      baseContribution(area)
+    );
+  }
 
-    if (pf.soilPoison) {
-      const area = (pf.excavationLength / 1000) * (pf.excavationWidth / 1000) * qty;
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "EARTHWORKS",
-        SECTIONS.SOIL_POISONING,
-        "Soil poisoning to pad footings",
-        "m²",
-        area,
-        baseContribution(area)
-      );
-    }
-
-    if (pf.backfill) {
-      const backfill = excavationVol - padConcrete;
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "EARTHWORKS",
-        SECTIONS.BACKFILLING,
-        "Backfill to pad footings",
-        "m³",
-        backfill,
-        baseContribution(backfill)
-      );
-    }
-  });
+  
+  // Backfill
+  if (pf.backfill) {
+    const backfill = excavationVol - padConcrete;
+    addBoqItemFromBillKey(
+      masterBoqItems,
+      "EARTHWORKS",
+      SECTIONS.BACKFILLING,
+      "Backfill to pad footings",
+      "m³",
+      backfill,
+      baseContribution(backfill)
+    );
+  }
+});
 
   // ---------- GROUND BEAMS ----------
-  groundBeamMeasurements.forEach((m) => {
-    const gb = groundBeamTypes.find((g) => g.id === m.groundBeamTypeId);
-    if (!gb) return;
+groundBeamMeasurements.forEach((m) => {
+  const gb = groundBeamTypes.find((g) => g.id === m.groundBeamTypeId);
+  if (!gb) return;
 
-    const length = m.length;
-    const trenchVol = (gb.trenchWidth / 1000) * (gb.trenchDepth / 1000) * length;
-    const concreteVol = (gb.beamWidth / 1000) * (gb.beamDepth / 1000) * length;
-    const totalReinf = (concreteVol * gb.reinfKgPerM3) / 1000;
-    const highTensile = totalReinf * 0.9;
-    const mildSteel = totalReinf * 0.1;
-    const strength = getConcreteStrength(gb.concreteClass);
-    const baseContribution = (q: number) => ({
-      module: "Ground Beams",
-      measurementId: m.id,
-      mark: m.mark,
-      qty: q,
-    });
+  const length = m.length;
+  const trenchVol = (gb.trenchWidth / 1000) * (gb.trenchDepth / 1000) * length;
+  const concreteVol = (gb.beamWidth / 1000) * (gb.beamDepth / 1000) * length;
+  const totalReinf = (concreteVol * gb.reinfKgPerM3) / 1000;
+  const highTensile = totalReinf * 0.9;
+  const mildSteel = totalReinf * 0.1;
+  const strength = getConcreteStrength(gb.concreteClass);
+  const baseContribution = (q: number) => ({
+    module: "Ground Beams",
+    measurementId: m.id,
+    mark: m.mark,
+    qty: q,
+  });
 
-    addBoqItemFromBillKey(
-      masterBoqItems,
-      "EARTHWORKS",
-      SECTIONS.EXCAVATION,
-      "Excavation for ground beams",
-      "m³",
-      trenchVol,
-      baseContribution(trenchVol)
-    );
+  // Excavation
+  addBoqItemFromBillKey(
+    masterBoqItems,
+    "EARTHWORKS",
+    SECTIONS.EXCAVATION,
+    "Excavation for ground beams",
+    "m³",
+    trenchVol,
+    baseContribution(trenchVol)
+  );
 
+  // Concrete
+  addBoqItemFromBillKey(
+    masterBoqItems,
+    "CONCRETE",
+    `Concrete (${strength})`,
+    `${gb.concreteClass} concrete in ground beams`,
+    "m³",
+    concreteVol,
+    baseContribution(concreteVol)
+  );
+
+  // Reinforcement
+  if (highTensile > 0) {
     addBoqItemFromBillKey(
       masterBoqItems,
       "CONCRETE",
-      `Concrete (${strength})`,
-      `${gb.concreteClass} concrete in ground beams`,
-      "m³",
-      concreteVol,
-      baseContribution(concreteVol)
+      SECTIONS.REINFORCEMENT,
+      "High tensile reinforcement",
+      "t",
+      highTensile,
+      baseContribution(highTensile)
     );
+  }
+  if (mildSteel > 0) {
+    addBoqItemFromBillKey(
+      masterBoqItems,
+      "CONCRETE",
+      SECTIONS.REINFORCEMENT,
+      "Mild steel reinforcement",
+      "t",
+      mildSteel,
+      baseContribution(mildSteel)
+    );
+  }
 
-    if (highTensile > 0) {
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "CONCRETE",
-        SECTIONS.REINFORCEMENT,
-        "High tensile reinforcement",
-        "t",
-        highTensile,
-        baseContribution(highTensile)
-      );
-    }
-    if (mildSteel > 0) {
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "CONCRETE",
-        SECTIONS.REINFORCEMENT,
-        "Mild steel reinforcement",
-        "t",
-        mildSteel,
-        baseContribution(mildSteel)
-      );
-    }
+  // Formwork
+  if (gb.formworkRequired) {
+    const formwork = (gb.beamDepth / 1000) * length * 2;
+    addBoqItemFromBillKey(
+      masterBoqItems,
+      "CONCRETE",
+      SECTIONS.FORMWORK,
+      "Formwork to sides of ground beams",
+      "m²",
+      formwork,
+      baseContribution(formwork)
+    );
+  }
 
-    if (gb.formworkRequired) {
-      const formwork = (gb.beamDepth / 1000) * length * 2;
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "CONCRETE",
-        SECTIONS.FORMWORK,
-        "Formwork to sides of ground beams",
-        "m²",
-        formwork,
-        baseContribution(formwork)
-      );
-    }
+  // Blinding
+  if (gb.blindingRequired) {
+    const blinding = (gb.beamWidth / 1000) * (gb.blindingThickness / 1000) * length;
+    addBoqItemFromBillKey(
+      masterBoqItems,
+      "EARTHWORKS",
+      SECTIONS.BLINDING,
+      `${gb.blindingThickness}mm blinding under ground beams`,
+      "m³",
+      blinding,
+      baseContribution(blinding)
+    );
+  }
 
-    if (gb.blindingRequired) {
-      const blinding = (gb.beamWidth / 1000) * (gb.blindingThickness / 1000) * length;
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "EARTHWORKS",
-        SECTIONS.BLINDING,
-        `${gb.blindingThickness}mm blinding under ground beams`,
-        "m³",
-        blinding,
-        baseContribution(blinding)
-      );
-    }
+  // Backfill
+  if (gb.backfillRequired) {
+    const backfill = trenchVol - concreteVol;
+    addBoqItemFromBillKey(
+      masterBoqItems,
+      "EARTHWORKS",
+      SECTIONS.BACKFILLING,
+      "Backfill to ground beams",
+      "m³",
+      backfill,
+      baseContribution(backfill)
+    );
+  }
 
-    if (gb.backfillRequired) {
-      const backfill = trenchVol - concreteVol;
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "EARTHWORKS",
-        SECTIONS.BACKFILLING,
-        "Backfill to ground beams",
-        "m³",
-        backfill,
-        baseContribution(backfill)
-      );
-    }
+  // DPC
+  if (gb.dpcRequired) {
+    const dpcArea = (gb.beamWidth / 1000) * length;
+    addBoqItemFromBillKey(
+      masterBoqItems,
+      "MASONRY",
+      SECTIONS.DAMP_PROOF_COURSES,
+      "DPC to ground beams",
+      "m²",
+      dpcArea,
+      baseContribution(dpcArea)
+    );
+  }
 
-    if (gb.dpcRequired) {
-      const dpcArea = (gb.beamWidth / 1000) * length;
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "MASONRY",
-        SECTIONS.DAMP_PROOF_COURSES,
-        "DPC to ground beams",
-        "m²",
-        dpcArea,
-        baseContribution(dpcArea)
-      );
-    }
+  // Soil Poisoning
+  if (gb.soilPoisonRequired) {
+    const area = (gb.trenchWidth / 1000) * length;
+    addBoqItemFromBillKey(
+      masterBoqItems,
+      "EARTHWORKS",
+      SECTIONS.SOIL_POISONING,
+      "Soil poisoning under ground beams",
+      "m²",
+      area,
+      baseContribution(area)
+    );
+  }
 
-    if (gb.soilPoisonRequired) {
-      const area = (gb.trenchWidth / 1000) * length;
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "EARTHWORKS",
-        SECTIONS.SOIL_POISONING,
-        "Soil poisoning under ground beams",
-        "m²",
-        area,
-        baseContribution(area)
-      );
-    }
-  });
+// ============================================
+// WORKING SPACE (only if formwork is required)
+// ============================================
+if (gb.formworkRequired && gb.workingSpaceRequired) {
+  const trenchWidthM = gb.trenchWidth / 1000;
+  const depthM = gb.trenchDepth / 1000;
+  const perimeter = 2 * (trenchWidthM + depthM); // approximate for trench
+  let workingSpaceArea = 0;
+  let depthBandDesc = "";
+
+  if (depthM <= 0.5) {
+    // No working space for depths ≤ 0.5m
+    workingSpaceArea = 0;
+  } else if (depthM > 0.5 && depthM <= 1.5) {
+    workingSpaceArea = perimeter * length; // <-- removed * qty
+    depthBandDesc = "Exceeding 0.5m and not exceeding 1.5m deep";
+  } else if (depthM > 1.5 && depthM <= 3.0) {
+    workingSpaceArea = perimeter * length;
+    depthBandDesc = "Exceeding 1.5m and not exceeding 3.0m deep";
+  } else if (depthM > 3.0 && depthM <= 4.5) {
+    workingSpaceArea = perimeter * length;
+    depthBandDesc = "Exceeding 3.0m and not exceeding 4.5m deep";
+  } else if (depthM > 4.5 && depthM <= 6.0) {
+    workingSpaceArea = perimeter * length;
+    depthBandDesc = "Exceeding 4.5m and not exceeding 6.0m deep";
+  } else {
+    workingSpaceArea = perimeter * length;
+    depthBandDesc = "Exceeding 6.0m deep";
+  }
+
+  if (workingSpaceArea > 0) {
+    const desc = `Back excavation of vertical sides of excavations in earth for working space including backfilling compacted to 95% Mod AASHTO density: ${depthBandDesc} for placing and removing formwork to beams, bases etc, where excavated face abuts concrete face.`;
+addBoqItemFromBillKey(
+  masterBoqItems,
+  "EARTHWORKS",
+  "Working Space",   // <-- Use string literal
+  desc,
+  "m²",
+  workingSpaceArea,
+  baseContribution(workingSpaceArea)
+);
+  }
+}
+
+// ============================================
+// RISK OF COLLAPSE (applies regardless of formwork)
+// ============================================
+if (gb.riskOfCollapseRequired) {
+  const trenchWidthM = gb.trenchWidth / 1000;
+  const depthM = gb.trenchDepth / 1000;
+  const perimeter = 2 * (trenchWidthM + depthM);
+  const collapseArea = perimeter * length; // <-- removed * qty
+  let bandDesc = "";
+  if (depthM <= 1.5) {
+    bandDesc = "not exceeding 1.5m deep";
+  } else {
+    bandDesc = "exceeding 1.5m deep";
+  }
+  const desc = `Sides of trench and hole excavations ${bandDesc}`;
+addBoqItemFromBillKey(
+  masterBoqItems,
+  "EARTHWORKS",
+  "Risk of Collapse",   // <-- Use string literal
+  desc,
+  "m²",
+  collapseArea,
+  baseContribution(collapseArea)
+);
+
+}
+});
 
   // ---------- COLUMNS ----------
   columnMeasurements.forEach((m) => {
@@ -1826,10 +1927,27 @@ wallMeasurements.forEach((m) => {
   // ============================================
   // RENDER
   // ============================================
+  
   return (
-    <main style={pageStyle}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-        <h1>BOQ Measurement Software</h1>
+  <main style={pageStyle}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+      <h1>BOQ Measurement Software</h1>
+      <div style={{ display: "flex", gap: "10px" }}>
+        <button
+          onClick={handleExportExcel}
+          style={{
+            padding: "10px 20px",
+            backgroundColor: "#28a745",
+            color: "white",
+            border: "none",
+            borderRadius: "6px",
+            cursor: "pointer",
+            fontSize: "14px",
+            fontWeight: "bold",
+          }}
+        >
+          Export to Excel
+        </button>
         <button
           onClick={handleClearProject}
           style={{
@@ -1846,154 +1964,155 @@ wallMeasurements.forEach((m) => {
           Clear Saved Project
         </button>
       </div>
+    </div>
 
-      <h2>Generated BOQ Summary</h2>
-      <BoqSummary boqItems={masterBoqItems} styles={styles} />
+    <h2>Generated BOQ Summary</h2>
+    <BoqSummary boqItems={masterBoqItems} styles={styles} />
 
-      {/* All module components – render them here */}
-      <BeamModule
-        beamTypes={beamTypes}
-        setBeamTypes={setBeamTypes}
-        editingBeamId={editingBeamId}
-        setEditingBeamId={setEditingBeamId}
-        newBeam={newBeam}
-        updateBeam={updateBeam}
-        resetBeam={resetBeam}
-        beamMeasurements={beamMeasurements}
-        setBeamMeasurements={setBeamMeasurements}
-        newBeamMeas={newBeamMeas}
-        updateBeamMeas={updateBeamMeas}
-        resetBeamMeas={resetBeamMeas}
-        editingBeamMeasurementId={editingBeamMeasurementId}
-        setEditingBeamMeasurementId={setEditingBeamMeasurementId}
-        styles={styles}
-      />
+    {/* All module components – render them here */}
+    <BeamModule
+      beamTypes={beamTypes}
+      setBeamTypes={setBeamTypes}
+      editingBeamId={editingBeamId}
+      setEditingBeamId={setEditingBeamId}
+      newBeam={newBeam}
+      updateBeam={updateBeam}
+      resetBeam={resetBeam}
+      beamMeasurements={beamMeasurements}
+      setBeamMeasurements={setBeamMeasurements}
+      newBeamMeas={newBeamMeas}
+      updateBeamMeas={updateBeamMeas}
+      resetBeamMeas={resetBeamMeas}
+      editingBeamMeasurementId={editingBeamMeasurementId}
+      setEditingBeamMeasurementId={setEditingBeamMeasurementId}
+      styles={styles}
+    />
 
-      <SurfaceBedModule
-        surfaceBedTypes={surfaceBedTypes}
-        setSurfaceBedTypes={setSurfaceBedTypes}
-        editingSurfaceBedId={editingSurfaceBedId}
-        setEditingSurfaceBedId={setEditingSurfaceBedId}
-        newSurfaceBed={newSurfaceBed}
-        updateSurfaceBed={updateSurfaceBed}
-        resetSurfaceBed={resetSurfaceBed}
-        surfaceBedMeasurements={surfaceBedMeasurements}
-        setSurfaceBedMeasurements={setSurfaceBedMeasurements}
-        newSurfaceBedMeas={newSurfaceBedMeas}
-        updateSurfaceBedMeas={updateSurfaceBedMeas}
-        resetSurfaceBedMeas={resetSurfaceBedMeas}
-        editingSurfaceBedMeasurementId={editingSurfaceBedMeasurementId}
-        setEditingSurfaceBedMeasurementId={setEditingSurfaceBedMeasurementId}
-        styles={styles}
-      />
+    <SurfaceBedModule
+      surfaceBedTypes={surfaceBedTypes}
+      setSurfaceBedTypes={setSurfaceBedTypes}
+      editingSurfaceBedId={editingSurfaceBedId}
+      setEditingSurfaceBedId={setEditingSurfaceBedId}
+      newSurfaceBed={newSurfaceBed}
+      updateSurfaceBed={updateSurfaceBed}
+      resetSurfaceBed={resetSurfaceBed}
+      surfaceBedMeasurements={surfaceBedMeasurements}
+      setSurfaceBedMeasurements={setSurfaceBedMeasurements}
+      newSurfaceBedMeas={newSurfaceBedMeas}
+      updateSurfaceBedMeas={updateSurfaceBedMeas}
+      resetSurfaceBedMeas={resetSurfaceBedMeas}
+      editingSurfaceBedMeasurementId={editingSurfaceBedMeasurementId}
+      setEditingSurfaceBedMeasurementId={setEditingSurfaceBedMeasurementId}
+      styles={styles}
+    />
 
-      <PadFootingModule
-        padFootingTypes={padFootingTypes}
-        setPadFootingTypes={setPadFootingTypes}
-        editingPadFootingId={editingPadFootingId}
-        setEditingPadFootingId={setEditingPadFootingId}
-        newPadFooting={newPadFooting}
-        updatePadFooting={updatePadFooting}
-        resetPadFooting={resetPadFooting}
-        padFootingMeasurements={padFootingMeasurements}
-        setPadFootingMeasurements={setPadFootingMeasurements}
-        newPadFootingMeas={newPadFootingMeas}
-        updatePadFootingMeas={updatePadFootingMeas}
-        resetPadFootingMeas={resetPadFootingMeas}
-        editingPadFootingMeasurementId={editingPadFootingMeasurementId}
-        setEditingPadFootingMeasurementId={setEditingPadFootingMeasurementId}
-        styles={styles}
-      />
+    <PadFootingModule
+      padFootingTypes={padFootingTypes}
+      setPadFootingTypes={setPadFootingTypes}
+      editingPadFootingId={editingPadFootingId}
+      setEditingPadFootingId={setEditingPadFootingId}
+      newPadFooting={newPadFooting}
+      updatePadFooting={updatePadFooting}
+      resetPadFooting={resetPadFooting}
+      padFootingMeasurements={padFootingMeasurements}
+      setPadFootingMeasurements={setPadFootingMeasurements}
+      newPadFootingMeas={newPadFootingMeas}
+      updatePadFootingMeas={updatePadFootingMeas}
+      resetPadFootingMeas={resetPadFootingMeas}
+      editingPadFootingMeasurementId={editingPadFootingMeasurementId}
+      setEditingPadFootingMeasurementId={setEditingPadFootingMeasurementId}
+      styles={styles}
+    />
 
-      <GroundBeamModule
-        groundBeamTypes={groundBeamTypes}
-        setGroundBeamTypes={setGroundBeamTypes}
-        editingGroundBeamId={editingGroundBeamId}
-        setEditingGroundBeamId={setEditingGroundBeamId}
-        newGroundBeam={newGroundBeam}
-        updateGroundBeam={updateGroundBeam}
-        resetGroundBeam={resetGroundBeam}
-        groundBeamMeasurements={groundBeamMeasurements}
-        setGroundBeamMeasurements={setGroundBeamMeasurements}
-        newGroundBeamMeas={newGroundBeamMeas}
-        updateGroundBeamMeas={updateGroundBeamMeas}
-        resetGroundBeamMeas={resetGroundBeamMeas}
-        editingGroundBeamMeasurementId={editingGroundBeamMeasurementId}
-        setEditingGroundBeamMeasurementId={setEditingGroundBeamMeasurementId}
-        styles={styles}
-      />
+    <GroundBeamModule
+      groundBeamTypes={groundBeamTypes}
+      setGroundBeamTypes={setGroundBeamTypes}
+      editingGroundBeamId={editingGroundBeamId}
+      setEditingGroundBeamId={setEditingGroundBeamId}
+      newGroundBeam={newGroundBeam}
+      updateGroundBeam={updateGroundBeam}
+      resetGroundBeam={resetGroundBeam}
+      groundBeamMeasurements={groundBeamMeasurements}
+      setGroundBeamMeasurements={setGroundBeamMeasurements}
+      newGroundBeamMeas={newGroundBeamMeas}
+      updateGroundBeamMeas={updateGroundBeamMeas}
+      resetGroundBeamMeas={resetGroundBeamMeas}
+      editingGroundBeamMeasurementId={editingGroundBeamMeasurementId}
+      setEditingGroundBeamMeasurementId={setEditingGroundBeamMeasurementId}
+      styles={styles}
+    />
 
-      <ColumnModule
-        columnTypes={columnTypes}
-        setColumnTypes={setColumnTypes}
-        editingColumnId={editingColumnId}
-        setEditingColumnId={setEditingColumnId}
-        newColumn={newColumn}
-        updateColumn={updateColumn}
-        resetColumn={resetColumn}
-        columnMeasurements={columnMeasurements}
-        setColumnMeasurements={setColumnMeasurements}
-        newColumnMeas={newColumnMeas}
-        updateColumnMeas={updateColumnMeas}
-        resetColumnMeas={resetColumnMeas}
-        editingColumnMeasurementId={editingColumnMeasurementId}
-        setEditingColumnMeasurementId={setEditingColumnMeasurementId}
-        styles={styles}
-      />
+    <ColumnModule
+      columnTypes={columnTypes}
+      setColumnTypes={setColumnTypes}
+      editingColumnId={editingColumnId}
+      setEditingColumnId={setEditingColumnId}
+      newColumn={newColumn}
+      updateColumn={updateColumn}
+      resetColumn={resetColumn}
+      columnMeasurements={columnMeasurements}
+      setColumnMeasurements={setColumnMeasurements}
+      newColumnMeas={newColumnMeas}
+      updateColumnMeas={updateColumnMeas}
+      resetColumnMeas={resetColumnMeas}
+      editingColumnMeasurementId={editingColumnMeasurementId}
+      setEditingColumnMeasurementId={setEditingColumnMeasurementId}
+      styles={styles}
+    />
 
-      <WallModule
-        wallTypes={wallTypes}
-        setWallTypes={setWallTypes}
-        editingWallId={editingWallId}
-        setEditingWallId={setEditingWallId}
-        newWall={newWall}
-        updateWall={updateWall}
-        resetWall={resetWall}
-        wallMeasurements={wallMeasurements}
-        setWallMeasurements={setWallMeasurements}
-        newWallMeas={newWallMeas}
-        updateWallMeas={updateWallMeas}
-        resetWallMeas={resetWallMeas}
-        editingWallMeasurementId={editingWallMeasurementId}
-        setEditingWallMeasurementId={setEditingWallMeasurementId}
-        styles={styles}
-      />
+    <WallModule
+      wallTypes={wallTypes}
+      setWallTypes={setWallTypes}
+      editingWallId={editingWallId}
+      setEditingWallId={setEditingWallId}
+      newWall={newWall}
+      updateWall={updateWall}
+      resetWall={resetWall}
+      wallMeasurements={wallMeasurements}
+      setWallMeasurements={setWallMeasurements}
+      newWallMeas={newWallMeas}
+      updateWallMeas={updateWallMeas}
+      resetWallMeas={resetWallMeas}
+      editingWallMeasurementId={editingWallMeasurementId}
+      setEditingWallMeasurementId={setEditingWallMeasurementId}
+      styles={styles}
+    />
 
-      <SlabModule
-        slabTypes={slabTypes}
-        setSlabTypes={setSlabTypes}
-        editingSlabId={editingSlabId}
-        setEditingSlabId={setEditingSlabId}
-        newSlab={newSlab}
-        updateSlab={updateSlab}
-        resetSlab={resetSlab}
-        slabMeasurements={slabMeasurements}
-        setSlabMeasurements={setSlabMeasurements}
-        newSlabMeas={newSlabMeas}
-        updateSlabMeas={updateSlabMeas}
-        resetSlabMeas={resetSlabMeas}
-        editingSlabMeasurementId={editingSlabMeasurementId}
-        setEditingSlabMeasurementId={setEditingSlabMeasurementId}
-        styles={styles}
-      />
+    <SlabModule
+      slabTypes={slabTypes}
+      setSlabTypes={setSlabTypes}
+      editingSlabId={editingSlabId}
+      setEditingSlabId={setEditingSlabId}
+      newSlab={newSlab}
+      updateSlab={updateSlab}
+      resetSlab={resetSlab}
+      slabMeasurements={slabMeasurements}
+      setSlabMeasurements={setSlabMeasurements}
+      newSlabMeas={newSlabMeas}
+      updateSlabMeas={updateSlabMeas}
+      resetSlabMeas={resetSlabMeas}
+      editingSlabMeasurementId={editingSlabMeasurementId}
+      setEditingSlabMeasurementId={setEditingSlabMeasurementId}
+      styles={styles}
+    />
 
-      <OpeningsModule
-        openingTypes={openingTypes}
-        setOpeningTypes={setOpeningTypes}
-        editingOpeningId={editingOpeningId}
-        setEditingOpeningId={setEditingOpeningId}
-        newOpening={newOpening}
-        updateOpening={updateOpening}
-        resetOpening={resetOpening}
-        openingMeasurements={openingMeasurements}
-        setOpeningMeasurements={setOpeningMeasurements}
-        newOpeningMeas={newOpeningMeas}
-        updateOpeningMeas={updateOpeningMeas}
-        resetOpeningMeas={resetOpeningMeas}
-        editingOpeningMeasurementId={editingOpeningMeasurementId}
-        setEditingOpeningMeasurementId={setEditingOpeningMeasurementId}
-        styles={styles}
-      />
-    </main>
-  );
+    <OpeningsModule
+      openingTypes={openingTypes}
+      setOpeningTypes={setOpeningTypes}
+      editingOpeningId={editingOpeningId}
+      setEditingOpeningId={setEditingOpeningId}
+      newOpening={newOpening}
+      updateOpening={updateOpening}
+      resetOpening={resetOpening}
+      openingMeasurements={openingMeasurements}
+      setOpeningMeasurements={setOpeningMeasurements}
+      newOpeningMeas={newOpeningMeas}
+      updateOpeningMeas={updateOpeningMeas}
+      resetOpeningMeas={resetOpeningMeas}
+      editingOpeningMeasurementId={editingOpeningMeasurementId}
+      setEditingOpeningMeasurementId={setEditingOpeningMeasurementId}
+      styles={styles}
+    />
+  </main>
+);
 }

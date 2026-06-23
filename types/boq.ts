@@ -69,7 +69,6 @@ export type PadFootingType = {
   padDepth: number;
   excavationLength: number;
   excavationWidth: number;
-  excavationDepth: number;
   concreteClass: string;
   reinfKg: number;
   formworkRequired: boolean;
@@ -77,6 +76,9 @@ export type PadFootingType = {
   blindingThickness: number;
   soilPoison: boolean;
   backfill: boolean;
+  workingSpaceRequired?: boolean;
+  riskOfCollapseRequired?: boolean;
+  excavationDepth: number; 
 };
 
 export type PadFootingMeasurement = {
@@ -101,6 +103,9 @@ export type GroundBeamType = {
   backfillRequired: boolean;
   dpcRequired: boolean;
   soilPoisonRequired: boolean;
+  workingSpaceRequired?: boolean;
+  riskOfCollapseRequired?: boolean;
+  excavationDepth: number; 
 };
 
 export type GroundBeamMeasurement = {

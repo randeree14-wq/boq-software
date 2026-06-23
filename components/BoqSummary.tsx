@@ -18,7 +18,7 @@ export default function BoqSummary({ boqItems, styles }: BoqSummaryProps) {
     return <p>No BOQ items generated yet. Add measurements to see the summary.</p>;
   }
 
-  // Group by billNo → section
+  // Group items by billNo → section
   const bills: Record<string, { billName: string; sections: Record<string, BoqItem[]> }> = {};
   Object.values(boqItems).forEach((item) => {
     const billKey = item.billNo;

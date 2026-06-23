@@ -9,9 +9,15 @@ export function addToBoqItem(boq: Record<string, BoqItem>, itemName: string, uni
   boq[itemName].qty += qty;
 }
 
-export function addLayerToBoq(boq: Record<string, BoqItem>, material: string, thickness: number, area: number) {
+export function addLayerToBoq(
+  boq: Record<string, BoqItem>,
+  material: string,
+  thickness: number,
+  area: number,
+  contribution?: { module: string; measurementId: number; mark: string; qty: number }
+) {
   if (material && thickness > 0) {
-    addToBoqItem(boq, `${thickness}mm ${material} compacted`, "m²", area);
+    addBoqItem(boq, "2", "EARTHWORKS", "Layerworks", `${thickness}mm ${material} compacted`, "m²", area, contribution);
   }
 }
 
