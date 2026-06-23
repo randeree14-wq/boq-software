@@ -14,14 +14,12 @@ interface BoqSummaryProps {
 export default function BoqSummary({ boqItems, styles }: BoqSummaryProps) {
   const { tableStyle, thStyle, tdStyle } = styles;
 
-  // If no items, show message
   if (!boqItems || Object.keys(boqItems).length === 0) {
     return <p>No BOQ items generated yet. Add measurements to see the summary.</p>;
   }
 
-  // Group items by billNo → section
+  // Group by billNo → section
   const bills: Record<string, { billName: string; sections: Record<string, BoqItem[]> }> = {};
-
   Object.values(boqItems).forEach((item) => {
     const billKey = item.billNo;
     if (!bills[billKey]) {
@@ -34,10 +32,7 @@ export default function BoqSummary({ boqItems, styles }: BoqSummaryProps) {
     bills[billKey].sections[sectionKey].push(item);
   });
 
-  // Get sorted list of active bills (by their original billNo)
   const activeBillNos = Object.keys(bills).sort((a, b) => parseInt(a) - parseInt(b));
-
-  // Create a mapping from original billNo to display number (sequential)
   const billDisplayMap: Record<string, number> = {};
   activeBillNos.forEach((billNo, index) => {
     billDisplayMap[billNo] = index + 1;
@@ -69,16 +64,49 @@ export default function BoqSummary({ boqItems, styles }: BoqSummaryProps) {
                         <th style={thStyle}>Description</th>
                         <th style={thStyle}>Unit</th>
                         <th style={thStyle}>Quantity</th>
+                        <th style={thStyle}>Trace</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {items.map((item) => (
-                        <tr key={`${item.billNo}|${item.section}|${item.description}|${item.unit}`}>
-                          <td style={tdStyle}>{item.description}</td>
-                          <td style={tdStyle}>{item.unit}</td>
-                          <td style={tdStyle}>{item.qty.toFixed(3)}</td>
-                        </tr>
-                      ))}
+                      {items.map((item) => {
+                        const hasContributions = item.contributions && item.contributions.length > 0;
+                        return (
+                          <tr key={`${item.billNo}|${item.section}|${item.description}|${item.unit}`}>
+                            <td style={tdStyle}>{item.description}</td>
+                            <td style={tdStyle}>{item.unit}</td>
+                            <td style={tdStyle}>{item.qty.toFixed(3)}</td>
+                            <td style={tdStyle}>
+                              {hasContributions ? (
+                                <details>
+                                  <summary style={{ cursor: "pointer", color: "#0066cc" }}>
+                                    View sources ({item.contributions.length})
+                                  </summary>
+                                  <table style={{ width: "100%", marginTop: "8px", borderCollapse: "collapse", fontSize: "0.9em" }}>
+                                    <thead>
+                                      <tr>
+                                        <th style={{ textAlign: "left", padding: "2px 6px" }}>Module</th>
+                                        <th style={{ textAlign: "left", padding: "2px 6px" }}>Mark</th>
+                                        <th style={{ textAlign: "right", padding: "2px 6px" }}>Qty</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {item.contributions.map((c, idx) => (
+                                        <tr key={idx}>
+                                          <td style={{ padding: "2px 6px" }}>{c.module}</td>
+                                          <td style={{ padding: "2px 6px" }}>{c.mark}</td>
+                                          <td style={{ padding: "2px 6px", textAlign: "right" }}>{c.qty.toFixed(3)}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </details>
+                              ) : (
+                                <span style={{ color: "#999" }}>–</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

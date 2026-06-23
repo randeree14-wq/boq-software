@@ -1,6 +1,6 @@
 "use client";
 
-import type { WallType, WallMeasurement, BrickType, WallThicknessType } from "@/types/boq";
+import type { WallType, WallMeasurement, BrickType, WallThicknessType, WallFinish } from "@/types/boq";
 import { getBrickDefaults, getThicknessFromType } from "@/lib/boqHelpers";
 
 interface WallModuleProps {
@@ -73,20 +73,16 @@ const WallModule = ({
   };
 
   const saveWallMeasurement = () => {
-    if (!newWallMeas.mark.trim() || newWallMeas.wallTypeId === 0 || newWallMeas.length <= 0 || newWallMeas.height <= 0) return;
-    
+    if (!newWallMeas.mark.trim() || newWallMeas.wallTypeId === 0 || !newWallMeas.length || newWallMeas.length <= 0 || !newWallMeas.height || newWallMeas.height <= 0) return;
     const area = newWallMeas.length * newWallMeas.height;
-    const measurementData = { ...newWallMeas, area };
-    
+    const data = { ...newWallMeas, area };
     if (editingWallMeasurementId !== null) {
       setWallMeasurements((prev) =>
-        prev.map((m) =>
-          m.id === editingWallMeasurementId ? { ...m, ...measurementData } : m
-        )
+        prev.map((m) => (m.id === editingWallMeasurementId ? { ...m, ...data } : m))
       );
       setEditingWallMeasurementId(null);
     } else {
-      setWallMeasurements((prev) => [...prev, { id: Date.now(), ...measurementData }]);
+      setWallMeasurements((prev) => [...prev, { id: Date.now(), ...data }]);
     }
     resetWallMeas();
   };
@@ -123,26 +119,35 @@ const WallModule = ({
         <select value={newWall.thicknessType} onChange={(e) => handleThicknessTypeChange(e.target.value as WallThicknessType)}>
           <option>Single Skin (Half Brick)</option><option>Double Skin (One Brick)</option><option>Cavity Wall</option><option>Triple Skin</option>
         </select>
-        <div style={{ padding: "8px", background: "#eef", borderRadius: "4px" }}>Thickness: {newWall.thicknessMm}mm</div>
-        <label><input type="checkbox" checked={newWall.plasterBothSides} onChange={(e) => updateWall({ plasterBothSides: e.target.checked })} /> Plaster both sides</label>
-        <label><input type="checkbox" checked={newWall.paintRequired} onChange={(e) => updateWall({ paintRequired: e.target.checked })} /> Paint required</label>
+        <div style={{ padding: "8px", background: "#eef", borderRadius: "4px" }}>Thickness: {newWall.thicknessMm || '-'}mm</div>
+        <input type="number" placeholder="Course height (mm) e.g., 75" value={newWall.courseHeight || ''} onChange={(e) => updateWall({ courseHeight: Number(e.target.value) })} />
+
+        <h3 style={{ gridColumn: "1 / -1", margin: "8px 0 4px", fontSize: "16px", fontWeight: "600" }}>Side 1</h3>
+        <label><input type="checkbox" checked={newWall.side1Plaster} onChange={(e) => updateWall({ side1Plaster: e.target.checked })} /> Plaster</label>
+        <select value={newWall.side1Finish} onChange={(e) => updateWall({ side1Finish: e.target.value as WallFinish })}>
+          <option value="None">None</option>
+          <option value="Paint">Paint</option>
+          <option value="Tile">Tile</option>
+        </select>
+        {newWall.side1Finish === "Tile" && (
+          <input type="number" placeholder="PC sum (R/m²) e.g., 350" value={newWall.side1TilePcSum || ''} onChange={(e) => updateWall({ side1TilePcSum: Number(e.target.value) })} />
+        )}
+
+        <h3 style={{ gridColumn: "1 / -1", margin: "8px 0 4px", fontSize: "16px", fontWeight: "600" }}>Side 2</h3>
+        <label><input type="checkbox" checked={newWall.side2Plaster} onChange={(e) => updateWall({ side2Plaster: e.target.checked })} /> Plaster</label>
+        <select value={newWall.side2Finish} onChange={(e) => updateWall({ side2Finish: e.target.value as WallFinish })}>
+          <option value="None">None</option>
+          <option value="Paint">Paint</option>
+          <option value="Tile">Tile</option>
+        </select>
+        {newWall.side2Finish === "Tile" && (
+          <input type="number" placeholder="PC sum (R/m²) e.g., 350" value={newWall.side2TilePcSum || ''} onChange={(e) => updateWall({ side2TilePcSum: Number(e.target.value) })} />
+        )}
+
         <label><input type="checkbox" checked={newWall.dpcRequired} onChange={(e) => updateWall({ dpcRequired: e.target.checked })} /> DPC required</label>
         <label><input type="checkbox" checked={newWall.reinforcementRequired} onChange={(e) => updateWall({ reinforcementRequired: e.target.checked })} /> Bed joint reinforcement</label>
         {newWall.reinforcementRequired && (
-         <input 
-        type="number" 
-        placeholder="Courses per reinforcement layer e.g., 4" 
-        value={newWall.coursesPerReinforcement || ''} 
-        onChange={(e) => updateWall({ coursesPerReinforcement: Number(e.target.value) })} 
-         />
-        )}
-        <label><input type="checkbox" checked={newWall.tilesInternal} onChange={(e) => updateWall({ tilesInternal: e.target.checked })} /> Tiles internal</label>
-        {newWall.tilesInternal && (
-          <input type="number" placeholder="Tile PC sum internal (R/m²) e.g., 350"  value={newWall.tilePcSumInternal || ''} onChange={(e) => updateWall({ tilePcSumInternal: Number(e.target.value) })} />
-        )}
-        <label><input type="checkbox" checked={newWall.tilesExternal} onChange={(e) => updateWall({ tilesExternal: e.target.checked })} /> Tiles external</label>
-        {newWall.tilesExternal && (
-          <input type="number" placeholder="Tile PC sum external (R/m²) e.g., 400" value={newWall.tilePcSumExternal || ''} onChange={(e) => updateWall({ tilePcSumExternal: Number(e.target.value) })} />
+          <input type="number" placeholder="Courses per layer" value={newWall.coursesPerReinforcement || ''} onChange={(e) => updateWall({ coursesPerReinforcement: Number(e.target.value) })} />
         )}
         <button onClick={saveWallType}>{editingWallId !== null ? "Update" : "Save"}</button>
       </div>
@@ -150,10 +155,19 @@ const WallModule = ({
       <table style={tableStyle} border={1} cellPadding={8}>
         <thead>
           <tr>
-            <th style={thStyle}>Name</th><th style={thStyle}>Brick Type</th><th style={thStyle}>Wall Type</th>
-            <th style={thStyle}>Thick</th><th style={thStyle}>Plaster</th><th style={thStyle}>Paint</th>
-            <th style={thStyle}>DPC</th><th style={thStyle}>Reinf</th><th style={thStyle}>Int Tiles</th>
-            <th style={thStyle}>Ext Tiles</th><th style={thStyle}>Actions</th>
+            <th style={thStyle}>Name</th>
+            <th style={thStyle}>Brick</th>
+            <th style={thStyle}>Thickness</th>
+            <th style={thStyle}>Course Ht</th>
+            <th style={thStyle}>Side1 Plaster</th>
+            <th style={thStyle}>Side1 Finish</th>
+            <th style={thStyle}>Side1 PC</th>
+            <th style={thStyle}>Side2 Plaster</th>
+            <th style={thStyle}>Side2 Finish</th>
+            <th style={thStyle}>Side2 PC</th>
+            <th style={thStyle}>DPC</th>
+            <th style={thStyle}>Reinf</th>
+            <th style={thStyle}>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -161,14 +175,16 @@ const WallModule = ({
             <tr key={wall.id}>
               <td style={tdStyle}>{wall.name}</td>
               <td style={tdStyle}>{wall.brickType}</td>
-              <td style={tdStyle}>{wall.thicknessType}</td>
-              <td style={tdStyle}>{wall.thicknessMm}mm</td>
-              <td style={tdStyle}>{wall.plasterBothSides ? "Both" : "No"}</td>
-              <td style={tdStyle}>{wall.paintRequired ? "Yes" : "No"}</td>
+              <td style={tdStyle}>{wall.thicknessMm || '-'}mm</td>
+              <td style={tdStyle}>{wall.courseHeight || '-'}</td>
+              <td style={tdStyle}>{wall.side1Plaster ? "Yes" : "No"}</td>
+              <td style={tdStyle}>{wall.side1Finish}</td>
+              <td style={tdStyle}>{wall.side1Finish === "Tile" ? `R${wall.side1TilePcSum || 0}` : "-"}</td>
+              <td style={tdStyle}>{wall.side2Plaster ? "Yes" : "No"}</td>
+              <td style={tdStyle}>{wall.side2Finish}</td>
+              <td style={tdStyle}>{wall.side2Finish === "Tile" ? `R${wall.side2TilePcSum || 0}` : "-"}</td>
               <td style={tdStyle}>{wall.dpcRequired ? "Yes" : "No"}</td>
-              <td style={tdStyle}>{wall.reinforcementRequired ? `${wall.coursesPerReinforcement}crs` : "No"}</td>
-              <td style={tdStyle}>{wall.tilesInternal ? `R${wall.tilePcSumInternal}` : "No"}</td>
-              <td style={tdStyle}>{wall.tilesExternal ? `R${wall.tilePcSumExternal}` : "No"}</td>
+              <td style={tdStyle}>{wall.reinforcementRequired ? `${wall.coursesPerReinforcement || '-'}crs` : "No"}</td>
               <td style={tdStyle}>
                 <button onClick={() => editWallType(wall.id)}>Edit</button>
                 <button onClick={() => deleteWallType(wall.id)}>Delete</button>
@@ -181,13 +197,13 @@ const WallModule = ({
       <hr />
       <h2>Wall Measurements</h2>
       <div style={formGridStyle}>
-        <input placeholder="Mark" value={newWallMeas.mark} onChange={(e) => updateWallMeas({ mark: e.target.value })} />
+        <input placeholder="Mark (e.g., W1)" value={newWallMeas.mark} onChange={(e) => updateWallMeas({ mark: e.target.value })} />
         <select value={newWallMeas.wallTypeId} onChange={(e) => updateWallMeas({ wallTypeId: Number(e.target.value) })}>
           <option value={0}>Select Type</option>
           {wallTypes.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
         </select>
-        <input type="number" placeholder="Length (m)" value={newWallMeas.length} onChange={(e) => updateWallMeas({ length: Number(e.target.value) })} />
-        <input type="number" placeholder="Height (m)" value={newWallMeas.height} onChange={(e) => updateWallMeas({ height: Number(e.target.value) })} />
+        <input type="number" placeholder="Length (m) e.g., 5.5" value={newWallMeas.length || ''} onChange={(e) => updateWallMeas({ length: Number(e.target.value) })} />
+        <input type="number" placeholder="Height (m) e.g., 2.7" value={newWallMeas.height || ''} onChange={(e) => updateWallMeas({ height: Number(e.target.value) })} />
         <button onClick={saveWallMeasurement}>
           {editingWallMeasurementId !== null ? "Update Measurement" : "Add Measurement"}
         </button>

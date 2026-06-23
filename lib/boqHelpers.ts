@@ -42,25 +42,37 @@ export function addBoqItem(
   section: string,
   description: string,
   unit: string,
-  qty: number
+  qty: number,
+  contribution?: { module: string; measurementId: number; mark: string; qty: number }
 ) {
   const key = `${billNo}|${section}|${description}|${unit}`;
   if (boq[key]) {
     boq[key].qty += qty;
+    if (contribution) {
+      boq[key].contributions.push(contribution);
+    }
   } else {
-    boq[key] = { billNo, billName, section, description, unit, qty };
+    boq[key] = {
+      billNo,
+      billName,
+      section,
+      description,
+      unit,
+      qty,
+      contributions: contribution ? [contribution] : [],
+    };
   }
 }
 
-// Type-safe helper using BillKey
 export function addBoqItemFromBillKey(
   boq: Record<string, BoqItem>,
   billKey: BillKey,
   section: string,
   description: string,
   unit: string,
-  qty: number
+  qty: number,
+  contribution?: { module: string; measurementId: number; mark: string; qty: number }
 ) {
   const bill = getBill(billKey);
-  addBoqItem(boq, bill.billNo, bill.billName, section, description, unit, qty);
+  addBoqItem(boq, bill.billNo, bill.billName, section, description, unit, qty, contribution);
 }

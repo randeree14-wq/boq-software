@@ -143,6 +143,8 @@ export type BrickType = "Common" | "Imperial" | "Maxi 90";
 
 export type WallThicknessType = "Single Skin (Half Brick)" | "Double Skin (One Brick)" | "Cavity Wall" | "Triple Skin";
 
+export type WallFinish = "None" | "Paint" | "Tile";
+
 export type WallType = {
   id: number;
   name: string;
@@ -150,17 +152,19 @@ export type WallType = {
   thicknessType: WallThicknessType;
   thicknessMm: number;
   courseHeight: number;
-  plasterBothSides: boolean;
-  plasterThickness: number;
-  paintRequired: boolean;
+  // Side 1
+  side1Plaster: boolean;
+  side1Finish: WallFinish;
+  side1TilePcSum?: number; // only if side1Finish === "Tile"
+  // Side 2
+  side2Plaster: boolean;
+  side2Finish: WallFinish;
+  side2TilePcSum?: number; // only if side2Finish === "Tile"
+  // Other fields
   dpcRequired: boolean;
   reinforcementRequired: boolean;
   coursesPerReinforcement: number;
   reinforcementType: string;
-  tilesInternal: boolean;
-  tilesExternal: boolean;
-  tilePcSumInternal: number;
-  tilePcSumExternal: number;
 };
 
 export type WallMeasurement = {
@@ -207,6 +211,12 @@ export type BoqItem = {
   description: string;
   unit: string;
   qty: number;
+  contributions: Array<{
+    module: string;
+    measurementId: number;
+    mark: string;
+    qty: number;
+  }>;
 };
 
 // ============================================
