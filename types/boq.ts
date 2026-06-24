@@ -29,6 +29,8 @@ export type BeamMeasurement = {
   mark: string;
   beamTypeId: number;
   length: number;
+  elementalSectionId?: string;   // e.g., "structural-frame"
+  elementalElementId?: string;   // e.g., "beams"
 };
 
 export type SurfaceBedType = {
@@ -59,6 +61,8 @@ export type SurfaceBedMeasurement = {
   mark: string;
   surfaceBedTypeId: number;
   area: number;
+  elementalSectionId?: string;   // e.g., "ground-floor"
+  elementalElementId?: string;   // e.g., "solid-floors"
 };
 
 export type PadFootingType = {
@@ -86,6 +90,8 @@ export type PadFootingMeasurement = {
   mark: string;
   padFootingTypeId: number;
   quantity: number;
+  elementalSectionId?: string;   // e.g., "substructure"
+  elementalElementId?: string;   // e.g., "pad-footings"
 };
 
 export type GroundBeamType = {
@@ -113,6 +119,8 @@ export type GroundBeamMeasurement = {
   mark: string;
   groundBeamTypeId: number;
   length: number;
+  elementalSectionId?: string;   // e.g., "substructure"
+  elementalElementId?: string;   // e.g., "ground-beams"
 };
 
 export type ColumnType = {
@@ -132,6 +140,8 @@ export type ColumnMeasurement = {
   mark: string;
   columnTypeId: number;
   quantity: number;
+  elementalSectionId?: string;   // e.g., "structural-frame"
+  elementalElementId?: string;   // e.g., "columns"
 };
 
 export type BeamFormType = "Downstand beam" | "Perimeter downstand beam" | "Upstand beam" | "Integrated slab beam / no beam formwork";
@@ -179,6 +189,8 @@ export type WallMeasurement = {
   length: number;
   height: number;
   area: number;
+  elementalSectionId?: string;   // e.g., "internal-divisions"
+  elementalElementId?: string;   // e.g., "walls"
 };
 
 export type SlabType = {
@@ -204,6 +216,8 @@ export type SlabMeasurement = {
   width: number;
   quantity: number;
   area: number;
+  elementalSectionId?: string;   // e.g., "structural-frame"
+  elementalElementId?: string;   // e.g., "slabs"
 };
 
 // ============================================
@@ -327,6 +341,8 @@ export type OpeningMeasurement = {
   openingTypeId: number;
   quantity?: number; // overrides type.quantity
   linkedWallId?: number; // for future wall deduction
+  elementalSectionId?: string;   // e.g., "internal-divisions"
+  elementalElementId?: string;   // e.g., "openings"
 };
 
 export type ProjectData = {

@@ -46,6 +46,8 @@ export const SECTIONS = {
   LAYERWORKS: "Layerworks",
   BLINDING: "Blinding",
   SOIL_POISONING: "Soil Poisoning",
+  WORKING_SPACE: "Working Space",
+  RISK_OF_COLLAPSE: "Risk of Collapse",
 
   // Concrete, Formwork and Reinforcement
   CONCRETE: "Concrete",
