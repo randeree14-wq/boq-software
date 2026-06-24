@@ -359,6 +359,11 @@ export default function Home() {
     linkedWallId: undefined,
   });
 
+// ============================================
+// RATES STATE
+// ============================================
+const [rates, setRates] = useState<Record<string, number>>({});
+
   // ============================================
   // MEASUREMENT EDITING STATES
   // ============================================
@@ -393,6 +398,7 @@ export default function Home() {
       setSlabMeasurements(savedData.slabMeasurements);
       setOpeningTypes(savedData.openingTypes || []);
       setOpeningMeasurements(savedData.openingMeasurements || []);
+      setRates(savedData.rates || {});
     }
   }, []);
 
@@ -414,6 +420,7 @@ export default function Home() {
       slabMeasurements,
       openingTypes,
       openingMeasurements,
+      rates,
     };
     saveProjectData(data);
   };
@@ -437,6 +444,7 @@ export default function Home() {
     slabMeasurements,
     openingTypes,
     openingMeasurements,
+    rates,
   ]);
 
   const handleClearProject = () => {
@@ -458,6 +466,7 @@ export default function Home() {
       setSlabMeasurements([]);
       setOpeningTypes([]);
       setOpeningMeasurements([]);
+      setRates({});
     }
   };
 
@@ -468,7 +477,7 @@ const handleExportExcel = () => {
     return;
   }
   // You can replace "My Project" with a dynamic project name later
-  exportBOQToExcel(masterBoqItems, "My Project");
+  exportBOQToExcel(masterBoqItems, rates, "My Project");
 };
 
 // ============================================
@@ -2013,6 +2022,8 @@ wallMeasurements.forEach((m) => {
 // ============================================
 const [activeTab, setActiveTab] = useState<"dashboard" | "measurement" | "boq" | "reports" | "settings">("dashboard");
 
+
+
 // ============================================
 // TAB STYLES
 // ============================================
@@ -2246,7 +2257,14 @@ return (
       {activeTab === "boq" && (
         <>
           <h2>Detailed BOQ</h2>
-          <BoqSummary boqItems={masterBoqItems} styles={styles} />
+           <BoqSummary
+            boqItems={masterBoqItems}
+            rates={rates}
+            onRateChange={(key, rate) => {
+              setRates((prev) => ({ ...prev, [key]: rate }));
+      }}
+      styles={styles}
+    />
         </>
       )}
 

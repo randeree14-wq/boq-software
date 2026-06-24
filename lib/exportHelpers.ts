@@ -1,7 +1,7 @@
 import * as XLSX from "xlsx";
 import type { BoqItem } from "@/types/boq";
 
-export function exportBOQToExcel(boqItems: Record<string, BoqItem>, projectName = "BOQ Export") {
+export function exportBOQToExcel(boqItems: Record<string, BoqItem>, rates: Record<string, number>, projectName = "BOQ Export") {
   // 1. Group items by billNo → section
   const bills: Record<string, { billName: string; sections: Record<string, BoqItem[]> }> = {};
   Object.values(boqItems).forEach((item) => {
@@ -52,13 +52,14 @@ export function exportBOQToExcel(boqItems: Record<string, BoqItem>, projectName 
 
       // Section header
       rows.push([sectionKey]);
-      rows.push(["Description", "Unit", "Quantity"]);
+      rows.push(["Description", "Unit", "Quantity", "Rate (R)", "Amount (R)"]);
 
       // Items
       items.forEach((item) => {
-        rows.push([item.description, item.unit, item.qty]);
-        billTotal += item.qty;
-      });
+      const rate = rates[`${item.billNo}|${item.section}|${item.description}|${item.unit}`] || 0;
+      const amount = item.qty * rate;
+      rows.push([item.description, item.unit, item.qty, rate, amount]);
+});
 
       // Section subtotal
       const sectionTotal = items.reduce((sum, item) => sum + item.qty, 0);

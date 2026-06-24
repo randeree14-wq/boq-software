@@ -236,6 +236,8 @@ export type BoqItem = {
     mark: string;
     qty: number;
   }>;
+  rate?: number;    // <-- NEW
+  amount?: number;  // <-- NEW (calculated as qty * rate)
 };
 
 // ============================================
@@ -256,6 +258,7 @@ export type ProjectData = {
   wallMeasurements: WallMeasurement[];
   slabTypes: SlabType[];
   slabMeasurements: SlabMeasurement[];
+  rates: Record<string, number>; // <-- NEW: keyed by `${billNo}|${section}|${description}|${unit}`
 };
 // Add this type for type-safe bill references
 export type BillKey = 
