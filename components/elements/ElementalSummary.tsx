@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import type { BoqItem } from "@/types/boq";
 import { elementalStructure, getElementById } from "@/lib/elementalStructure";
 
@@ -52,14 +51,14 @@ export default function ElementalSummary({
   // FALLBACK: Assign elemental data based on module if missing
   // ============================================
   const moduleToElementalMap: Record<string, { section: string; element: string }> = {
-    "Beams": { section: "Structural Frame", element: "Beams" },
-    "Surface Beds": { section: "Ground-floor", element: "solid-floors" },
-    "Pad Footings": { section: "Substructure", element: "pad-footings" },
-    "Ground Beams": { section: "Substructure", element: "ground-beams" },
-    "Columns": { section: "Structural Frame", element: "Columns" },
-    "Slabs": { section: "Structural Frame", element: "Slabs" },
-    "Walls": { section: "Internal Divisions", element: "Walls" },
-    "Openings": { section: "Internal Divisions", element: "Openings" },
+    "Beams": { section: "structural-frame", element: "beams" },
+    "Surface Beds": { section: "ground-floor", element: "solid-floors" },
+    "Pad Footings": { section: "substructure", element: "pad-footings" },
+    "Ground Beams": { section: "substructure", element: "ground-beams" },
+    "Columns": { section: "structural-frame", element: "columns" },
+    "Slabs": { section: "structural-frame", element: "slabs" },
+    "Walls": { section: "internal-divisions", element: "walls" },
+    "Openings": { section: "internal-divisions", element: "openings" },
   };
 
   allMeasurements.forEach((m) => {
@@ -113,7 +112,7 @@ export default function ElementalSummary({
     return el?.name || id;
   };
 
-  // Helper to get section name from id (simplified – we can enhance later)
+  // Helper to get section name from id
   const getSectionName = (id: string) => {
     const section = elementalStructure.find((s) => s.id === id);
     return section?.name || id;
@@ -131,11 +130,23 @@ export default function ElementalSummary({
   // Sort sections
   const sortedSections = Object.keys(groupedData).sort();
 
+  // Calculate total quantity across all elements
+  let grandTotal = 0;
+  sortedSections.forEach((sectionId) => {
+    const sectionData = groupedData[sectionId];
+    Object.values(sectionData).forEach((elementData) => {
+      grandTotal += elementData.total;
+    });
+  });
+
   return (
     <div style={cardStyle}>
       <h2>Elemental Summary</h2>
       <p style={{ color: "#666", marginBottom: "16px" }}>
         Quantities grouped by AAQS elemental sections and elements.
+        <span style={{ marginLeft: "16px", fontWeight: "bold" }}>
+          Grand Total: {grandTotal.toFixed(3)}
+        </span>
       </p>
 
       {sortedSections.map((sectionId) => {
@@ -143,10 +154,18 @@ export default function ElementalSummary({
         const sectionName = getSectionName(sectionId);
         const sortedElements = Object.keys(sectionData).sort();
 
+        let sectionTotal = 0;
+        Object.values(sectionData).forEach((elementData) => {
+          sectionTotal += elementData.total;
+        });
+
         return (
           <div key={sectionId} style={{ marginBottom: "24px" }}>
             <h3 style={{ fontSize: "18px", fontWeight: "600", margin: "0 0 12px 0", color: "#0066cc" }}>
               {sectionName}
+              <span style={{ color: "#666", fontSize: "14px", marginLeft: "12px" }}>
+                Section Total: {sectionTotal.toFixed(3)}
+              </span>
             </h3>
 
             {sortedElements.map((elementId) => {

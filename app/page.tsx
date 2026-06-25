@@ -22,6 +22,8 @@ import type {
   ProjectData,
   OpeningType,
   OpeningMeasurement,
+  CostPlanComponent,
+  WallLocation,
 } from "@/types/boq";
 import {
   addToBoqItem,
@@ -36,13 +38,18 @@ import {
   clearProjectData,
 } from "@/lib/projectStorage";
 import { SECTIONS } from "@/lib/boqStructure";
+import { getElementalLocation } from "@/lib/elementalStructure";
+import { exportBOQToExcel } from "@/lib/exportHelpers";
+import { generateWallCostComponents } from "@/lib/costComponentGenerator";
+
+// Layout components
+import BoqSummary from "@/components/modules/BoqSummary";
 import Dashboard from "@/components/dashboard/Dashboard";
 import ElementalMeasurement from "@/components/elements/ElementalMeasurement";
-import BoqSummary from "@/components/modules/BoqSummary";
-import { exportBOQToExcel } from "@/lib/exportHelpers";
-import { getElementalLocation } from "@/lib/elementalStructure";
+import ElementalSummary from "@/components/elements/ElementalSummary";
+import ElementalCostSummary from "@/components/elements/ElementalCostSummary";
 
-// Import all module components
+// Module components
 import BeamModule from "@/components/modules/BeamModule";
 import SurfaceBedModule from "@/components/modules/SurfaceBedModule";
 import PadFootingModule from "@/components/modules/PadFootingModule";
@@ -51,7 +58,6 @@ import ColumnModule from "@/components/modules/ColumnModule";
 import WallModule from "@/components/modules/WallModule";
 import SlabModule from "@/components/modules/SlabModule";
 import OpeningsModule from "@/components/modules/OpeningsModule";
-import ElementalSummary from "@/components/elements/ElementalSummary";
 
 // ============================================
 // Helper: Extract concrete strength
@@ -107,32 +113,6 @@ const tableStyle = {
 };
 
 const styles = { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle };
-
-const tabBarStyle = {
-  display: "flex",
-  gap: "4px",
-  marginBottom: "24px",
-  borderBottom: "2px solid #ddd",
-  paddingBottom: "0",
-  backgroundColor: "#fff",
-  borderRadius: "8px 8px 0 0",
-  padding: "8px 12px 0 12px",
-  flexWrap: "wrap" as const,
-};
-
-const tabButtonStyle = (isActive: boolean) => ({
-  padding: "10px 20px",
-  border: "none",
-  backgroundColor: isActive ? "#0066cc" : "transparent",
-  color: isActive ? "#fff" : "#333",
-  borderRadius: "6px 6px 0 0",
-  cursor: "pointer",
-  fontSize: "14px",
-  fontWeight: isActive ? "600" : "400",
-  transition: "all 0.2s",
-  borderBottom: isActive ? "3px solid #0066cc" : "3px solid transparent",
-  marginBottom: "-2px",
-});
 
 // ============================================
 // MAIN COMPONENT
@@ -273,22 +253,22 @@ export default function Home() {
   const [wallTypes, setWallTypes] = useState<WallType[]>([]);
   const [editingWallId, setEditingWallId] = useState<number | null>(null);
   const { values: newWall, update: updateWall, reset: resetWall } = useFormState({
-  name: "",
-  brickType: "Common",
-  thicknessType: "Single Skin (Half Brick)",
-  thicknessMm: undefined,
-  courseHeight: 75,
-  side1Plaster: true,
-  side1Finish: "Paint",
-  side1TilePcSum: undefined,
-  side2Plaster: true,
-  side2Finish: "Paint",
-  side2TilePcSum: undefined,
-  dpcRequired: true,
-  reinforcementRequired: false,
-  coursesPerReinforcement: 4,
-  reinforcementType: "Galvanised mesh",
-});
+    name: "",
+    brickType: "Common",
+    thicknessType: "Single Skin (Half Brick)",
+    thicknessMm: undefined,
+    courseHeight: 75,
+    side1Plaster: true,
+    side1Finish: "Paint",
+    side1TilePcSum: undefined,
+    side2Plaster: true,
+    side2Finish: "Paint",
+    side2TilePcSum: undefined,
+    dpcRequired: true,
+    reinforcementRequired: false,
+    coursesPerReinforcement: 4,
+    reinforcementType: "Galvanised mesh",
+  });
 
   const [wallMeasurements, setWallMeasurements] = useState<WallMeasurement[]>([]);
   const { values: newWallMeas, update: updateWallMeas, reset: resetWallMeas } = useFormState({
@@ -297,6 +277,7 @@ export default function Home() {
     length: undefined,
     height: undefined,
     area: undefined,
+    wallLocation: "Internal Division",
   });
 
   // ---------- SLAB ----------
@@ -359,10 +340,24 @@ export default function Home() {
     linkedWallId: undefined,
   });
 
-// ============================================
-// RATES STATE
-// ============================================
-const [rates, setRates] = useState<Record<string, number>>({});
+  // ============================================
+  // COST PLAN COMPONENTS STATE
+  // ============================================
+  const [costPlanComponents, setCostPlanComponents] = useState<CostPlanComponent[]>([]);
+
+  // ============================================
+  // RATES STATE
+  // ============================================
+  const [rates, setRates] = useState<Record<string, number>>({});
+
+  // ============================================
+  // AUTO-GENERATE COST PLAN COMPONENTS
+  // ============================================
+  useEffect(() => {
+    const components = generateWallCostComponents(wallMeasurements, wallTypes);
+    setCostPlanComponents(components);
+    console.log("Generated cost plan components:", components.length);
+  }, [wallMeasurements, wallTypes]);
 
   // ============================================
   // MEASUREMENT EDITING STATES
@@ -399,6 +394,8 @@ const [rates, setRates] = useState<Record<string, number>>({});
       setOpeningTypes(savedData.openingTypes || []);
       setOpeningMeasurements(savedData.openingMeasurements || []);
       setRates(savedData.rates || {});
+      setCostPlanComponents(savedData.costPlanComponents || []);
+      console.log("Loaded cost plan components:", savedData.costPlanComponents?.length);
     }
   }, []);
 
@@ -421,7 +418,9 @@ const [rates, setRates] = useState<Record<string, number>>({});
       openingTypes,
       openingMeasurements,
       rates,
+      costPlanComponents,
     };
+    console.log("Saving cost plan components:", costPlanComponents.length);
     saveProjectData(data);
   };
 
@@ -445,6 +444,7 @@ const [rates, setRates] = useState<Record<string, number>>({});
     openingTypes,
     openingMeasurements,
     rates,
+    costPlanComponents,
   ]);
 
   const handleClearProject = () => {
@@ -467,534 +467,548 @@ const [rates, setRates] = useState<Record<string, number>>({});
       setOpeningTypes([]);
       setOpeningMeasurements([]);
       setRates({});
+      setCostPlanComponents([]);
     }
   };
 
   // Handle Excel export
-const handleExportExcel = () => {
-  if (Object.keys(masterBoqItems).length === 0) {
-    alert("No BOQ items to export. Add measurements first.");
-    return;
-  }
-  // You can replace "My Project" with a dynamic project name later
-  exportBOQToExcel(masterBoqItems, rates, "My Project");
-};
-
-// ============================================
-// HANDLERS
-// ============================================
-
-// BEAM handlers
-function saveBeamType() {
-  if (!newBeam.name.trim()) return;
-  if (editingBeamId !== null) {
-    setBeamTypes((prev) => prev.map((b) => (b.id === editingBeamId ? { ...b, ...newBeam } : b)));
-    setEditingBeamId(null);
-  } else {
-    setBeamTypes((prev) => [...prev, { id: Date.now(), ...newBeam }]);
-  }
-  resetBeam();
-}
-
-function editBeamType(id: number) {
-  const beam = beamTypes.find((b) => b.id === id);
-  if (beam) {
-    updateBeam(beam);
-    setEditingBeamId(id);
-  }
-}
-
-function deleteBeamType(id: number) {
-  setBeamTypes((prev) => prev.filter((b) => b.id !== id));
-  setBeamMeasurements((prev) => prev.filter((m) => m.beamTypeId !== id));
-}
-
-function addBeamMeasurement() {
-  if (!newBeamMeas.mark.trim() || newBeamMeas.beamTypeId === 0 || !newBeamMeas.length || newBeamMeas.length <= 0) return;
-  const measurement = {
-    id: Date.now(),
-    ...newBeamMeas,
-    elementalSectionId: "Structural Frame",
-    elementalElementId: "beams",
+  const handleExportExcel = () => {
+    if (Object.keys(masterBoqItems).length === 0) {
+      alert("No BOQ items to export. Add measurements first.");
+      return;
+    }
+    exportBOQToExcel(masterBoqItems, rates, "My Project");
   };
-  if (editingBeamMeasurementId !== null) {
-    setBeamMeasurements((prev) =>
-      prev.map((m) => (m.id === editingBeamMeasurementId ? { ...m, ...measurement } : m))
-    );
-    setEditingBeamMeasurementId(null);
-  } else {
-    setBeamMeasurements((prev) => [...prev, measurement]);
-  }
-  resetBeamMeas();
-}
 
-function editBeamMeasurement(id: number) {
-  const measurement = beamMeasurements.find((m) => m.id === id);
-  if (measurement) {
-    updateBeamMeas(measurement);
-    setEditingBeamMeasurementId(id);
-  }
-}
+  // ============================================
+  // HANDLERS
+  // ============================================
 
-function deleteBeamMeasurement(id: number) {
-  if (confirm("Are you sure you want to delete this measurement?")) {
-    setBeamMeasurements((prev) => prev.filter((m) => m.id !== id));
-    if (editingBeamMeasurementId === id) {
+  // BEAM handlers
+  function saveBeamType() {
+    if (!newBeam.name.trim()) return;
+    if (editingBeamId !== null) {
+      setBeamTypes((prev) => prev.map((b) => (b.id === editingBeamId ? { ...b, ...newBeam } : b)));
+      setEditingBeamId(null);
+    } else {
+      setBeamTypes((prev) => [...prev, { id: Date.now(), ...newBeam }]);
+    }
+    resetBeam();
+  }
+
+  function editBeamType(id: number) {
+    const beam = beamTypes.find((b) => b.id === id);
+    if (beam) {
+      updateBeam(beam);
+      setEditingBeamId(id);
+    }
+  }
+
+  function deleteBeamType(id: number) {
+    setBeamTypes((prev) => prev.filter((b) => b.id !== id));
+    setBeamMeasurements((prev) => prev.filter((m) => m.beamTypeId !== id));
+  }
+
+  function addBeamMeasurement() {
+    if (!newBeamMeas.mark.trim() || newBeamMeas.beamTypeId === 0 || !newBeamMeas.length || newBeamMeas.length <= 0) return;
+    const measurement = {
+      id: Date.now(),
+      ...newBeamMeas,
+      elementalSectionId: "Structural Frame",
+      elementalElementId: "beams",
+    };
+    if (editingBeamMeasurementId !== null) {
+      setBeamMeasurements((prev) =>
+        prev.map((m) => (m.id === editingBeamMeasurementId ? { ...m, ...measurement } : m))
+      );
       setEditingBeamMeasurementId(null);
-      resetBeamMeas();
+    } else {
+      setBeamMeasurements((prev) => [...prev, measurement]);
+    }
+    resetBeamMeas();
+  }
+
+  function editBeamMeasurement(id: number) {
+    const measurement = beamMeasurements.find((m) => m.id === id);
+    if (measurement) {
+      updateBeamMeas(measurement);
+      setEditingBeamMeasurementId(id);
     }
   }
-}
 
-// SURFACE BED handlers
-function saveSurfaceBedType() {
-  if (!newSurfaceBed.name.trim()) return;
-  if (editingSurfaceBedId !== null) {
-    setSurfaceBedTypes((prev) => prev.map((sb) => (sb.id === editingSurfaceBedId ? { ...sb, ...newSurfaceBed } : sb)));
-    setEditingSurfaceBedId(null);
-  } else {
-    setSurfaceBedTypes((prev) => [...prev, { id: Date.now(), ...newSurfaceBed }]);
+  function deleteBeamMeasurement(id: number) {
+    if (confirm("Are you sure you want to delete this measurement?")) {
+      setBeamMeasurements((prev) => prev.filter((m) => m.id !== id));
+      if (editingBeamMeasurementId === id) {
+        setEditingBeamMeasurementId(null);
+        resetBeamMeas();
+      }
+    }
   }
-  resetSurfaceBed();
-}
 
-function editSurfaceBedType(id: number) {
-  const sb = surfaceBedTypes.find((s) => s.id === id);
-  if (sb) {
-    updateSurfaceBed(sb);
-    setEditingSurfaceBedId(id);
+  // SURFACE BED handlers
+  function saveSurfaceBedType() {
+    if (!newSurfaceBed.name.trim()) return;
+    if (editingSurfaceBedId !== null) {
+      setSurfaceBedTypes((prev) => prev.map((sb) => (sb.id === editingSurfaceBedId ? { ...sb, ...newSurfaceBed } : sb)));
+      setEditingSurfaceBedId(null);
+    } else {
+      setSurfaceBedTypes((prev) => [...prev, { id: Date.now(), ...newSurfaceBed }]);
+    }
+    resetSurfaceBed();
   }
-}
 
-function deleteSurfaceBedType(id: number) {
-  setSurfaceBedTypes((prev) => prev.filter((sb) => sb.id !== id));
-  setSurfaceBedMeasurements((prev) => prev.filter((m) => m.surfaceBedTypeId !== id));
-}
-
-function addSurfaceBedMeasurement() {
-  if (!newSurfaceBedMeas.mark.trim() || newSurfaceBedMeas.surfaceBedTypeId === 0 || !newSurfaceBedMeas.area || newSurfaceBedMeas.area <= 0) return;
-  const measurement = {
-    id: Date.now(),
-    ...newSurfaceBedMeas,
-    elementalSectionId: "ground-floor",
-    elementalElementId: "solid-floors",
-  };
-  if (editingSurfaceBedMeasurementId !== null) {
-    setSurfaceBedMeasurements((prev) =>
-      prev.map((m) => (m.id === editingSurfaceBedMeasurementId ? { ...m, ...measurement } : m))
-    );
-    setEditingSurfaceBedMeasurementId(null);
-  } else {
-    setSurfaceBedMeasurements((prev) => [...prev, measurement]);
+  function editSurfaceBedType(id: number) {
+    const sb = surfaceBedTypes.find((s) => s.id === id);
+    if (sb) {
+      updateSurfaceBed(sb);
+      setEditingSurfaceBedId(id);
+    }
   }
-  resetSurfaceBedMeas();
-}
 
-function editSurfaceBedMeasurement(id: number) {
-  const measurement = surfaceBedMeasurements.find((m) => m.id === id);
-  if (measurement) {
-    updateSurfaceBedMeas(measurement);
-    setEditingSurfaceBedMeasurementId(id);
+  function deleteSurfaceBedType(id: number) {
+    setSurfaceBedTypes((prev) => prev.filter((sb) => sb.id !== id));
+    setSurfaceBedMeasurements((prev) => prev.filter((m) => m.surfaceBedTypeId !== id));
   }
-}
 
-function deleteSurfaceBedMeasurement(id: number) {
-  if (confirm("Are you sure you want to delete this measurement?")) {
-    setSurfaceBedMeasurements((prev) => prev.filter((m) => m.id !== id));
-    if (editingSurfaceBedMeasurementId === id) {
+  function addSurfaceBedMeasurement() {
+    if (!newSurfaceBedMeas.mark.trim() || newSurfaceBedMeas.surfaceBedTypeId === 0 || !newSurfaceBedMeas.area || newSurfaceBedMeas.area <= 0) return;
+    const measurement = {
+      id: Date.now(),
+      ...newSurfaceBedMeas,
+      elementalSectionId: "ground-floor",
+      elementalElementId: "solid-floors",
+    };
+    if (editingSurfaceBedMeasurementId !== null) {
+      setSurfaceBedMeasurements((prev) =>
+        prev.map((m) => (m.id === editingSurfaceBedMeasurementId ? { ...m, ...measurement } : m))
+      );
       setEditingSurfaceBedMeasurementId(null);
-      resetSurfaceBedMeas();
+    } else {
+      setSurfaceBedMeasurements((prev) => [...prev, measurement]);
+    }
+    resetSurfaceBedMeas();
+  }
+
+  function editSurfaceBedMeasurement(id: number) {
+    const measurement = surfaceBedMeasurements.find((m) => m.id === id);
+    if (measurement) {
+      updateSurfaceBedMeas(measurement);
+      setEditingSurfaceBedMeasurementId(id);
     }
   }
-}
 
-// PAD FOOTING handlers
-function savePadFootingType() {
-  if (!newPadFooting.name.trim()) return;
-  if (editingPadFootingId !== null) {
-    setPadFootingTypes((prev) => prev.map((pf) => (pf.id === editingPadFootingId ? { ...pf, ...newPadFooting } : pf)));
-    setEditingPadFootingId(null);
-  } else {
-    setPadFootingTypes((prev) => [...prev, { id: Date.now(), ...newPadFooting }]);
+  function deleteSurfaceBedMeasurement(id: number) {
+    if (confirm("Are you sure you want to delete this measurement?")) {
+      setSurfaceBedMeasurements((prev) => prev.filter((m) => m.id !== id));
+      if (editingSurfaceBedMeasurementId === id) {
+        setEditingSurfaceBedMeasurementId(null);
+        resetSurfaceBedMeas();
+      }
+    }
   }
-  resetPadFooting();
-}
 
-function editPadFootingType(id: number) {
-  const pf = padFootingTypes.find((p) => p.id === id);
-  if (pf) {
-    updatePadFooting(pf);
-    setEditingPadFootingId(id);
+  // PAD FOOTING handlers
+  function savePadFootingType() {
+    if (!newPadFooting.name.trim()) return;
+    if (editingPadFootingId !== null) {
+      setPadFootingTypes((prev) => prev.map((pf) => (pf.id === editingPadFootingId ? { ...pf, ...newPadFooting } : pf)));
+      setEditingPadFootingId(null);
+    } else {
+      setPadFootingTypes((prev) => [...prev, { id: Date.now(), ...newPadFooting }]);
+    }
+    resetPadFooting();
   }
-}
 
-function deletePadFootingType(id: number) {
-  setPadFootingTypes((prev) => prev.filter((pf) => pf.id !== id));
-  setPadFootingMeasurements((prev) => prev.filter((m) => m.padFootingTypeId !== id));
-}
-
-function addPadFootingMeasurement() {
-  if (!newPadFootingMeas.mark.trim() || newPadFootingMeas.padFootingTypeId === 0 || !newPadFootingMeas.quantity || newPadFootingMeas.quantity <= 0) return;
-  const measurement = {
-    id: Date.now(),
-    ...newPadFootingMeas,
-    elementalSectionId: "substructure",
-    elementalElementId: "pad-footings",
-  };
-  if (editingPadFootingMeasurementId !== null) {
-    setPadFootingMeasurements((prev) =>
-      prev.map((m) => (m.id === editingPadFootingMeasurementId ? { ...m, ...measurement } : m))
-    );
-    setEditingPadFootingMeasurementId(null);
-  } else {
-    setPadFootingMeasurements((prev) => [...prev, measurement]);
+  function editPadFootingType(id: number) {
+    const pf = padFootingTypes.find((p) => p.id === id);
+    if (pf) {
+      updatePadFooting(pf);
+      setEditingPadFootingId(id);
+    }
   }
-  resetPadFootingMeas();
-}
 
-function editPadFootingMeasurement(id: number) {
-  const measurement = padFootingMeasurements.find((m) => m.id === id);
-  if (measurement) {
-    updatePadFootingMeas(measurement);
-    setEditingPadFootingMeasurementId(id);
+  function deletePadFootingType(id: number) {
+    setPadFootingTypes((prev) => prev.filter((pf) => pf.id !== id));
+    setPadFootingMeasurements((prev) => prev.filter((m) => m.padFootingTypeId !== id));
   }
-}
 
-function deletePadFootingMeasurement(id: number) {
-  if (confirm("Are you sure you want to delete this measurement?")) {
-    setPadFootingMeasurements((prev) => prev.filter((m) => m.id !== id));
-    if (editingPadFootingMeasurementId === id) {
+  function addPadFootingMeasurement() {
+    if (!newPadFootingMeas.mark.trim() || newPadFootingMeas.padFootingTypeId === 0 || !newPadFootingMeas.quantity || newPadFootingMeas.quantity <= 0) return;
+    const measurement = {
+      id: Date.now(),
+      ...newPadFootingMeas,
+      elementalSectionId: "substructure",
+      elementalElementId: "pad-footings",
+    };
+    if (editingPadFootingMeasurementId !== null) {
+      setPadFootingMeasurements((prev) =>
+        prev.map((m) => (m.id === editingPadFootingMeasurementId ? { ...m, ...measurement } : m))
+      );
       setEditingPadFootingMeasurementId(null);
-      resetPadFootingMeas();
+    } else {
+      setPadFootingMeasurements((prev) => [...prev, measurement]);
+    }
+    resetPadFootingMeas();
+  }
+
+  function editPadFootingMeasurement(id: number) {
+    const measurement = padFootingMeasurements.find((m) => m.id === id);
+    if (measurement) {
+      updatePadFootingMeas(measurement);
+      setEditingPadFootingMeasurementId(id);
     }
   }
-}
 
-// GROUND BEAM handlers
-function saveGroundBeamType() {
-  if (!newGroundBeam.name.trim()) return;
-  if (editingGroundBeamId !== null) {
-    setGroundBeamTypes((prev) => prev.map((gb) => (gb.id === editingGroundBeamId ? { ...gb, ...newGroundBeam } : gb)));
-    setEditingGroundBeamId(null);
-  } else {
-    setGroundBeamTypes((prev) => [...prev, { id: Date.now(), ...newGroundBeam }]);
+  function deletePadFootingMeasurement(id: number) {
+    if (confirm("Are you sure you want to delete this measurement?")) {
+      setPadFootingMeasurements((prev) => prev.filter((m) => m.id !== id));
+      if (editingPadFootingMeasurementId === id) {
+        setEditingPadFootingMeasurementId(null);
+        resetPadFootingMeas();
+      }
+    }
   }
-  resetGroundBeam();
-}
 
-function editGroundBeamType(id: number) {
-  const gb = groundBeamTypes.find((g) => g.id === id);
-  if (gb) {
-    updateGroundBeam(gb);
-    setEditingGroundBeamId(id);
+  // GROUND BEAM handlers
+  function saveGroundBeamType() {
+    if (!newGroundBeam.name.trim()) return;
+    if (editingGroundBeamId !== null) {
+      setGroundBeamTypes((prev) => prev.map((gb) => (gb.id === editingGroundBeamId ? { ...gb, ...newGroundBeam } : gb)));
+      setEditingGroundBeamId(null);
+    } else {
+      setGroundBeamTypes((prev) => [...prev, { id: Date.now(), ...newGroundBeam }]);
+    }
+    resetGroundBeam();
   }
-}
 
-function deleteGroundBeamType(id: number) {
-  setGroundBeamTypes((prev) => prev.filter((gb) => gb.id !== id));
-  setGroundBeamMeasurements((prev) => prev.filter((m) => m.groundBeamTypeId !== id));
-}
-
-function addGroundBeamMeasurement() {
-  if (!newGroundBeamMeas.mark.trim() || newGroundBeamMeas.groundBeamTypeId === 0 || !newGroundBeamMeas.length || newGroundBeamMeas.length <= 0) return;
-  const measurement = {
-    id: Date.now(),
-    ...newGroundBeamMeas,
-    elementalSectionId: "substructure",
-    elementalElementId: "ground-beams",
-  };
-  if (editingGroundBeamMeasurementId !== null) {
-    setGroundBeamMeasurements((prev) =>
-      prev.map((m) => (m.id === editingGroundBeamMeasurementId ? { ...m, ...measurement } : m))
-    );
-    setEditingGroundBeamMeasurementId(null);
-  } else {
-    setGroundBeamMeasurements((prev) => [...prev, measurement]);
+  function editGroundBeamType(id: number) {
+    const gb = groundBeamTypes.find((g) => g.id === id);
+    if (gb) {
+      updateGroundBeam(gb);
+      setEditingGroundBeamId(id);
+    }
   }
-  resetGroundBeamMeas();
-}
 
-function editGroundBeamMeasurement(id: number) {
-  const measurement = groundBeamMeasurements.find((m) => m.id === id);
-  if (measurement) {
-    updateGroundBeamMeas(measurement);
-    setEditingGroundBeamMeasurementId(id);
+  function deleteGroundBeamType(id: number) {
+    setGroundBeamTypes((prev) => prev.filter((gb) => gb.id !== id));
+    setGroundBeamMeasurements((prev) => prev.filter((m) => m.groundBeamTypeId !== id));
   }
-}
 
-function deleteGroundBeamMeasurement(id: number) {
-  if (confirm("Are you sure you want to delete this measurement?")) {
-    setGroundBeamMeasurements((prev) => prev.filter((m) => m.id !== id));
-    if (editingGroundBeamMeasurementId === id) {
+  function addGroundBeamMeasurement() {
+    if (!newGroundBeamMeas.mark.trim() || newGroundBeamMeas.groundBeamTypeId === 0 || !newGroundBeamMeas.length || newGroundBeamMeas.length <= 0) return;
+    const measurement = {
+      id: Date.now(),
+      ...newGroundBeamMeas,
+      elementalSectionId: "substructure",
+      elementalElementId: "ground-beams",
+    };
+    if (editingGroundBeamMeasurementId !== null) {
+      setGroundBeamMeasurements((prev) =>
+        prev.map((m) => (m.id === editingGroundBeamMeasurementId ? { ...m, ...measurement } : m))
+      );
       setEditingGroundBeamMeasurementId(null);
-      resetGroundBeamMeas();
+    } else {
+      setGroundBeamMeasurements((prev) => [...prev, measurement]);
+    }
+    resetGroundBeamMeas();
+  }
+
+  function editGroundBeamMeasurement(id: number) {
+    const measurement = groundBeamMeasurements.find((m) => m.id === id);
+    if (measurement) {
+      updateGroundBeamMeas(measurement);
+      setEditingGroundBeamMeasurementId(id);
     }
   }
-}
 
-// COLUMN handlers
-function saveColumnType() {
-  if (!newColumn.name.trim()) return;
-  if (editingColumnId !== null) {
-    setColumnTypes((prev) => prev.map((c) => (c.id === editingColumnId ? { ...c, ...newColumn } : c)));
-    setEditingColumnId(null);
-  } else {
-    setColumnTypes((prev) => [...prev, { id: Date.now(), ...newColumn }]);
+  function deleteGroundBeamMeasurement(id: number) {
+    if (confirm("Are you sure you want to delete this measurement?")) {
+      setGroundBeamMeasurements((prev) => prev.filter((m) => m.id !== id));
+      if (editingGroundBeamMeasurementId === id) {
+        setEditingGroundBeamMeasurementId(null);
+        resetGroundBeamMeas();
+      }
+    }
   }
-  resetColumn();
-}
 
-function editColumnType(id: number) {
-  const col = columnTypes.find((c) => c.id === id);
-  if (col) {
-    updateColumn(col);
-    setEditingColumnId(id);
+  // COLUMN handlers
+  function saveColumnType() {
+    if (!newColumn.name.trim()) return;
+    if (editingColumnId !== null) {
+      setColumnTypes((prev) => prev.map((c) => (c.id === editingColumnId ? { ...c, ...newColumn } : c)));
+      setEditingColumnId(null);
+    } else {
+      setColumnTypes((prev) => [...prev, { id: Date.now(), ...newColumn }]);
+    }
+    resetColumn();
   }
-}
 
-function deleteColumnType(id: number) {
-  setColumnTypes((prev) => prev.filter((c) => c.id !== id));
-  setColumnMeasurements((prev) => prev.filter((m) => m.columnTypeId !== id));
-}
-
-function addColumnMeasurement() {
-  if (!newColumnMeas.mark.trim() || newColumnMeas.columnTypeId === 0 || !newColumnMeas.quantity || newColumnMeas.quantity <= 0) return;
-  const measurement = {
-    id: Date.now(),
-    ...newColumnMeas,
-    elementalSectionId: "Structural Frame",
-    elementalElementId: "columns",
-  };
-  if (editingColumnMeasurementId !== null) {
-    setColumnMeasurements((prev) =>
-      prev.map((m) => (m.id === editingColumnMeasurementId ? { ...m, ...measurement } : m))
-    );
-    setEditingColumnMeasurementId(null);
-  } else {
-    setColumnMeasurements((prev) => [...prev, measurement]);
+  function editColumnType(id: number) {
+    const col = columnTypes.find((c) => c.id === id);
+    if (col) {
+      updateColumn(col);
+      setEditingColumnId(id);
+    }
   }
-  resetColumnMeas();
-}
 
-function editColumnMeasurement(id: number) {
-  const measurement = columnMeasurements.find((m) => m.id === id);
-  if (measurement) {
-    updateColumnMeas(measurement);
-    setEditingColumnMeasurementId(id);
+  function deleteColumnType(id: number) {
+    setColumnTypes((prev) => prev.filter((c) => c.id !== id));
+    setColumnMeasurements((prev) => prev.filter((m) => m.columnTypeId !== id));
   }
-}
 
-function deleteColumnMeasurement(id: number) {
-  if (confirm("Are you sure you want to delete this measurement?")) {
-    setColumnMeasurements((prev) => prev.filter((m) => m.id !== id));
-    if (editingColumnMeasurementId === id) {
+  function addColumnMeasurement() {
+    if (!newColumnMeas.mark.trim() || newColumnMeas.columnTypeId === 0 || !newColumnMeas.quantity || newColumnMeas.quantity <= 0) return;
+    const measurement = {
+      id: Date.now(),
+      ...newColumnMeas,
+      elementalSectionId: "Structural Frame",
+      elementalElementId: "columns",
+    };
+    if (editingColumnMeasurementId !== null) {
+      setColumnMeasurements((prev) =>
+        prev.map((m) => (m.id === editingColumnMeasurementId ? { ...m, ...measurement } : m))
+      );
       setEditingColumnMeasurementId(null);
-      resetColumnMeas();
+    } else {
+      setColumnMeasurements((prev) => [...prev, measurement]);
+    }
+    resetColumnMeas();
+  }
+
+  function editColumnMeasurement(id: number) {
+    const measurement = columnMeasurements.find((m) => m.id === id);
+    if (measurement) {
+      updateColumnMeas(measurement);
+      setEditingColumnMeasurementId(id);
     }
   }
-}
 
-// SLAB handlers
-function saveSlabType() {
-  if (!newSlab.name.trim()) return;
-  if (editingSlabId !== null) {
-    setSlabTypes((prev) => prev.map((s) => (s.id === editingSlabId ? { ...s, ...newSlab } : s)));
-    setEditingSlabId(null);
-  } else {
-    setSlabTypes((prev) => [...prev, { id: Date.now(), ...newSlab }]);
+  function deleteColumnMeasurement(id: number) {
+    if (confirm("Are you sure you want to delete this measurement?")) {
+      setColumnMeasurements((prev) => prev.filter((m) => m.id !== id));
+      if (editingColumnMeasurementId === id) {
+        setEditingColumnMeasurementId(null);
+        resetColumnMeas();
+      }
+    }
   }
-  resetSlab();
-}
 
-function editSlabType(id: number) {
-  const slab = slabTypes.find((s) => s.id === id);
-  if (slab) {
-    updateSlab(slab);
-    setEditingSlabId(id);
+  // SLAB handlers
+  function saveSlabType() {
+    if (!newSlab.name.trim()) return;
+    if (editingSlabId !== null) {
+      setSlabTypes((prev) => prev.map((s) => (s.id === editingSlabId ? { ...s, ...newSlab } : s)));
+      setEditingSlabId(null);
+    } else {
+      setSlabTypes((prev) => [...prev, { id: Date.now(), ...newSlab }]);
+    }
+    resetSlab();
   }
-}
 
-function deleteSlabType(id: number) {
-  setSlabTypes((prev) => prev.filter((s) => s.id !== id));
-  setSlabMeasurements((prev) => prev.filter((m) => m.slabTypeId !== id));
-}
-
-function addSlabMeasurement() {
-  if (!newSlabMeas.mark.trim() || newSlabMeas.slabTypeId === 0 || !newSlabMeas.length || newSlabMeas.length <= 0 || !newSlabMeas.width || newSlabMeas.width <= 0 || !newSlabMeas.quantity || newSlabMeas.quantity <= 0) return;
-  const area = newSlabMeas.length * newSlabMeas.width * newSlabMeas.quantity;
-  const measurement = {
-    id: Date.now(),
-    ...newSlabMeas,
-    area,
-    elementalSectionId: "Structural Frame",
-    elementalElementId: "slabs",
-  };
-  if (editingSlabMeasurementId !== null) {
-    setSlabMeasurements((prev) =>
-      prev.map((m) => (m.id === editingSlabMeasurementId ? { ...m, ...measurement } : m))
-    );
-    setEditingSlabMeasurementId(null);
-  } else {
-    setSlabMeasurements((prev) => [...prev, measurement]);
+  function editSlabType(id: number) {
+    const slab = slabTypes.find((s) => s.id === id);
+    if (slab) {
+      updateSlab(slab);
+      setEditingSlabId(id);
+    }
   }
-  resetSlabMeas();
-}
 
-function editSlabMeasurement(id: number) {
-  const measurement = slabMeasurements.find((m) => m.id === id);
-  if (measurement) {
-    updateSlabMeas(measurement);
-    setEditingSlabMeasurementId(id);
+  function deleteSlabType(id: number) {
+    setSlabTypes((prev) => prev.filter((s) => s.id !== id));
+    setSlabMeasurements((prev) => prev.filter((m) => m.slabTypeId !== id));
   }
-}
 
-function deleteSlabMeasurement(id: number) {
-  if (confirm("Are you sure you want to delete this measurement?")) {
-    setSlabMeasurements((prev) => prev.filter((m) => m.id !== id));
-    if (editingSlabMeasurementId === id) {
+  function addSlabMeasurement() {
+    if (!newSlabMeas.mark.trim() || newSlabMeas.slabTypeId === 0 || !newSlabMeas.length || newSlabMeas.length <= 0 || !newSlabMeas.width || newSlabMeas.width <= 0 || !newSlabMeas.quantity || newSlabMeas.quantity <= 0) return;
+    const area = newSlabMeas.length * newSlabMeas.width * newSlabMeas.quantity;
+    const measurement = {
+      id: Date.now(),
+      ...newSlabMeas,
+      area,
+      elementalSectionId: "Structural Frame",
+      elementalElementId: "slabs",
+    };
+    if (editingSlabMeasurementId !== null) {
+      setSlabMeasurements((prev) =>
+        prev.map((m) => (m.id === editingSlabMeasurementId ? { ...m, ...measurement } : m))
+      );
       setEditingSlabMeasurementId(null);
-      resetSlabMeas();
+    } else {
+      setSlabMeasurements((prev) => [...prev, measurement]);
+    }
+    resetSlabMeas();
+  }
+
+  function editSlabMeasurement(id: number) {
+    const measurement = slabMeasurements.find((m) => m.id === id);
+    if (measurement) {
+      updateSlabMeas(measurement);
+      setEditingSlabMeasurementId(id);
     }
   }
-}
 
-// WALL handlers
-function handleThicknessTypeChange(type: WallThicknessType) {
-  const thicknessMm = getThicknessFromType(type);
-  updateWall({ thicknessType: type, thicknessMm });
-}
-
-function handleBrickTypeChange(type: BrickType) {
-  const { courseHeight } = getBrickDefaults(type);
-  updateWall({ brickType: type, courseHeight });
-}
-
-function saveWallType() {
-  if (!newWall.name.trim()) return;
-  if (editingWallId !== null) {
-    setWallTypes((prev) => prev.map((w) => (w.id === editingWallId ? { ...w, ...newWall } : w)));
-    setEditingWallId(null);
-  } else {
-    setWallTypes((prev) => [...prev, { id: Date.now(), ...newWall }]);
+  function deleteSlabMeasurement(id: number) {
+    if (confirm("Are you sure you want to delete this measurement?")) {
+      setSlabMeasurements((prev) => prev.filter((m) => m.id !== id));
+      if (editingSlabMeasurementId === id) {
+        setEditingSlabMeasurementId(null);
+        resetSlabMeas();
+      }
+    }
   }
-  resetWall();
-}
 
-function editWallType(id: number) {
-  const wall = wallTypes.find((w) => w.id === id);
-  if (wall) {
-    updateWall(wall);
-    setEditingWallId(id);
+  // ============================================
+  // WALL HANDLERS
+  // ============================================
+
+  function handleThicknessTypeChange(type: WallThicknessType) {
+    const thicknessMm = getThicknessFromType(type);
+    updateWall({ thicknessType: type, thicknessMm });
   }
-}
 
-function deleteWallType(id: number) {
-  setWallTypes((prev) => prev.filter((w) => w.id !== id));
-  setWallMeasurements((prev) => prev.filter((m) => m.wallTypeId !== id));
-}
-
-function addWallMeasurement() {
-  if (!newWallMeas.mark.trim() || newWallMeas.wallTypeId === 0 || !newWallMeas.length || newWallMeas.length <= 0 || !newWallMeas.height || newWallMeas.height <= 0) return;
-  const area = newWallMeas.length * newWallMeas.height;
-  const measurement = {
-    id: Date.now(),
-    ...newWallMeas,
-    area,
-    elementalSectionId: "Internal Divisions",
-    elementalElementId: "walls",
-  };
-  if (editingWallMeasurementId !== null) {
-    setWallMeasurements((prev) =>
-      prev.map((m) => (m.id === editingWallMeasurementId ? { ...m, ...measurement } : m))
-    );
-    setEditingWallMeasurementId(null);
-  } else {
-    setWallMeasurements((prev) => [...prev, measurement]);
+  function handleBrickTypeChange(type: BrickType) {
+    const { courseHeight } = getBrickDefaults(type);
+    updateWall({ brickType: type, courseHeight });
   }
-  resetWallMeas();
-}
 
-function editWallMeasurement(id: number) {
-  const measurement = wallMeasurements.find((m) => m.id === id);
-  if (measurement) {
-    updateWallMeas(measurement);
-    setEditingWallMeasurementId(id);
+  function saveWallType() {
+    if (!newWall.name.trim()) return;
+    if (editingWallId !== null) {
+      setWallTypes((prev) => prev.map((w) => (w.id === editingWallId ? { ...w, ...newWall } : w)));
+      setEditingWallId(null);
+    } else {
+      setWallTypes((prev) => [...prev, { id: Date.now(), ...newWall }]);
+    }
+    resetWall();
   }
-}
 
-function deleteWallMeasurement(id: number) {
-  if (confirm("Are you sure you want to delete this measurement?")) {
-    setWallMeasurements((prev) => prev.filter((m) => m.id !== id));
-    if (editingWallMeasurementId === id) {
+  function editWallType(id: number) {
+    const wall = wallTypes.find((w) => w.id === id);
+    if (wall) {
+      updateWall(wall);
+      setEditingWallId(id);
+    }
+  }
+
+  function deleteWallType(id: number) {
+    setWallTypes((prev) => prev.filter((w) => w.id !== id));
+    setWallMeasurements((prev) => prev.filter((m) => m.wallTypeId !== id));
+  }
+
+  function addWallMeasurement() {
+    // Validation
+    if (!newWallMeas.mark.trim() || newWallMeas.wallTypeId === 0 || !newWallMeas.length || newWallMeas.length <= 0 || !newWallMeas.height || newWallMeas.height <= 0) {
+      return;
+    }
+
+    const area = newWallMeas.length * newWallMeas.height;
+    const wallLocation = newWallMeas.wallLocation || "Internal Division";
+
+    // Create the measurement
+    const measurement = {
+      id: Date.now(),
+      ...newWallMeas,
+      area,
+      wallLocation,
+      elementalSectionId: "internal-divisions",
+      elementalElementId: "walls",
+    };
+
+    // Save measurement
+    if (editingWallMeasurementId !== null) {
+      setWallMeasurements((prev) =>
+        prev.map((m) => (m.id === editingWallMeasurementId ? { ...m, ...measurement } : m))
+      );
       setEditingWallMeasurementId(null);
-      resetWallMeas();
+    } else {
+      setWallMeasurements((prev) => [...prev, measurement]);
+    }
+
+    resetWallMeas();
+  }
+
+  function editWallMeasurement(id: number) {
+    const measurement = wallMeasurements.find((m) => m.id === id);
+    if (measurement) {
+      updateWallMeas(measurement);
+      setEditingWallMeasurementId(id);
     }
   }
-}
 
-// OPENING handlers
-function saveOpeningType() {
-  if (!newOpening.name.trim()) return;
-  if (editingOpeningId !== null) {
-    setOpeningTypes((prev) =>
-      prev.map((o) => (o.id === editingOpeningId ? { ...o, ...newOpening } : o))
-    );
-    setEditingOpeningId(null);
-  } else {
-    setOpeningTypes((prev) => [...prev, { id: Date.now(), ...newOpening }]);
+  function deleteWallMeasurement(id: number) {
+    if (confirm("Are you sure you want to delete this measurement?")) {
+      setWallMeasurements((prev) => prev.filter((m) => m.id !== id));
+      if (editingWallMeasurementId === id) {
+        setEditingWallMeasurementId(null);
+        resetWallMeas();
+      }
+    }
   }
-  resetOpening();
-}
 
-function editOpeningType(id: number) {
-  const opening = openingTypes.find((o) => o.id === id);
-  if (opening) {
-    updateOpening(opening);
-    setEditingOpeningId(id);
+  // OPENING handlers
+  function saveOpeningType() {
+    if (!newOpening.name.trim()) return;
+    if (editingOpeningId !== null) {
+      setOpeningTypes((prev) =>
+        prev.map((o) => (o.id === editingOpeningId ? { ...o, ...newOpening } : o))
+      );
+      setEditingOpeningId(null);
+    } else {
+      setOpeningTypes((prev) => [...prev, { id: Date.now(), ...newOpening }]);
+    }
+    resetOpening();
   }
-}
 
-function deleteOpeningType(id: number) {
-  setOpeningTypes((prev) => prev.filter((o) => o.id !== id));
-  setOpeningMeasurements((prev) => prev.filter((m) => m.openingTypeId !== id));
-}
-
-function addOpeningMeasurement() {
-  if (!newOpeningMeas.mark.trim() || newOpeningMeas.openingTypeId === 0 || !newOpeningMeas.quantity || newOpeningMeas.quantity <= 0) return;
-  const measurement = {
-    id: Date.now(),
-    ...newOpeningMeas,
-    elementalSectionId: "Internal Divisions",
-    elementalElementId: "Openings",
-  };
-  if (editingOpeningMeasurementId !== null) {
-    setOpeningMeasurements((prev) =>
-      prev.map((m) => (m.id === editingOpeningMeasurementId ? { ...m, ...measurement } : m))
-    );
-    setEditingOpeningMeasurementId(null);
-  } else {
-    setOpeningMeasurements((prev) => [...prev, measurement]);
+  function editOpeningType(id: number) {
+    const opening = openingTypes.find((o) => o.id === id);
+    if (opening) {
+      updateOpening(opening);
+      setEditingOpeningId(id);
+    }
   }
-  resetOpeningMeas();
-}
 
-function editOpeningMeasurement(id: number) {
-  const measurement = openingMeasurements.find((m) => m.id === id);
-  if (measurement) {
-    updateOpeningMeas(measurement);
-    setEditingOpeningMeasurementId(id);
+  function deleteOpeningType(id: number) {
+    setOpeningTypes((prev) => prev.filter((o) => o.id !== id));
+    setOpeningMeasurements((prev) => prev.filter((m) => m.openingTypeId !== id));
   }
-}
 
-function deleteOpeningMeasurement(id: number) {
-  if (confirm("Are you sure you want to delete this measurement?")) {
-    setOpeningMeasurements((prev) => prev.filter((m) => m.id !== id));
-    if (editingOpeningMeasurementId === id) {
+  function addOpeningMeasurement() {
+    if (!newOpeningMeas.mark.trim() || newOpeningMeas.openingTypeId === 0 || !newOpeningMeas.quantity || newOpeningMeas.quantity <= 0) return;
+    const measurement = {
+      id: Date.now(),
+      ...newOpeningMeas,
+      elementalSectionId: "Internal Divisions",
+      elementalElementId: "Openings",
+    };
+    if (editingOpeningMeasurementId !== null) {
+      setOpeningMeasurements((prev) =>
+        prev.map((m) => (m.id === editingOpeningMeasurementId ? { ...m, ...measurement } : m))
+      );
       setEditingOpeningMeasurementId(null);
-      resetOpeningMeas();
+    } else {
+      setOpeningMeasurements((prev) => [...prev, measurement]);
+    }
+    resetOpeningMeas();
+  }
+
+  function editOpeningMeasurement(id: number) {
+    const measurement = openingMeasurements.find((m) => m.id === id);
+    if (measurement) {
+      updateOpeningMeas(measurement);
+      setEditingOpeningMeasurementId(id);
     }
   }
-}
+
+  function deleteOpeningMeasurement(id: number) {
+    if (confirm("Are you sure you want to delete this measurement?")) {
+      setOpeningMeasurements((prev) => prev.filter((m) => m.id !== id));
+      if (editingOpeningMeasurementId === id) {
+        setEditingOpeningMeasurementId(null);
+        resetOpeningMeas();
+      }
+    }
+  }
 
   // ============================================
   // MASTER BOQ ENGINE
@@ -1258,17 +1272,17 @@ function deleteOpeningMeasurement(id: number) {
     }
 
     // Tiles
-  if (sb.tileRequired && sb.tilePcSum && sb.tilePcSum > 0) {
-  addBoqItemFromBillKey(
-    masterBoqItems,
-    "TILING",
-    SECTIONS.TILING,
-    `Tiles PC Sum R${sb.tilePcSum}/m²`,
-    "m²",
-    m.area,
-    baseContribution(m.area)
-  );
-}
+    if (sb.tileRequired && sb.tilePcSum && sb.tilePcSum > 0) {
+      addBoqItemFromBillKey(
+        masterBoqItems,
+        "TILING",
+        SECTIONS.TILING,
+        `Tiles PC Sum R${sb.tilePcSum}/m²`,
+        "m²",
+        m.area,
+        baseContribution(m.area)
+      );
+    }
 
     // Powerfloat
     if (sb.powerfloat) {
@@ -1284,335 +1298,321 @@ function deleteOpeningMeasurement(id: number) {
     }
   });
 
-// ---------- PAD FOOTINGS ----------
-padFootingMeasurements.forEach((m) => {
-  const pf = padFootingTypes.find((p) => p.id === m.padFootingTypeId);
-  if (!pf) return;
+  // ---------- PAD FOOTINGS ----------
+  padFootingMeasurements.forEach((m) => {
+    const pf = padFootingTypes.find((p) => p.id === m.padFootingTypeId);
+    if (!pf) return;
 
-  const qty = m.quantity;
-  const padConcrete = (pf.padLength / 1000) * (pf.padWidth / 1000) * (pf.padDepth / 1000) * qty;
-  const excavationVol = (pf.excavationLength / 1000) * (pf.excavationWidth / 1000) * (pf.excavationDepth / 1000) * qty;
-  const totalReinf = (padConcrete * pf.reinfKg) / 1000;
-  const highTensile = totalReinf * 0.9;
-  const mildSteel = totalReinf * 0.1;
-  const strength = getConcreteStrength(pf.concreteClass);
-  const baseContribution = (q: number) => ({
-    module: "Pad Footings",
-    measurementId: m.id,
-    mark: m.mark,
-    qty: q,
+    const qty = m.quantity;
+    const padConcrete = (pf.padLength / 1000) * (pf.padWidth / 1000) * (pf.padDepth / 1000) * qty;
+    const excavationVol = (pf.excavationLength / 1000) * (pf.excavationWidth / 1000) * (pf.excavationDepth / 1000) * qty;
+    const totalReinf = (padConcrete * pf.reinfKg) / 1000;
+    const highTensile = totalReinf * 0.9;
+    const mildSteel = totalReinf * 0.1;
+    const strength = getConcreteStrength(pf.concreteClass);
+    const baseContribution = (q: number) => ({
+      module: "Pad Footings",
+      measurementId: m.id,
+      mark: m.mark,
+      qty: q,
+    });
+
+    // Excavation
+    addBoqItemFromBillKey(
+      masterBoqItems,
+      "EARTHWORKS",
+      SECTIONS.EXCAVATION,
+      "Excavation for pad footings",
+      "m³",
+      excavationVol,
+      baseContribution(excavationVol)
+    );
+
+    // Concrete
+    addBoqItemFromBillKey(
+      masterBoqItems,
+      "CONCRETE",
+      `Concrete (${strength})`,
+      `${pf.concreteClass} concrete in pad footings`,
+      "m³",
+      padConcrete,
+      baseContribution(padConcrete)
+    );
+
+    // Reinforcement
+    if (highTensile > 0) {
+      addBoqItemFromBillKey(
+        masterBoqItems,
+        "CONCRETE",
+        SECTIONS.REINFORCEMENT,
+        "High tensile reinforcement",
+        "t",
+        highTensile,
+        baseContribution(highTensile)
+      );
+    }
+    if (mildSteel > 0) {
+      addBoqItemFromBillKey(
+        masterBoqItems,
+        "CONCRETE",
+        SECTIONS.REINFORCEMENT,
+        "Mild steel reinforcement",
+        "t",
+        mildSteel,
+        baseContribution(mildSteel)
+      );
+    }
+
+    // Formwork
+    if (pf.formworkRequired) {
+      const formwork = 2 * ((pf.padLength / 1000) + (pf.padWidth / 1000)) * (pf.padDepth / 1000) * qty;
+      addBoqItemFromBillKey(
+        masterBoqItems,
+        "CONCRETE",
+        SECTIONS.FORMWORK,
+        "Formwork to sides of pad footings",
+        "m²",
+        formwork,
+        baseContribution(formwork)
+      );
+    }
+
+    // Blinding
+    if (pf.blindingRequired) {
+      const blinding = (pf.excavationLength / 1000) * (pf.excavationWidth / 1000) * (pf.blindingThickness / 1000) * qty;
+      addBoqItemFromBillKey(
+        masterBoqItems,
+        "EARTHWORKS",
+        SECTIONS.BLINDING,
+        `${pf.blindingThickness}mm blinding under pad footings`,
+        "m³",
+        blinding,
+        baseContribution(blinding)
+      );
+    }
+
+    // Soil Poisoning
+    if (pf.soilPoison) {
+      const area = (pf.excavationLength / 1000) * (pf.excavationWidth / 1000) * qty;
+      addBoqItemFromBillKey(
+        masterBoqItems,
+        "EARTHWORKS",
+        SECTIONS.SOIL_POISONING,
+        "Soil poisoning to pad footings",
+        "m²",
+        area,
+        baseContribution(area)
+      );
+    }
+
+    // Backfill
+    if (pf.backfill) {
+      const backfill = excavationVol - padConcrete;
+      addBoqItemFromBillKey(
+        masterBoqItems,
+        "EARTHWORKS",
+        SECTIONS.BACKFILLING,
+        "Backfill to pad footings",
+        "m³",
+        backfill,
+        baseContribution(backfill)
+      );
+    }
   });
-
-  // Excavation
-  addBoqItemFromBillKey(
-    masterBoqItems,
-    "EARTHWORKS",
-    SECTIONS.EXCAVATION,
-    "Excavation for pad footings",
-    "m³",
-    excavationVol,
-    baseContribution(excavationVol)
-  );
-
-  // Concrete
-  addBoqItemFromBillKey(
-    masterBoqItems,
-    "CONCRETE",
-    `Concrete (${strength})`,
-    `${pf.concreteClass} concrete in pad footings`,
-    "m³",
-    padConcrete,
-    baseContribution(padConcrete)
-  );
-
-  // Reinforcement
-  if (highTensile > 0) {
-    addBoqItemFromBillKey(
-      masterBoqItems,
-      "CONCRETE",
-      SECTIONS.REINFORCEMENT,
-      "High tensile reinforcement",
-      "t",
-      highTensile,
-      baseContribution(highTensile)
-    );
-  }
-  if (mildSteel > 0) {
-    addBoqItemFromBillKey(
-      masterBoqItems,
-      "CONCRETE",
-      SECTIONS.REINFORCEMENT,
-      "Mild steel reinforcement",
-      "t",
-      mildSteel,
-      baseContribution(mildSteel)
-    );
-  }
-
-  // Formwork
-  if (pf.formworkRequired) {
-    const formwork = 2 * ((pf.padLength / 1000) + (pf.padWidth / 1000)) * (pf.padDepth / 1000) * qty;
-    addBoqItemFromBillKey(
-      masterBoqItems,
-      "CONCRETE",
-      SECTIONS.FORMWORK,
-      "Formwork to sides of pad footings",
-      "m²",
-      formwork,
-      baseContribution(formwork)
-    );
-  }
-
-  // Blinding
-  if (pf.blindingRequired) {
-    const blinding = (pf.excavationLength / 1000) * (pf.excavationWidth / 1000) * (pf.blindingThickness / 1000) * qty;
-    addBoqItemFromBillKey(
-      masterBoqItems,
-      "EARTHWORKS",
-      SECTIONS.BLINDING,
-      `${pf.blindingThickness}mm blinding under pad footings`,
-      "m³",
-      blinding,
-      baseContribution(blinding)
-    );
-  }
-
-  // Soil Poisoning
-  if (pf.soilPoison) {
-    const area = (pf.excavationLength / 1000) * (pf.excavationWidth / 1000) * qty;
-    addBoqItemFromBillKey(
-      masterBoqItems,
-      "EARTHWORKS",
-      SECTIONS.SOIL_POISONING,
-      "Soil poisoning to pad footings",
-      "m²",
-      area,
-      baseContribution(area)
-    );
-  }
-
-  
-  // Backfill
-  if (pf.backfill) {
-    const backfill = excavationVol - padConcrete;
-    addBoqItemFromBillKey(
-      masterBoqItems,
-      "EARTHWORKS",
-      SECTIONS.BACKFILLING,
-      "Backfill to pad footings",
-      "m³",
-      backfill,
-      baseContribution(backfill)
-    );
-  }
-});
 
   // ---------- GROUND BEAMS ----------
-groundBeamMeasurements.forEach((m) => {
-  const gb = groundBeamTypes.find((g) => g.id === m.groundBeamTypeId);
-  if (!gb) return;
+  groundBeamMeasurements.forEach((m) => {
+    const gb = groundBeamTypes.find((g) => g.id === m.groundBeamTypeId);
+    if (!gb) return;
 
-  const length = m.length;
-  const trenchVol = (gb.trenchWidth / 1000) * (gb.trenchDepth / 1000) * length;
-  const concreteVol = (gb.beamWidth / 1000) * (gb.beamDepth / 1000) * length;
-  const totalReinf = (concreteVol * gb.reinfKgPerM3) / 1000;
-  const highTensile = totalReinf * 0.9;
-  const mildSteel = totalReinf * 0.1;
-  const strength = getConcreteStrength(gb.concreteClass);
-  const baseContribution = (q: number) => ({
-    module: "Ground Beams",
-    measurementId: m.id,
-    mark: m.mark,
-    qty: q,
+    const length = m.length;
+    const trenchVol = (gb.trenchWidth / 1000) * (gb.trenchDepth / 1000) * length;
+    const concreteVol = (gb.beamWidth / 1000) * (gb.beamDepth / 1000) * length;
+    const totalReinf = (concreteVol * gb.reinfKgPerM3) / 1000;
+    const highTensile = totalReinf * 0.9;
+    const mildSteel = totalReinf * 0.1;
+    const strength = getConcreteStrength(gb.concreteClass);
+    const baseContribution = (q: number) => ({
+      module: "Ground Beams",
+      measurementId: m.id,
+      mark: m.mark,
+      qty: q,
+    });
+
+    // Excavation
+    addBoqItemFromBillKey(
+      masterBoqItems,
+      "EARTHWORKS",
+      SECTIONS.EXCAVATION,
+      "Excavation for ground beams",
+      "m³",
+      trenchVol,
+      baseContribution(trenchVol)
+    );
+
+    // Concrete
+    addBoqItemFromBillKey(
+      masterBoqItems,
+      "CONCRETE",
+      `Concrete (${strength})`,
+      `${gb.concreteClass} concrete in ground beams`,
+      "m³",
+      concreteVol,
+      baseContribution(concreteVol)
+    );
+
+    // Reinforcement
+    if (highTensile > 0) {
+      addBoqItemFromBillKey(
+        masterBoqItems,
+        "CONCRETE",
+        SECTIONS.REINFORCEMENT,
+        "High tensile reinforcement",
+        "t",
+        highTensile,
+        baseContribution(highTensile)
+      );
+    }
+    if (mildSteel > 0) {
+      addBoqItemFromBillKey(
+        masterBoqItems,
+        "CONCRETE",
+        SECTIONS.REINFORCEMENT,
+        "Mild steel reinforcement",
+        "t",
+        mildSteel,
+        baseContribution(mildSteel)
+      );
+    }
+
+    // Formwork
+    if (gb.formworkRequired) {
+      const formwork = (gb.beamDepth / 1000) * length * 2;
+      addBoqItemFromBillKey(
+        masterBoqItems,
+        "CONCRETE",
+        SECTIONS.FORMWORK,
+        "Formwork to sides of ground beams",
+        "m²",
+        formwork,
+        baseContribution(formwork)
+      );
+    }
+
+    // Blinding
+    if (gb.blindingRequired) {
+      const blinding = (gb.beamWidth / 1000) * (gb.blindingThickness / 1000) * length;
+      addBoqItemFromBillKey(
+        masterBoqItems,
+        "EARTHWORKS",
+        SECTIONS.BLINDING,
+        `${gb.blindingThickness}mm blinding under ground beams`,
+        "m³",
+        blinding,
+        baseContribution(blinding)
+      );
+    }
+
+    // Backfill
+    if (gb.backfillRequired) {
+      const backfill = trenchVol - concreteVol;
+      addBoqItemFromBillKey(
+        masterBoqItems,
+        "EARTHWORKS",
+        SECTIONS.BACKFILLING,
+        "Backfill to ground beams",
+        "m³",
+        backfill,
+        baseContribution(backfill)
+      );
+    }
+
+    // DPC
+    if (gb.dpcRequired) {
+      const dpcArea = (gb.beamWidth / 1000) * length;
+      addBoqItemFromBillKey(
+        masterBoqItems,
+        "MASONRY",
+        SECTIONS.DAMP_PROOF_COURSES,
+        "DPC to ground beams",
+        "m²",
+        dpcArea,
+        baseContribution(dpcArea)
+      );
+    }
+
+    // Soil Poisoning
+    if (gb.soilPoisonRequired) {
+      const area = (gb.trenchWidth / 1000) * length;
+      addBoqItemFromBillKey(
+        masterBoqItems,
+        "EARTHWORKS",
+        SECTIONS.SOIL_POISONING,
+        "Soil poisoning under ground beams",
+        "m²",
+        area,
+        baseContribution(area)
+      );
+    }
+
+    // WORKING SPACE (only if formwork is required)
+    if (gb.formworkRequired && gb.workingSpaceRequired) {
+      const trenchWidthM = gb.trenchWidth / 1000;
+      const depthM = gb.trenchDepth / 1000;
+      const perimeter = 2 * (trenchWidthM + depthM);
+      let workingSpaceArea = 0;
+      let depthBandDesc = "";
+
+      if (depthM > 0.5 && depthM <= 1.5) {
+        workingSpaceArea = perimeter * length;
+        depthBandDesc = "Exceeding 0.5m and not exceeding 1.5m deep";
+      } else if (depthM > 1.5 && depthM <= 3.0) {
+        workingSpaceArea = perimeter * length;
+        depthBandDesc = "Exceeding 1.5m and not exceeding 3.0m deep";
+      } else if (depthM > 3.0 && depthM <= 4.5) {
+        workingSpaceArea = perimeter * length;
+        depthBandDesc = "Exceeding 3.0m and not exceeding 4.5m deep";
+      } else if (depthM > 4.5 && depthM <= 6.0) {
+        workingSpaceArea = perimeter * length;
+        depthBandDesc = "Exceeding 4.5m and not exceeding 6.0m deep";
+      } else if (depthM > 6.0) {
+        workingSpaceArea = perimeter * length;
+        depthBandDesc = "Exceeding 6.0m deep";
+      }
+
+      if (workingSpaceArea > 0) {
+        const desc = `Back excavation of vertical sides of excavations in earth for working space including backfilling compacted to 95% Mod AASHTO density: ${depthBandDesc} for placing and removing formwork to beams, bases etc, where excavated face abuts concrete face.`;
+        addBoqItemFromBillKey(
+          masterBoqItems,
+          "EARTHWORKS",
+          "Working Space",
+          desc,
+          "m²",
+          workingSpaceArea,
+          baseContribution(workingSpaceArea)
+        );
+      }
+    }
+
+    // RISK OF COLLAPSE (applies regardless of formwork)
+    if (gb.riskOfCollapseRequired) {
+      const trenchWidthM = gb.trenchWidth / 1000;
+      const depthM = gb.trenchDepth / 1000;
+      const perimeter = 2 * (trenchWidthM + depthM);
+      const collapseArea = perimeter * length;
+      let bandDesc = depthM <= 1.5 ? "not exceeding 1.5m deep" : "exceeding 1.5m deep";
+      const desc = `Sides of trench and hole excavations ${bandDesc}`;
+      addBoqItemFromBillKey(
+        masterBoqItems,
+        "EARTHWORKS",
+        "Risk of Collapse",
+        desc,
+        "m²",
+        collapseArea,
+        baseContribution(collapseArea)
+      );
+    }
   });
-
-  // Excavation
-  addBoqItemFromBillKey(
-    masterBoqItems,
-    "EARTHWORKS",
-    SECTIONS.EXCAVATION,
-    "Excavation for ground beams",
-    "m³",
-    trenchVol,
-    baseContribution(trenchVol)
-  );
-
-  // Concrete
-  addBoqItemFromBillKey(
-    masterBoqItems,
-    "CONCRETE",
-    `Concrete (${strength})`,
-    `${gb.concreteClass} concrete in ground beams`,
-    "m³",
-    concreteVol,
-    baseContribution(concreteVol)
-  );
-
-  // Reinforcement
-  if (highTensile > 0) {
-    addBoqItemFromBillKey(
-      masterBoqItems,
-      "CONCRETE",
-      SECTIONS.REINFORCEMENT,
-      "High tensile reinforcement",
-      "t",
-      highTensile,
-      baseContribution(highTensile)
-    );
-  }
-  if (mildSteel > 0) {
-    addBoqItemFromBillKey(
-      masterBoqItems,
-      "CONCRETE",
-      SECTIONS.REINFORCEMENT,
-      "Mild steel reinforcement",
-      "t",
-      mildSteel,
-      baseContribution(mildSteel)
-    );
-  }
-
-  // Formwork
-  if (gb.formworkRequired) {
-    const formwork = (gb.beamDepth / 1000) * length * 2;
-    addBoqItemFromBillKey(
-      masterBoqItems,
-      "CONCRETE",
-      SECTIONS.FORMWORK,
-      "Formwork to sides of ground beams",
-      "m²",
-      formwork,
-      baseContribution(formwork)
-    );
-  }
-
-  // Blinding
-  if (gb.blindingRequired) {
-    const blinding = (gb.beamWidth / 1000) * (gb.blindingThickness / 1000) * length;
-    addBoqItemFromBillKey(
-      masterBoqItems,
-      "EARTHWORKS",
-      SECTIONS.BLINDING,
-      `${gb.blindingThickness}mm blinding under ground beams`,
-      "m³",
-      blinding,
-      baseContribution(blinding)
-    );
-  }
-
-  // Backfill
-  if (gb.backfillRequired) {
-    const backfill = trenchVol - concreteVol;
-    addBoqItemFromBillKey(
-      masterBoqItems,
-      "EARTHWORKS",
-      SECTIONS.BACKFILLING,
-      "Backfill to ground beams",
-      "m³",
-      backfill,
-      baseContribution(backfill)
-    );
-  }
-
-  // DPC
-  if (gb.dpcRequired) {
-    const dpcArea = (gb.beamWidth / 1000) * length;
-    addBoqItemFromBillKey(
-      masterBoqItems,
-      "MASONRY",
-      SECTIONS.DAMP_PROOF_COURSES,
-      "DPC to ground beams",
-      "m²",
-      dpcArea,
-      baseContribution(dpcArea)
-    );
-  }
-
-  // Soil Poisoning
-  if (gb.soilPoisonRequired) {
-    const area = (gb.trenchWidth / 1000) * length;
-    addBoqItemFromBillKey(
-      masterBoqItems,
-      "EARTHWORKS",
-      SECTIONS.SOIL_POISONING,
-      "Soil poisoning under ground beams",
-      "m²",
-      area,
-      baseContribution(area)
-    );
-  }
-
-// ============================================
-// WORKING SPACE (only if formwork is required)
-// ============================================
-if (gb.formworkRequired && gb.workingSpaceRequired) {
-  const trenchWidthM = gb.trenchWidth / 1000;
-  const depthM = gb.trenchDepth / 1000;
-  const perimeter = 2 * (trenchWidthM + depthM); // approximate for trench
-  let workingSpaceArea = 0;
-  let depthBandDesc = "";
-
-  if (depthM <= 0.5) {
-    // No working space for depths ≤ 0.5m
-    workingSpaceArea = 0;
-  } else if (depthM > 0.5 && depthM <= 1.5) {
-    workingSpaceArea = perimeter * length; // <-- removed * qty
-    depthBandDesc = "Exceeding 0.5m and not exceeding 1.5m deep";
-  } else if (depthM > 1.5 && depthM <= 3.0) {
-    workingSpaceArea = perimeter * length;
-    depthBandDesc = "Exceeding 1.5m and not exceeding 3.0m deep";
-  } else if (depthM > 3.0 && depthM <= 4.5) {
-    workingSpaceArea = perimeter * length;
-    depthBandDesc = "Exceeding 3.0m and not exceeding 4.5m deep";
-  } else if (depthM > 4.5 && depthM <= 6.0) {
-    workingSpaceArea = perimeter * length;
-    depthBandDesc = "Exceeding 4.5m and not exceeding 6.0m deep";
-  } else {
-    workingSpaceArea = perimeter * length;
-    depthBandDesc = "Exceeding 6.0m deep";
-  }
-
-  if (workingSpaceArea > 0) {
-    const desc = `Back excavation of vertical sides of excavations in earth for working space including backfilling compacted to 95% Mod AASHTO density: ${depthBandDesc} for placing and removing formwork to beams, bases etc, where excavated face abuts concrete face.`;
-addBoqItemFromBillKey(
-  masterBoqItems,
-  "EARTHWORKS",
-  "Working Space",   // <-- Use string literal
-  desc,
-  "m²",
-  workingSpaceArea,
-  baseContribution(workingSpaceArea)
-);
-  }
-}
-
-// ============================================
-// RISK OF COLLAPSE (applies regardless of formwork)
-// ============================================
-if (gb.riskOfCollapseRequired) {
-  const trenchWidthM = gb.trenchWidth / 1000;
-  const depthM = gb.trenchDepth / 1000;
-  const perimeter = 2 * (trenchWidthM + depthM);
-  const collapseArea = perimeter * length; // <-- removed * qty
-  let bandDesc = "";
-  if (depthM <= 1.5) {
-    bandDesc = "not exceeding 1.5m deep";
-  } else {
-    bandDesc = "exceeding 1.5m deep";
-  }
-  const desc = `Sides of trench and hole excavations ${bandDesc}`;
-addBoqItemFromBillKey(
-  masterBoqItems,
-  "EARTHWORKS",
-  "Risk of Collapse",   // <-- Use string literal
-  desc,
-  "m²",
-  collapseArea,
-  baseContribution(collapseArea)
-);
-
-}
-});
 
   // ---------- COLUMNS ----------
   columnMeasurements.forEach((m) => {
@@ -1681,128 +1681,117 @@ addBoqItemFromBillKey(
   });
 
   // ---------- WALLS ----------
-// ---------- WALLS ----------
-wallMeasurements.forEach((m) => {
-  const wall = wallTypes.find((w) => w.id === m.wallTypeId);
-  if (!wall) return;
+  wallMeasurements.forEach((m) => {
+    const wall = wallTypes.find((w) => w.id === m.wallTypeId);
+    if (!wall) return;
 
-  const area = m.area;
-  const baseContribution = (qty: number) => ({
-    module: "Walls",
-    measurementId: m.id,
-    mark: m.mark,
-    qty,
-  });
+    const area = m.area;
+    const baseContribution = (qty: number) => ({
+      module: "Walls",
+      measurementId: m.id,
+      mark: m.mark,
+      qty,
+    });
 
-  // Brickwork (unchanged)
-  addBoqItemFromBillKey(
-    masterBoqItems,
-    "MASONRY",
-    SECTIONS.BRICKWORK,
-    `${wall.brickType} brickwork - ${wall.thicknessType}`,
-    "m²",
-    area,
-    baseContribution(area)
-  );
-
-  // DPC (unchanged)
-  if (wall.dpcRequired) {
+    // Brickwork
     addBoqItemFromBillKey(
       masterBoqItems,
       "MASONRY",
-      SECTIONS.DAMP_PROOF_COURSES,
-      "Damp-proof course",
-      "m",
-      m.length,
-      baseContribution(m.length)
+      SECTIONS.BRICKWORK,
+      `${wall.brickType} brickwork - ${wall.thicknessType}`,
+      "m²",
+      area,
+      baseContribution(area)
     );
-  }
 
-  // Reinforcement (unchanged)
-  if (wall.reinforcementRequired && wall.courseHeight && wall.coursesPerReinforcement) {
-    let wallThicknessMm = 0;
-    if (wall.thicknessType === "Single Skin (Half Brick)") wallThicknessMm = 102;
-    else if (wall.thicknessType === "Double Skin (One Brick)") wallThicknessMm = 215;
-    else if (wall.thicknessType === "Cavity Wall") wallThicknessMm = 275;
-    else if (wall.thicknessType === "Triple Skin") wallThicknessMm = 327;
-    else if (wall.thicknessMm) wallThicknessMm = wall.thicknessMm;
-
-    const layers = Math.floor((m.height * 1000) / (wall.courseHeight * wall.coursesPerReinforcement));
-    const totalLength = m.length * layers;
-    if (totalLength > 0) {
-      const widthLabel = wallThicknessMm > 102 ? "150mm" : "75mm";
-      const desc = `${widthLabel} ${wall.reinforcementType} bed joint reinforcement`;
+    // DPC
+    if (wall.dpcRequired) {
       addBoqItemFromBillKey(
         masterBoqItems,
         "MASONRY",
-        SECTIONS.MASONRY_REINFORCEMENT,
-        desc,
+        SECTIONS.DAMP_PROOF_COURSES,
+        "Damp-proof course",
         "m",
-        totalLength,
-        baseContribution(totalLength)
-      );
-    }
-  }
-
-  // ============================================
-  // SIDE-BASED FINISHES
-  // ============================================
-
-  // Helper to process a side
-  const processSide = (side: 1 | 2) => {
-    const plaster = side === 1 ? wall.side1Plaster : wall.side2Plaster;
-    const finish = side === 1 ? wall.side1Finish : wall.side2Finish;
-    const tilePcSum = side === 1 ? wall.side1TilePcSum : wall.side2TilePcSum;
-    const sideLabel = side === 1 ? "side 1" : "side 2";
-
-    // Plaster
-    if (plaster) {
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "PLASTERING",
-        SECTIONS.PLASTER,
-        `Plaster to walls (${sideLabel}) - ${wall.thicknessType}`,
-        "m²",
-        area,
-        baseContribution(area)
+        m.length,
+        baseContribution(m.length)
       );
     }
 
-    // Finish (Paint or Tile)
-    if (finish === "Paint") {
-      // Paint only if plaster is true? In reality paint needs plaster underneath, but we'll keep it separate.
-      // For QS, paint is measured regardless, but we assume plaster is done.
-      // If plaster is false but paint is selected, that's a user error, but we still generate paint.
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "PAINTWORK",
-        SECTIONS.PAINT,
-        `Paint to walls (${sideLabel}) - ${wall.thicknessType}`,
-        "m²",
-        area,
-        baseContribution(area)
-      );
-    } else if (finish === "Tile") {
-      // Tile PC sum
-      const pcSum = tilePcSum || 0;
-      if (pcSum > 0) {
+    // Reinforcement
+    if (wall.reinforcementRequired && wall.courseHeight && wall.coursesPerReinforcement) {
+      let wallThicknessMm = 0;
+      if (wall.thicknessType === "Single Skin (Half Brick)") wallThicknessMm = 102;
+      else if (wall.thicknessType === "Double Skin (One Brick)") wallThicknessMm = 215;
+      else if (wall.thicknessType === "Cavity Wall") wallThicknessMm = 275;
+      else if (wall.thicknessType === "Triple Skin") wallThicknessMm = 327;
+      else if (wall.thicknessMm) wallThicknessMm = wall.thicknessMm;
+
+      const layers = Math.floor((m.height * 1000) / (wall.courseHeight * wall.coursesPerReinforcement));
+      const totalLength = m.length * layers;
+      if (totalLength > 0) {
+        const widthLabel = wallThicknessMm > 102 ? "150mm" : "75mm";
+        const desc = `${widthLabel} ${wall.reinforcementType} bed joint reinforcement`;
         addBoqItemFromBillKey(
           masterBoqItems,
-          "TILING",
-          SECTIONS.TILING,
-          `Wall tiles (${sideLabel}) - PC Sum R${pcSum}/m²`,
+          "MASONRY",
+          SECTIONS.MASONRY_REINFORCEMENT,
+          desc,
+          "m",
+          totalLength,
+          baseContribution(totalLength)
+        );
+      }
+    }
+
+    // Side-based finishes
+    const processSide = (side: 1 | 2) => {
+      const plaster = side === 1 ? wall.side1Plaster : wall.side2Plaster;
+      const finish = side === 1 ? wall.side1Finish : wall.side2Finish;
+      const tilePcSum = side === 1 ? wall.side1TilePcSum : wall.side2TilePcSum;
+      const sideLabel = side === 1 ? "side 1" : "side 2";
+
+      if (plaster) {
+        addBoqItemFromBillKey(
+          masterBoqItems,
+          "PLASTERING",
+          SECTIONS.PLASTER,
+          `Plaster to walls (${sideLabel}) - ${wall.thicknessType}`,
           "m²",
           area,
           baseContribution(area)
         );
       }
-    }
-  };
 
-  // Process both sides
-  processSide(1);
-  processSide(2);
-});
+      if (finish === "Paint") {
+        addBoqItemFromBillKey(
+          masterBoqItems,
+          "PAINTWORK",
+          SECTIONS.PAINT,
+          `Paint to walls (${sideLabel}) - ${wall.thicknessType}`,
+          "m²",
+          area,
+          baseContribution(area)
+        );
+      } else if (finish === "Tile") {
+        const pcSum = tilePcSum || 0;
+        if (pcSum > 0) {
+          addBoqItemFromBillKey(
+            masterBoqItems,
+            "TILING",
+            SECTIONS.TILING,
+            `Wall tiles (${sideLabel}) - PC Sum R${pcSum}/m²`,
+            "m²",
+            area,
+            baseContribution(area)
+          );
+        }
+      }
+    };
+
+    processSide(1);
+    processSide(2);
+  });
+
   // ---------- SLABS ----------
   slabMeasurements.forEach((m) => {
     const slab = slabTypes.find((s) => s.id === m.slabTypeId);
@@ -2013,19 +2002,13 @@ wallMeasurements.forEach((m) => {
     }
   });
 
-  // ============================================
-  // RENDER
-  // ============================================
-  
-// ============================================
+ // ============================================
 // TAB STATE
 // ============================================
 const [activeTab, setActiveTab] = useState<"dashboard" | "measurement" | "boq" | "reports" | "settings">("dashboard");
 
-
-
 // ============================================
-// TAB STYLES
+// TAB STYLES - ADD THIS HERE
 // ============================================
 const tabBarStyle = {
   display: "flex",
@@ -2053,256 +2036,256 @@ const tabButtonStyle = (isActive: boolean) => ({
   marginBottom: "-2px",
 });
 
-// In the render, after the header section:
-return (
-  <main style={pageStyle}>
-    {/* Header with title and buttons */}
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-      <h1>BOQ Measurement Software</h1>
-      <div style={{ display: "flex", gap: "10px" }}>
-        <button
-          onClick={handleExportExcel}
-          style={{
-            padding: "10px 20px",
-            backgroundColor: "#28a745",
-            color: "white",
-            border: "none",
-            borderRadius: "6px",
-            cursor: "pointer",
-            fontSize: "14px",
-            fontWeight: "bold",
-          }}
-        >
-          Export to Excel
+  // ============================================
+  // RENDER
+  // ============================================
+  return (
+    <main style={pageStyle}>
+      {/* Header with title and buttons */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+        <h1>BOQ Measurement Software</h1>
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button
+            onClick={handleExportExcel}
+            style={{
+              padding: "10px 20px",
+              backgroundColor: "#28a745",
+              color: "white",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontSize: "14px",
+              fontWeight: "bold",
+            }}
+          >
+            Export to Excel
+          </button>
+          <button
+            onClick={handleClearProject}
+            style={{
+              padding: "10px 20px",
+              backgroundColor: "#dc3545",
+              color: "white",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontSize: "14px",
+              fontWeight: "bold",
+            }}
+          >
+            Clear Saved Project
+          </button>
+        </div>
+      </div>
+
+      {/* Top Navigation */}
+      <div style={tabBarStyle}>
+        <button style={tabButtonStyle(activeTab === "dashboard")} onClick={() => setActiveTab("dashboard")}>
+          Dashboard
         </button>
-        <button
-          onClick={handleClearProject}
-          style={{
-            padding: "10px 20px",
-            backgroundColor: "#dc3545",
-            color: "white",
-            border: "none",
-            borderRadius: "6px",
-            cursor: "pointer",
-            fontSize: "14px",
-            fontWeight: "bold",
-          }}
-        >
-          Clear Saved Project
+        <button style={tabButtonStyle(activeTab === "measurement")} onClick={() => setActiveTab("measurement")}>
+          Elemental Measurement
+        </button>
+        <button style={tabButtonStyle(activeTab === "boq")} onClick={() => setActiveTab("boq")}>
+          Detailed BOQ
+        </button>
+        <button style={tabButtonStyle(activeTab === "reports")} onClick={() => setActiveTab("reports")}>
+          Reports
+        </button>
+        <button style={tabButtonStyle(activeTab === "settings")} onClick={() => setActiveTab("settings")}>
+          Project Settings
         </button>
       </div>
-    </div>
 
-    {/* Top Navigation */}
-    <div style={tabBarStyle}>
-      <button style={tabButtonStyle(activeTab === "dashboard")} onClick={() => setActiveTab("dashboard")}>
-        Dashboard
-      </button>
-      <button style={tabButtonStyle(activeTab === "measurement")} onClick={() => setActiveTab("measurement")}>
-        Elemental Measurement
-      </button>
-      <button style={tabButtonStyle(activeTab === "boq")} onClick={() => setActiveTab("boq")}>
-        Detailed BOQ
-      </button>
-      <button style={tabButtonStyle(activeTab === "reports")} onClick={() => setActiveTab("reports")}>
-        Reports
-      </button>
-      <button style={tabButtonStyle(activeTab === "settings")} onClick={() => setActiveTab("settings")}>
-        Project Settings
-      </button>
-    </div>
+      {/* Content */}
+      <div style={{ marginTop: "20px" }}>
+        {activeTab === "dashboard" && (
+          <Dashboard boqItems={masterBoqItems} styles={{ cardStyle }} />
+        )}
 
-    {/* Content */}
-    <div style={{ marginTop: "20px" }}>
-      {activeTab === "dashboard" && (
-        <Dashboard boqItems={masterBoqItems} styles={{ cardStyle }} />
-      )}
+        {activeTab === "measurement" && (
+          <ElementalMeasurement
+            styles={{ cardStyle, formGridStyle, tableStyle, thStyle, tdStyle }}
+            moduleProps={{
+              beam: {
+                beamTypes,
+                setBeamTypes,
+                editingBeamId,
+                setEditingBeamId,
+                newBeam,
+                updateBeam,
+                resetBeam,
+                beamMeasurements,
+                setBeamMeasurements,
+                newBeamMeas,
+                updateBeamMeas,
+                resetBeamMeas,
+                editingBeamMeasurementId,
+                setEditingBeamMeasurementId,
+              },
+              groundBeam: {
+                groundBeamTypes,
+                setGroundBeamTypes,
+                editingGroundBeamId,
+                setEditingGroundBeamId,
+                newGroundBeam,
+                updateGroundBeam,
+                resetGroundBeam,
+                groundBeamMeasurements,
+                setGroundBeamMeasurements,
+                newGroundBeamMeas,
+                updateGroundBeamMeas,
+                resetGroundBeamMeas,
+                editingGroundBeamMeasurementId,
+                setEditingGroundBeamMeasurementId,
+              },
+              padFooting: {
+                padFootingTypes,
+                setPadFootingTypes,
+                editingPadFootingId,
+                setEditingPadFootingId,
+                newPadFooting,
+                updatePadFooting,
+                resetPadFooting,
+                padFootingMeasurements,
+                setPadFootingMeasurements,
+                newPadFootingMeas,
+                updatePadFootingMeas,
+                resetPadFootingMeas,
+                editingPadFootingMeasurementId,
+                setEditingPadFootingMeasurementId,
+              },
+              column: {
+                columnTypes,
+                setColumnTypes,
+                editingColumnId,
+                setEditingColumnId,
+                newColumn,
+                updateColumn,
+                resetColumn,
+                columnMeasurements,
+                setColumnMeasurements,
+                newColumnMeas,
+                updateColumnMeas,
+                resetColumnMeas,
+                editingColumnMeasurementId,
+                setEditingColumnMeasurementId,
+              },
+              slab: {
+                slabTypes,
+                setSlabTypes,
+                editingSlabId,
+                setEditingSlabId,
+                newSlab,
+                updateSlab,
+                resetSlab,
+                slabMeasurements,
+                setSlabMeasurements,
+                newSlabMeas,
+                updateSlabMeas,
+                resetSlabMeas,
+                editingSlabMeasurementId,
+                setEditingSlabMeasurementId,
+              },
+              surfaceBed: {
+                surfaceBedTypes,
+                setSurfaceBedTypes,
+                editingSurfaceBedId,
+                setEditingSurfaceBedId,
+                newSurfaceBed,
+                updateSurfaceBed,
+                resetSurfaceBed,
+                surfaceBedMeasurements,
+                setSurfaceBedMeasurements,
+                newSurfaceBedMeas,
+                updateSurfaceBedMeas,
+                resetSurfaceBedMeas,
+                editingSurfaceBedMeasurementId,
+                setEditingSurfaceBedMeasurementId,
+              },
+              wall: {
+                wallTypes,
+                setWallTypes,
+                editingWallId,
+                setEditingWallId,
+                newWall,
+                updateWall,
+                resetWall,
+                wallMeasurements,
+                setWallMeasurements,
+                newWallMeas,
+                updateWallMeas,
+                resetWallMeas,
+                editingWallMeasurementId,
+                setEditingWallMeasurementId,
+              },
+              openings: {
+                openingTypes,
+                setOpeningTypes,
+                editingOpeningId,
+                setEditingOpeningId,
+                newOpening,
+                updateOpening,
+                resetOpening,
+                openingMeasurements,
+                setOpeningMeasurements,
+                newOpeningMeas,
+                updateOpeningMeas,
+                resetOpeningMeas,
+                editingOpeningMeasurementId,
+                setEditingOpeningMeasurementId,
+              },
+            }}
+          />
+        )}
 
-      {activeTab === "measurement" && (
-        <ElementalMeasurement
-          styles={{ cardStyle, formGridStyle, tableStyle, thStyle, tdStyle }}
-          moduleProps={{
-            beam: {
-              beamTypes,
-              setBeamTypes,
-              editingBeamId,
-              setEditingBeamId,
-              newBeam,
-              updateBeam,
-              resetBeam,
-              beamMeasurements,
-              setBeamMeasurements,
-              newBeamMeas,
-              updateBeamMeas,
-              resetBeamMeas,
-              editingBeamMeasurementId,
-              setEditingBeamMeasurementId,
-            },
-            groundBeam: {
-              groundBeamTypes,
-              setGroundBeamTypes,
-              editingGroundBeamId,
-              setEditingGroundBeamId,
-              newGroundBeam,
-              updateGroundBeam,
-              resetGroundBeam,
-              groundBeamMeasurements,
-              setGroundBeamMeasurements,
-              newGroundBeamMeas,
-              updateGroundBeamMeas,
-              resetGroundBeamMeas,
-              editingGroundBeamMeasurementId,
-              setEditingGroundBeamMeasurementId,
-            },
-            padFooting: {
-              padFootingTypes,
-              setPadFootingTypes,
-              editingPadFootingId,
-              setEditingPadFootingId,
-              newPadFooting,
-              updatePadFooting,
-              resetPadFooting,
-              padFootingMeasurements,
-              setPadFootingMeasurements,
-              newPadFootingMeas,
-              updatePadFootingMeas,
-              resetPadFootingMeas,
-              editingPadFootingMeasurementId,
-              setEditingPadFootingMeasurementId,
-            },
-            column: {
-              columnTypes,
-              setColumnTypes,
-              editingColumnId,
-              setEditingColumnId,
-              newColumn,
-              updateColumn,
-              resetColumn,
-              columnMeasurements,
-              setColumnMeasurements,
-              newColumnMeas,
-              updateColumnMeas,
-              resetColumnMeas,
-              editingColumnMeasurementId,
-              setEditingColumnMeasurementId,
-            },
-            slab: {
-              slabTypes,
-              setSlabTypes,
-              editingSlabId,
-              setEditingSlabId,
-              newSlab,
-              updateSlab,
-              resetSlab,
-              slabMeasurements,
-              setSlabMeasurements,
-              newSlabMeas,
-              updateSlabMeas,
-              resetSlabMeas,
-              editingSlabMeasurementId,
-              setEditingSlabMeasurementId,
-            },
-            surfaceBed: {
-              surfaceBedTypes,
-              setSurfaceBedTypes,
-              editingSurfaceBedId,
-              setEditingSurfaceBedId,
-              newSurfaceBed,
-              updateSurfaceBed,
-              resetSurfaceBed,
-              surfaceBedMeasurements,
-              setSurfaceBedMeasurements,
-              newSurfaceBedMeas,
-              updateSurfaceBedMeas,
-              resetSurfaceBedMeas,
-              editingSurfaceBedMeasurementId,
-              setEditingSurfaceBedMeasurementId,
-            },
-            wall: {
-              wallTypes,
-              setWallTypes,
-              editingWallId,
-              setEditingWallId,
-              newWall,
-              updateWall,
-              resetWall,
-              wallMeasurements,
-              setWallMeasurements,
-              newWallMeas,
-              updateWallMeas,
-              resetWallMeas,
-              editingWallMeasurementId,
-              setEditingWallMeasurementId,
-            },
-            openings: {
-              openingTypes,
-              setOpeningTypes,
-              editingOpeningId,
-              setEditingOpeningId,
-              newOpening,
-              updateOpening,
-              resetOpening,
-              openingMeasurements,
-              setOpeningMeasurements,
-              newOpeningMeas,
-              updateOpeningMeas,
-              resetOpeningMeas,
-              editingOpeningMeasurementId,
-              setEditingOpeningMeasurementId,
-            },
-          }}
-        />
-      )}
+        {activeTab === "boq" && (
+          <>
+            <h2>Detailed BOQ</h2>
+            <BoqSummary
+              boqItems={masterBoqItems}
+              rates={rates}
+              onRateChange={(key, rate) => {
+                setRates((prev) => ({ ...prev, [key]: rate }));
+              }}
+              styles={styles}
+            />
+          </>
+        )}
 
-      {activeTab === "boq" && (
-        <>
-          <h2>Detailed BOQ</h2>
-           <BoqSummary
-            boqItems={masterBoqItems}
-            rates={rates}
-            onRateChange={(key, rate) => {
-              setRates((prev) => ({ ...prev, [key]: rate }));
-      }}
-      styles={styles}
-    />
-        </>
-      )}
+        {activeTab === "reports" && (
+          <>
+            {/* Cost Summary */}
+            <ElementalCostSummary
+              costPlanComponents={costPlanComponents}
+              rates={rates}
+              styles={{ cardStyle, tableStyle, thStyle, tdStyle }}
+            />
 
-{activeTab === "reports" && (
-  <ElementalSummary
-    beamMeasurements={beamMeasurements}
-    surfaceBedMeasurements={surfaceBedMeasurements}
-    padFootingMeasurements={padFootingMeasurements}
-    groundBeamMeasurements={groundBeamMeasurements}
-    columnMeasurements={columnMeasurements}
-    wallMeasurements={wallMeasurements}
-    slabMeasurements={slabMeasurements}
-    openingMeasurements={openingMeasurements}
-    boqItems={masterBoqItems}
-    styles={{ cardStyle, tableStyle, thStyle, tdStyle }}
-  />
-)}
+            {/* Quantity Summary */}
+            <ElementalSummary
+              beamMeasurements={beamMeasurements}
+              surfaceBedMeasurements={surfaceBedMeasurements}
+              padFootingMeasurements={padFootingMeasurements}
+              groundBeamMeasurements={groundBeamMeasurements}
+              columnMeasurements={columnMeasurements}
+              wallMeasurements={wallMeasurements}
+              slabMeasurements={slabMeasurements}
+              openingMeasurements={openingMeasurements}
+              boqItems={masterBoqItems}
+              styles={{ cardStyle, tableStyle, thStyle, tdStyle }}
+            />
+          </>
+        )}
 
-      {activeTab === "reports" && (
-        <div style={cardStyle}>
-          <h2>Reports</h2>
-          <p>BOQ reports, elemental summaries, and exports will appear here.</p>
-          <p style={{ color: "#999", marginTop: "16px" }}>Coming soon.</p>
-        </div>
-      )}
-
-      {activeTab === "reports" && (
-        <ElementalSummary boqItems={masterBoqItems} styles={{ cardStyle, tableStyle, thStyle, tdStyle }} />
-      )}
-
-      {activeTab === "settings" && (
-        <div style={cardStyle}>
-          <h2>Project Settings</h2>
-          <p>Project details, rates, and measurement rules.</p>
-          <p style={{ color: "#999", marginTop: "16px" }}>Coming soon.</p>
-        </div>
-      )}
-    </div>
-  </main>
-);
+        {activeTab === "settings" && (
+          <div style={cardStyle}>
+            <h2>Project Settings</h2>
+            <p>Project details, rates, and measurement rules.</p>
+            <p style={{ color: "#999", marginTop: "16px" }}>Coming soon.</p>
+          </div>
+        )}
+      </div>
+    </main>
+  );
 }

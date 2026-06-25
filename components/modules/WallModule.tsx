@@ -1,6 +1,6 @@
 "use client";
 
-import type { WallType, WallMeasurement, BrickType, WallThicknessType, WallFinish } from "@/types/boq";
+import type { WallType, WallMeasurement, BrickType, WallThicknessType, WallFinish, WallLocation } from "@/types/boq";
 import { getBrickDefaults, getThicknessFromType } from "@/lib/boqHelpers";
 
 interface WallModuleProps {
@@ -75,7 +75,11 @@ const WallModule = ({
   const saveWallMeasurement = () => {
     if (!newWallMeas.mark.trim() || newWallMeas.wallTypeId === 0 || !newWallMeas.length || newWallMeas.length <= 0 || !newWallMeas.height || newWallMeas.height <= 0) return;
     const area = newWallMeas.length * newWallMeas.height;
-    const data = { ...newWallMeas, area };
+    const data = {
+      ...newWallMeas,
+      area,
+      wallLocation: newWallMeas.wallLocation || "Internal Division",
+    };
     if (editingWallMeasurementId !== null) {
       setWallMeasurements((prev) =>
         prev.map((m) => (m.id === editingWallMeasurementId ? { ...m, ...data } : m))
@@ -110,6 +114,7 @@ const WallModule = ({
   return (
     <div style={cardStyle}>
       <h1>Wall Module</h1>
+
       <h2>Wall Type Library</h2>
       <div style={formGridStyle}>
         <input placeholder="Name" value={newWall.name} onChange={(e) => updateWall({ name: e.target.value })} />
@@ -117,7 +122,10 @@ const WallModule = ({
           <option>Common</option><option>Imperial</option><option>Maxi 90</option>
         </select>
         <select value={newWall.thicknessType} onChange={(e) => handleThicknessTypeChange(e.target.value as WallThicknessType)}>
-          <option>Single Skin (Half Brick)</option><option>Double Skin (One Brick)</option><option>Cavity Wall</option><option>Triple Skin</option>
+          <option>Single Skin (Half Brick)</option>
+          <option>Double Skin (One Brick)</option>
+          <option>Cavity Wall</option>
+          <option>Triple Skin</option>
         </select>
         <div style={{ padding: "8px", background: "#eef", borderRadius: "4px" }}>Thickness: {newWall.thicknessMm || '-'}mm</div>
         <input type="number" placeholder="Course height (mm) e.g., 75" value={newWall.courseHeight || ''} onChange={(e) => updateWall({ courseHeight: Number(e.target.value) })} />
@@ -153,23 +161,21 @@ const WallModule = ({
       </div>
 
       <table style={tableStyle} border={1} cellPadding={8}>
-        <thead>
-          <tr>
-            <th style={thStyle}>Name</th>
-            <th style={thStyle}>Brick</th>
-            <th style={thStyle}>Thickness</th>
-            <th style={thStyle}>Course Ht</th>
-            <th style={thStyle}>Side1 Plaster</th>
-            <th style={thStyle}>Side1 Finish</th>
-            <th style={thStyle}>Side1 PC</th>
-            <th style={thStyle}>Side2 Plaster</th>
-            <th style={thStyle}>Side2 Finish</th>
-            <th style={thStyle}>Side2 PC</th>
-            <th style={thStyle}>DPC</th>
-            <th style={thStyle}>Reinf</th>
-            <th style={thStyle}>Actions</th>
-          </tr>
-        </thead>
+        <thead><tr>
+          <th style={thStyle}>Name</th>
+          <th style={thStyle}>Brick</th>
+          <th style={thStyle}>Thickness</th>
+          <th style={thStyle}>Course Ht</th>
+          <th style={thStyle}>Side1 Plaster</th>
+          <th style={thStyle}>Side1 Finish</th>
+          <th style={thStyle}>Side1 PC</th>
+          <th style={thStyle}>Side2 Plaster</th>
+          <th style={thStyle}>Side2 Finish</th>
+          <th style={thStyle}>Side2 PC</th>
+          <th style={thStyle}>DPC</th>
+          <th style={thStyle}>Reinf</th>
+          <th style={thStyle}>Actions</th>
+        </tr></thead>
         <tbody>
           {wallTypes.map((wall) => (
             <tr key={wall.id}>
@@ -178,10 +184,10 @@ const WallModule = ({
               <td style={tdStyle}>{wall.thicknessMm || '-'}mm</td>
               <td style={tdStyle}>{wall.courseHeight || '-'}</td>
               <td style={tdStyle}>{wall.side1Plaster ? "Yes" : "No"}</td>
-              <td style={tdStyle}>{wall.side1Finish}</td>
+              <td style={tdStyle}>{wall.side1Finish || "None"}</td>
               <td style={tdStyle}>{wall.side1Finish === "Tile" ? `R${wall.side1TilePcSum || 0}` : "-"}</td>
               <td style={tdStyle}>{wall.side2Plaster ? "Yes" : "No"}</td>
-              <td style={tdStyle}>{wall.side2Finish}</td>
+              <td style={tdStyle}>{wall.side2Finish || "None"}</td>
               <td style={tdStyle}>{wall.side2Finish === "Tile" ? `R${wall.side2TilePcSum || 0}` : "-"}</td>
               <td style={tdStyle}>{wall.dpcRequired ? "Yes" : "No"}</td>
               <td style={tdStyle}>{wall.reinforcementRequired ? `${wall.coursesPerReinforcement || '-'}crs` : "No"}</td>
@@ -195,6 +201,7 @@ const WallModule = ({
       </table>
 
       <hr />
+
       <h2>Wall Measurements</h2>
       <div style={formGridStyle}>
         <input placeholder="Mark (e.g., W1)" value={newWallMeas.mark} onChange={(e) => updateWallMeas({ mark: e.target.value })} />
@@ -204,6 +211,15 @@ const WallModule = ({
         </select>
         <input type="number" placeholder="Length (m) e.g., 5.5" value={newWallMeas.length || ''} onChange={(e) => updateWallMeas({ length: Number(e.target.value) })} />
         <input type="number" placeholder="Height (m) e.g., 2.7" value={newWallMeas.height || ''} onChange={(e) => updateWallMeas({ height: Number(e.target.value) })} />
+        <select
+          value={newWallMeas.wallLocation || "Internal Division"}
+          onChange={(e) => updateWallMeas({ wallLocation: e.target.value as WallLocation })}
+          style={{ padding: "8px", border: "1px solid #ccc", borderRadius: "4px" }}
+        >
+          <option value="Internal Division">Internal Division</option>
+          <option value="External Envelope">External Envelope</option>
+          <option value="Boundary / Retaining Wall">Boundary / Retaining Wall</option>
+        </select>
         <button onClick={saveWallMeasurement}>
           {editingWallMeasurementId !== null ? "Update Measurement" : "Add Measurement"}
         </button>
@@ -213,9 +229,15 @@ const WallModule = ({
       </div>
 
       <table style={tableStyle} border={1} cellPadding={8}>
-        <thead>
-          <tr><th style={thStyle}>Mark</th><th style={thStyle}>Wall Type</th><th style={thStyle}>Length</th><th style={thStyle}>Height</th><th style={thStyle}>Area (m²)</th><th style={thStyle}>Actions</th></tr>
-        </thead>
+        <thead><tr>
+          <th style={thStyle}>Mark</th>
+          <th style={thStyle}>Wall Type</th>
+          <th style={thStyle}>Length</th>
+          <th style={thStyle}>Height</th>
+          <th style={thStyle}>Area (m²)</th>
+          <th style={thStyle}>Location</th>
+          <th style={thStyle}>Actions</th>
+        </tr></thead>
         <tbody>
           {wallMeasurements.map((m) => {
             const wall = wallTypes.find((w) => w.id === m.wallTypeId);
@@ -226,6 +248,7 @@ const WallModule = ({
                 <td style={tdStyle}>{m.length}</td>
                 <td style={tdStyle}>{m.height}</td>
                 <td style={tdStyle}>{m.area}</td>
+                <td style={tdStyle}>{m.wallLocation || "Internal Division"}</td>
                 <td style={tdStyle}>
                   <button onClick={() => editWallMeasurement(m.id)}>Edit</button>
                   <button onClick={() => deleteWallMeasurement(m.id)}>Delete</button>

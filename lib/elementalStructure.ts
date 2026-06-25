@@ -1,20 +1,6 @@
-import type { ElementalSection } from "@/types/elemental";
+"use client";
 
-// Mapping from moduleKey to elemental section and element
-export const moduleToElementalMap: Record<string, { sectionId: string; elementId: string }> = {
-  "beam": { sectionId: "structural-frame", elementId: "beams" },
-  "surface-bed": { sectionId: "ground-floor", elementId: "solid-floors" },
-  "pad-footing": { sectionId: "substructure", elementId: "pad-footings" },
-  "ground-beam": { sectionId: "substructure", elementId: "ground-beams" },
-  "column": { sectionId: "structural-frame", elementId: "columns" },
-  "slab": { sectionId: "structural-frame", elementId: "slabs" },
-  "wall": { sectionId: "internal-divisions", elementId: "walls" },
-  "opening": { sectionId: "internal-divisions", elementId: "openings" },
-};
-
-export function getElementalLocation(moduleKey: string): { sectionId: string; elementId: string } | undefined {
-  return moduleToElementalMap[moduleKey];
-}
+import type { ElementalSection, ElementalElement } from "@/types/elemental";
 
 export const elementalStructure: ElementalSection[] = [
   {
@@ -48,6 +34,10 @@ export const elementalStructure: ElementalSection[] = [
         status: "coming-soon",
         moduleKey: undefined,
         description: "External walls, cladding, windows, etc.",
+        children: [
+          { id: "external-walls", name: "External Walls", status: "coming-soon" },
+          { id: "external-finishes", name: "External Finishes", status: "coming-soon" },
+        ],
       },
       {
         id: "roofs",
@@ -64,18 +54,29 @@ export const elementalStructure: ElementalSection[] = [
         description: "Walls, Openings, etc.",
       },
       {
-        id: "floor-finishes",
-        name: "Floor Finishes",
-        status: "coming-soon",
-        moduleKey: undefined,
-        description: "Floor coverings, screeds, etc.",
-      },
-      {
         id: "internal-wall-finishes",
         name: "Internal Wall Finishes",
         status: "coming-soon",
         moduleKey: undefined,
         description: "Plaster, paint, tiles, etc.",
+      },
+      {
+        id: "boundary-walls",
+        name: "Boundary / Retaining Walls",
+        status: "coming-soon",
+        moduleKey: undefined,
+        description: "Boundary walls, retaining walls, etc.",
+        children: [
+          { id: "boundary-walls-structure", name: "Boundary Wall Structure", status: "coming-soon" },
+          { id: "boundary-finishes", name: "Boundary Wall Finishes", status: "coming-soon" },
+        ],
+      },
+      {
+        id: "floor-finishes",
+        name: "Floor Finishes",
+        status: "coming-soon",
+        moduleKey: undefined,
+        description: "Floor coverings, screeds, etc.",
       },
       {
         id: "ceiling-finishes",
@@ -99,7 +100,6 @@ export const elementalStructure: ElementalSection[] = [
       },
     ],
   },
-  // Add more sections as needed, all "coming-soon" for now
 ];
 
 // Helper to get active elements
@@ -118,8 +118,41 @@ export function getActiveElements(): ElementalElement[] {
 // Helper to get an element by id
 export function getElementById(id: string): ElementalElement | undefined {
   for (const section of elementalStructure) {
+    // Check top-level elements
     const found = section.elements.find((el) => el.id === id);
     if (found) return found;
+    // Check children (if any)
+    for (const el of section.elements) {
+      if (el.children) {
+        const childFound = el.children.find((child) => child.id === id);
+        if (childFound) return childFound;
+      }
+    }
   }
   return undefined;
+}
+
+// Helper to get a section by id
+export function getSectionById(id: string) {
+  for (const section of elementalStructure) {
+    if (section.id === id) return section;
+  }
+  return undefined;
+}
+
+// Helper to get section name from element id
+export function getSectionNameByElementId(elementId: string): string {
+  for (const section of elementalStructure) {
+    // Check top-level elements
+    const found = section.elements.find((el) => el.id === elementId);
+    if (found) return section.name;
+    // Check children
+    for (const el of section.elements) {
+      if (el.children) {
+        const childFound = el.children.find((child) => child.id === elementId);
+        if (childFound) return section.name;
+      }
+    }
+  }
+  return "Uncategorised";
 }

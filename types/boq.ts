@@ -189,8 +189,25 @@ export type WallMeasurement = {
   length: number;
   height: number;
   area: number;
+  wallLocation: WallLocation;
   elementalSectionId?: string;   // e.g., "internal-divisions"
   elementalElementId?: string;   // e.g., "walls"
+};
+
+export type WallLocation = "Internal Division" | "External Envelope" | "Boundary / Retaining Wall";
+
+export type CostPlanComponent = {
+  id: string; // Unique identifier
+  measurementId: number; // Reference to source measurement
+  mark: string;
+  module: string;
+  elementalSectionId: string;
+  elementalElementId: string;
+  description: string;
+  unit: string;
+  qty: number;
+  rate?: number;
+  amount?: number;
 };
 
 export type SlabType = {
@@ -259,6 +276,7 @@ export type ProjectData = {
   slabTypes: SlabType[];
   slabMeasurements: SlabMeasurement[];
   rates: Record<string, number>; // <-- NEW: keyed by `${billNo}|${section}|${description}|${unit}`
+  costPlanComponents: CostPlanComponent[];
 };
 // Add this type for type-safe bill references
 export type BillKey = 
