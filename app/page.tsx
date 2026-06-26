@@ -40,7 +40,12 @@ import {
 import { SECTIONS } from "@/lib/boqStructure";
 import { getElementalLocation } from "@/lib/elementalStructure";
 import { exportBOQToExcel } from "@/lib/exportHelpers";
-import { generateWallCostComponents } from "@/lib/costComponentGenerator";
+import {
+  generateWallCostPlanComponents,
+  generateWallBoqItems,
+  generateSlabCostPlanComponents,
+  generateSlabBoqItems,
+} from "@/lib/measurementOutputEngine";
 
 // Layout components
 import BoqSummary from "@/components/modules/BoqSummary";
@@ -285,15 +290,15 @@ export default function Home() {
   const [editingSlabId, setEditingSlabId] = useState<number | null>(null);
   const { values: newSlab, update: updateSlab, reset: resetSlab } = useFormState({
     name: "",
-    thickness: undefined,
+    thickness: 0,
     concreteClass: "30MPa/19mm",
     reinfType: "Rebar",
-    reinfKgPerM3: undefined,
+    reinfKgPerM3: 0,
     meshType: "A193",
     formworkToEdges: true,
     screedRequired: false,
-    screedThickness: undefined,
-    floorFinishPcSum: undefined,
+    screedThickness: 0,
+    floorFinishPcSum: 0,
     floorFinishDescription: "Tiles",
   });
   const [slabMeasurements, setSlabMeasurements] = useState<SlabMeasurement[]>([]);
@@ -353,11 +358,16 @@ export default function Home() {
   // ============================================
   // AUTO-GENERATE COST PLAN COMPONENTS
   // ============================================
-  useEffect(() => {
-    const components = generateWallCostComponents(wallMeasurements, wallTypes);
-    setCostPlanComponents(components);
-    console.log("Generated cost plan components:", components.length);
-  }, [wallMeasurements, wallTypes]);
+  // ============================================
+// AUTO-GENERATE COST PLAN COMPONENTS
+// ============================================
+
+useEffect(() => {
+  const wallComponents = generateWallCostPlanComponents(wallMeasurements, wallTypes);
+  const slabComponents = generateSlabCostPlanComponents(slabMeasurements, slabTypes);
+  setCostPlanComponents([...wallComponents, ...slabComponents]);
+  console.log("Generated cost plan components:", wallComponents.length + slabComponents.length);
+}, [wallMeasurements, wallTypes, slabMeasurements, slabTypes]);
 
   // ============================================
   // MEASUREMENT EDITING STATES
@@ -395,8 +405,7 @@ export default function Home() {
       setOpeningMeasurements(savedData.openingMeasurements || []);
       setRates(savedData.rates || {});
       setCostPlanComponents(savedData.costPlanComponents || []);
-      console.log("Loaded cost plan components:", savedData.costPlanComponents?.length);
-    }
+          }
   }, []);
 
   const saveAllData = () => {
@@ -420,8 +429,7 @@ export default function Home() {
       rates,
       costPlanComponents,
     };
-    console.log("Saving cost plan components:", costPlanComponents.length);
-    saveProjectData(data);
+        saveProjectData(data);
   };
 
   useEffect(() => {
@@ -1681,218 +1689,12 @@ export default function Home() {
   });
 
   // ---------- WALLS ----------
-  wallMeasurements.forEach((m) => {
-    const wall = wallTypes.find((w) => w.id === m.wallTypeId);
-    if (!wall) return;
-
-    const area = m.area;
-    const baseContribution = (qty: number) => ({
-      module: "Walls",
-      measurementId: m.id,
-      mark: m.mark,
-      qty,
-    });
-
-    // Brickwork
-    addBoqItemFromBillKey(
-      masterBoqItems,
-      "MASONRY",
-      SECTIONS.BRICKWORK,
-      `${wall.brickType} brickwork - ${wall.thicknessType}`,
-      "m²",
-      area,
-      baseContribution(area)
-    );
-
-    // DPC
-    if (wall.dpcRequired) {
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "MASONRY",
-        SECTIONS.DAMP_PROOF_COURSES,
-        "Damp-proof course",
-        "m",
-        m.length,
-        baseContribution(m.length)
-      );
-    }
-
-    // Reinforcement
-    if (wall.reinforcementRequired && wall.courseHeight && wall.coursesPerReinforcement) {
-      let wallThicknessMm = 0;
-      if (wall.thicknessType === "Single Skin (Half Brick)") wallThicknessMm = 102;
-      else if (wall.thicknessType === "Double Skin (One Brick)") wallThicknessMm = 215;
-      else if (wall.thicknessType === "Cavity Wall") wallThicknessMm = 275;
-      else if (wall.thicknessType === "Triple Skin") wallThicknessMm = 327;
-      else if (wall.thicknessMm) wallThicknessMm = wall.thicknessMm;
-
-      const layers = Math.floor((m.height * 1000) / (wall.courseHeight * wall.coursesPerReinforcement));
-      const totalLength = m.length * layers;
-      if (totalLength > 0) {
-        const widthLabel = wallThicknessMm > 102 ? "150mm" : "75mm";
-        const desc = `${widthLabel} ${wall.reinforcementType} bed joint reinforcement`;
-        addBoqItemFromBillKey(
-          masterBoqItems,
-          "MASONRY",
-          SECTIONS.MASONRY_REINFORCEMENT,
-          desc,
-          "m",
-          totalLength,
-          baseContribution(totalLength)
-        );
-      }
-    }
-
-    // Side-based finishes
-    const processSide = (side: 1 | 2) => {
-      const plaster = side === 1 ? wall.side1Plaster : wall.side2Plaster;
-      const finish = side === 1 ? wall.side1Finish : wall.side2Finish;
-      const tilePcSum = side === 1 ? wall.side1TilePcSum : wall.side2TilePcSum;
-      const sideLabel = side === 1 ? "side 1" : "side 2";
-
-      if (plaster) {
-        addBoqItemFromBillKey(
-          masterBoqItems,
-          "PLASTERING",
-          SECTIONS.PLASTER,
-          `Plaster to walls (${sideLabel}) - ${wall.thicknessType}`,
-          "m²",
-          area,
-          baseContribution(area)
-        );
-      }
-
-      if (finish === "Paint") {
-        addBoqItemFromBillKey(
-          masterBoqItems,
-          "PAINTWORK",
-          SECTIONS.PAINT,
-          `Paint to walls (${sideLabel}) - ${wall.thicknessType}`,
-          "m²",
-          area,
-          baseContribution(area)
-        );
-      } else if (finish === "Tile") {
-        const pcSum = tilePcSum || 0;
-        if (pcSum > 0) {
-          addBoqItemFromBillKey(
-            masterBoqItems,
-            "TILING",
-            SECTIONS.TILING,
-            `Wall tiles (${sideLabel}) - PC Sum R${pcSum}/m²`,
-            "m²",
-            area,
-            baseContribution(area)
-          );
-        }
-      }
-    };
-
-    processSide(1);
-    processSide(2);
-  });
+// Generate BOQ items using the new output engine
+generateWallBoqItems(wallMeasurements, wallTypes, masterBoqItems);
 
   // ---------- SLABS ----------
-  slabMeasurements.forEach((m) => {
-    const slab = slabTypes.find((s) => s.id === m.slabTypeId);
-    if (!slab) return;
-
-    const area = m.area;
-    const concreteVol = area * (slab.thickness / 1000);
-    const strength = getConcreteStrength(slab.concreteClass);
-    const baseContribution = (q: number) => ({
-      module: "Slabs",
-      measurementId: m.id,
-      mark: m.mark,
-      qty: q,
-    });
-
-    addBoqItemFromBillKey(
-      masterBoqItems,
-      "CONCRETE",
-      `Concrete (${strength})`,
-      `${slab.concreteClass} concrete in suspended slab`,
-      "m³",
-      concreteVol,
-      baseContribution(concreteVol)
-    );
-
-    if (slab.reinfType === "Rebar") {
-      const totalReinf = (concreteVol * slab.reinfKgPerM3) / 1000;
-      const highTensile = totalReinf * 0.9;
-      const mildSteel = totalReinf * 0.1;
-      if (highTensile > 0) {
-        addBoqItemFromBillKey(
-          masterBoqItems,
-          "CONCRETE",
-          SECTIONS.REINFORCEMENT,
-          "High tensile reinforcement",
-          "t",
-          highTensile,
-          baseContribution(highTensile)
-        );
-      }
-      if (mildSteel > 0) {
-        addBoqItemFromBillKey(
-          masterBoqItems,
-          "CONCRETE",
-          SECTIONS.REINFORCEMENT,
-          "Mild steel reinforcement",
-          "t",
-          mildSteel,
-          baseContribution(mildSteel)
-        );
-      }
-    } else if (slab.reinfType === "Mesh" && slab.meshType && slab.meshType !== "None") {
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "CONCRETE",
-        SECTIONS.REINFORCEMENT,
-        "Fabric reinforcement",
-        "m²",
-        area,
-        baseContribution(area)
-      );
-    }
-
-    if (slab.formworkToEdges) {
-      const perimeter = 2 * (m.length + m.width) * m.quantity;
-      const formwork = perimeter * (slab.thickness / 1000);
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "CONCRETE",
-        SECTIONS.FORMWORK,
-        "Formwork to edges of slabs",
-        "m²",
-        formwork,
-        baseContribution(formwork)
-      );
-    }
-
-    if (slab.screedRequired) {
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "FLOOR_COVERINGS",
-        SECTIONS.SCREEDS,
-        `${slab.screedThickness}mm screed to slab`,
-        "m²",
-        area,
-        baseContribution(area)
-      );
-    }
-
-    if (slab.floorFinishPcSum > 0) {
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "FLOOR_COVERINGS",
-        SECTIONS.FLOOR_FINISHES,
-        `${slab.floorFinishDescription} floor finish PC R${slab.floorFinishPcSum}/m²`,
-        "m²",
-        area,
-        baseContribution(area)
-      );
-    }
-  });
+// Using the new Measurement Output Engine
+generateSlabBoqItems(slabMeasurements, slabTypes, masterBoqItems);
 
   // ---------- OPENINGS ----------
   openingMeasurements.forEach((m) => {

@@ -23,12 +23,6 @@ export default function ElementalCostSummary({
 }: ElementalCostSummaryProps) {
   const { cardStyle, tableStyle, thStyle, tdStyle } = styles;
 
-  // DEBUG: Log what we received
-  console.log("=== ElementalCostSummary Debug ===");
-  console.log("costPlanComponents received:", costPlanComponents);
-  console.log("costPlanComponents length:", costPlanComponents?.length || 0);
-  console.log("Rates received:", rates);
-
   // Helper: get rate for a component
   const getRate = (component: CostPlanComponent): number => {
     // Try to find a rate from the BOQ rates by matching description

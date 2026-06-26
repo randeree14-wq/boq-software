@@ -69,16 +69,38 @@ export function addBoqItem(
     };
   }
 }
-
 export function addBoqItemFromBillKey(
-  boq: Record<string, BoqItem>,
-  billKey: BillKey,
+  boqItems: Record<string, BoqItem>,
+  billKey: string,
   section: string,
   description: string,
   unit: string,
   qty: number,
-  contribution?: { module: string; measurementId: number; mark: string; qty: number }
+  contribution: { module: string; measurementId: number; mark: string; qty: number }
 ) {
-  const bill = getBill(billKey);
-  addBoqItem(boq, bill.billNo, bill.billName, section, description, unit, qty, contribution);
+  // Safeguard against null/undefined
+  const safeQty = qty || 0;
+  const safeContribQty = contribution.qty || 0;
+  
+  const key = `${billKey}|${section}|${description}|${unit}`;
+  
+  if (!boqItems[key]) {
+    boqItems[key] = {
+      billNo: billKey,
+      billName: billKey,
+      section: section,
+      description: description,
+      unit: unit,
+      qty: 0,
+      contributions: [],
+    };
+  }
+  
+  boqItems[key].qty += safeQty;
+  boqItems[key].contributions.push({
+    module: contribution.module,
+    measurementId: contribution.measurementId,
+    mark: contribution.mark,
+    qty: safeContribQty,
+  });
 }

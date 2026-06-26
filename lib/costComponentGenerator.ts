@@ -1,11 +1,12 @@
 import { WallType, WallMeasurement, CostPlanComponent } from "@/types/boq";
-import { getCostPlanMapping } from "./wallCostPlanMapping";
+import { generateWallCostPlanComponents } from "./measurementOutputEngine";
 
 export function generateWallCostComponents(
   wallMeasurements: WallMeasurement[],
   wallTypes: WallType[]
 ): CostPlanComponent[] {
-  const components: CostPlanComponent[] = [];
+  return generateWallCostPlanComponents(wallMeasurements, wallTypes);
+}
 
   wallMeasurements.forEach((measurement) => {
     const wallType = wallTypes.find((w) => w.id === measurement.wallTypeId);

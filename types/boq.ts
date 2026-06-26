@@ -370,3 +370,33 @@ export type ProjectData = {
   openingTypes: OpeningType[];
   openingMeasurements: OpeningMeasurement[];
 };
+
+// ============================================
+// MEASUREMENT OUTPUT ENGINE
+// ============================================
+
+export type MeasurementOutput = {
+  id: string;
+  sourceModule: string;
+  sourceMeasurementId: number;
+  sourceMark: string;
+  outputType: "cost-plan" | "boq";
+  sectionId?: string;
+  elementId?: string;
+  componentId?: string;
+  componentName: string;
+  description: string;
+  unit: string;
+  qty: number;
+  rate?: number;
+  amount?: number;
+};
+
+// Helper type for output generation context
+export type OutputContext = {
+  measurementId: number;
+  mark: string;
+  module: string;
+  sectionId: string;
+  elementId: string;
+};
