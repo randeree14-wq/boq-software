@@ -1,15 +1,6 @@
 "use client";
 
-import type {
-  OpeningType,
-  OpeningMeasurement,
-  DoorConfiguration,
-  DoorLeafType,
-  DoorFrameType,
-  WindowType,
-  WindowFrameType,
-  WallThicknessOption,
-} from "@/types/boq";
+import type { OpeningType, OpeningMeasurement } from "@/types/boq";
 
 interface OpeningsModuleProps {
   openingTypes: OpeningType[];
@@ -29,7 +20,7 @@ interface OpeningsModuleProps {
   styles: any;
 }
 
-const OpeningsModule = ({
+export default function OpeningsModule({
   openingTypes,
   setOpeningTypes,
   editingOpeningId,
@@ -45,22 +36,59 @@ const OpeningsModule = ({
   editingOpeningMeasurementId,
   setEditingOpeningMeasurementId,
   styles,
-}: OpeningsModuleProps) => {
+}: OpeningsModuleProps) {
+  const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles || {};
+
+  // SAFEGUARD: Safe versions of all props
+  const safeNewOpening = {
+    name: newOpening?.name || "",
+    category: newOpening?.category || "Door",
+    widthMm: newOpening?.widthMm || 0,
+    heightMm: newOpening?.heightMm || 0,
+    quantity: newOpening?.quantity || 0,
+    wallThicknessOption: newOpening?.wallThicknessOption || "Half brick",
+    wallThicknessMm: newOpening?.wallThicknessMm || 0,
+    includeLintel: newOpening?.includeLintel ?? true,
+    lintelBearingMm: newOpening?.lintelBearingMm || 230,
+    includeRevealPlaster: newOpening?.includeRevealPlaster ?? true,
+    doorConfiguration: newOpening?.doorConfiguration || "Single",
+    doorLeafType: newOpening?.doorLeafType || "Hollow core timber door",
+    doorFrameType: newOpening?.doorFrameType || "Timber frame",
+    paintDoor: newOpening?.paintDoor ?? false,
+    paintFrame: newOpening?.paintFrame ?? false,
+    includeIronmongery: newOpening?.includeIronmongery ?? false,
+    includeThreshold: newOpening?.includeThreshold ?? false,
+    windowType: newOpening?.windowType || "Aluminium window",
+    windowFrameType: newOpening?.windowFrameType || "Aluminium",
+    externalSill: newOpening?.externalSill ?? false,
+    internalSill: newOpening?.internalSill ?? false,
+  };
+
+  const safeNewOpeningMeas = {
+    mark: newOpeningMeas?.mark || "",
+    openingTypeId: newOpeningMeas?.openingTypeId || 0,
+    quantity: newOpeningMeas?.quantity || 0,
+    linkedWallId: newOpeningMeas?.linkedWallId || 0,
+  };
+
+  const safeOpeningTypes = openingTypes || [];
+  const safeOpeningMeasurements = openingMeasurements || [];
+
   const saveOpeningType = () => {
-    if (!newOpening.name.trim()) return;
+    if (!safeNewOpening.name.trim()) return;
     if (editingOpeningId !== null) {
       setOpeningTypes((prev) =>
-        prev.map((o) => (o.id === editingOpeningId ? { ...o, ...newOpening } : o))
+        prev.map((o) => (o.id === editingOpeningId ? { ...o, ...safeNewOpening } : o))
       );
       setEditingOpeningId(null);
     } else {
-      setOpeningTypes((prev) => [...prev, { id: Date.now(), ...newOpening }]);
+      setOpeningTypes((prev) => [...prev, { id: Date.now(), ...safeNewOpening }]);
     }
     resetOpening();
   };
 
   const editOpeningType = (id: number) => {
-    const opening = openingTypes.find((o) => o.id === id);
+    const opening = safeOpeningTypes.find((o) => o.id === id);
     if (opening) {
       updateOpening(opening);
       setEditingOpeningId(id);
@@ -72,24 +100,27 @@ const OpeningsModule = ({
     setOpeningMeasurements((prev) => prev.filter((m) => m.openingTypeId !== id));
   };
 
-  const saveOpeningMeasurement = () => {
-    if (!newOpeningMeas.mark.trim() || newOpeningMeas.openingTypeId === 0 || newOpeningMeas.quantity <= 0) return;
-
+  const addOpeningMeasurement = () => {
+    if (!safeNewOpeningMeas.mark.trim() || safeNewOpeningMeas.openingTypeId === 0 || !safeNewOpeningMeas.quantity || safeNewOpeningMeas.quantity <= 0) return;
+    const measurement = {
+      id: Date.now(),
+      ...safeNewOpeningMeas,
+      elementalSectionId: "Internal Divisions",
+      elementalElementId: "Openings",
+    };
     if (editingOpeningMeasurementId !== null) {
       setOpeningMeasurements((prev) =>
-        prev.map((m) =>
-          m.id === editingOpeningMeasurementId ? { ...m, ...newOpeningMeas } : m
-        )
+        prev.map((m) => (m.id === editingOpeningMeasurementId ? { ...m, ...measurement } : m))
       );
       setEditingOpeningMeasurementId(null);
     } else {
-      setOpeningMeasurements((prev) => [...prev, { id: Date.now(), ...newOpeningMeas }]);
+      setOpeningMeasurements((prev) => [...prev, measurement]);
     }
     resetOpeningMeas();
   };
 
   const editOpeningMeasurement = (id: number) => {
-    const measurement = openingMeasurements.find((m) => m.id === id);
+    const measurement = safeOpeningMeasurements.find((m) => m.id === id);
     if (measurement) {
       updateOpeningMeas(measurement);
       setEditingOpeningMeasurementId(id);
@@ -106,76 +137,59 @@ const OpeningsModule = ({
     }
   };
 
-  const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles;
-
-  const category = newOpening.category;
-
   return (
     <div style={cardStyle}>
-      <h1>Openings Module</h1>
       <h2>Opening Type Library</h2>
       <div style={formGridStyle}>
-        <input placeholder="Name" value={newOpening.name} onChange={(e) => updateOpening({ name: e.target.value })} />
-        <select value={newOpening.category} onChange={(e) => updateOpening({ category: e.target.value as "Door" | "Window" })}>
-          <option value="Door">Door</option>
-          <option value="Window">Window</option>
+        <input placeholder="Name" value={safeNewOpening.name} onChange={(e) => updateOpening({ name: e.target.value })} />
+        <select value={safeNewOpening.category} onChange={(e) => updateOpening({ category: e.target.value as "Door" | "Window" })}>
+          <option>Door</option><option>Window</option>
         </select>
-
-        <input type="number"  placeholder="Width (mm) e.g., 900" value={newOpening.widthMm || ''} onChange={(e) => updateOpening({ widthMm: Number(e.target.value) })} />
-        <input type="number" placeholder="Height (mm) e.g., 2100" value={newOpening.heightMm} onChange={(e) => updateOpening({ heightMm: Number(e.target.value) })} />
-
-        <select value={newOpening.wallThicknessOption} onChange={(e) => updateOpening({ wallThicknessOption: e.target.value as WallThicknessOption })}>
-          <option value="Half brick">Half brick</option>
-          <option value="One brick">One brick</option>
-          <option value="Other mm">Other mm</option>
+        <input type="number" placeholder="Width (mm)" value={safeNewOpening.widthMm || ''} onChange={(e) => updateOpening({ widthMm: Number(e.target.value) || 0 })} />
+        <input type="number" placeholder="Height (mm)" value={safeNewOpening.heightMm || ''} onChange={(e) => updateOpening({ heightMm: Number(e.target.value) || 0 })} />
+        <input type="number" placeholder="Quantity" value={safeNewOpening.quantity || ''} onChange={(e) => updateOpening({ quantity: Number(e.target.value) || 0 })} />
+        <select value={safeNewOpening.wallThicknessOption} onChange={(e) => updateOpening({ wallThicknessOption: e.target.value as "Half brick" | "One brick" | "Other mm" })}>
+          <option>Half brick</option><option>One brick</option><option>Other mm</option>
         </select>
-        {newOpening.wallThicknessOption === "Other mm" && (
-          <input type="number" placeholder="Wall thickness (mm) e.g., 102" value={newOpening.wallThicknessMm || 0} onChange={(e) => updateOpening({ wallThicknessMm: Number(e.target.value) })} />
+        {safeNewOpening.wallThicknessOption === "Other mm" && (
+          <input type="number" placeholder="Wall thickness (mm)" value={safeNewOpening.wallThicknessMm || ''} onChange={(e) => updateOpening({ wallThicknessMm: Number(e.target.value) || 0 })} />
         )}
-
-        <label><input type="checkbox" checked={newOpening.includeLintel} onChange={(e) => updateOpening({ includeLintel: e.target.checked })} /> Include Lintel</label>
-        {newOpening.includeLintel && (
-          <input type="number" placeholder="Lintel bearing (mm) e.g., 230" value={newOpening.lintelBearingMm || ''} onChange={(e) => updateOpening({ lintelBearingMm: Number(e.target.value) })} />
+        <label><input type="checkbox" checked={safeNewOpening.includeLintel} onChange={(e) => updateOpening({ includeLintel: e.target.checked })} /> Include lintel</label>
+        {safeNewOpening.includeLintel && (
+          <input type="number" placeholder="Lintel bearing (mm)" value={safeNewOpening.lintelBearingMm || ''} onChange={(e) => updateOpening({ lintelBearingMm: Number(e.target.value) || 0 })} />
         )}
-        <label><input type="checkbox" checked={newOpening.includeRevealPlaster} onChange={(e) => updateOpening({ includeRevealPlaster: e.target.checked })} /> Include Reveal Plaster</label>
+        <label><input type="checkbox" checked={safeNewOpening.includeRevealPlaster} onChange={(e) => updateOpening({ includeRevealPlaster: e.target.checked })} /> Reveal plaster</label>
 
-        {category === "Door" && (
+        {safeNewOpening.category === "Door" && (
           <>
-            <select value={newOpening.doorConfiguration || "Single"} onChange={(e) => updateOpening({ doorConfiguration: e.target.value as DoorConfiguration })}>
-              <option value="Single">Single</option><option value="Double">Double</option><option value="Sliding">Sliding</option>
-              <option value="Folding">Folding</option><option value="Roller shutter">Roller shutter</option>
+            <select value={safeNewOpening.doorConfiguration} onChange={(e) => updateOpening({ doorConfiguration: e.target.value as "Single" | "Double" | "Sliding" | "Folding" | "Roller shutter" })}>
+              <option>Single</option><option>Double</option><option>Sliding</option><option>Folding</option><option>Roller shutter</option>
             </select>
-            <select value={newOpening.doorLeafType || "Hollow core timber door"} onChange={(e) => updateOpening({ doorLeafType: e.target.value as DoorLeafType })}>
-              <option value="Hollow core timber door">Hollow core timber door</option>
-              <option value="Semi-solid timber door">Semi-solid timber door</option>
-              <option value="Solid timber door">Solid timber door</option>
-              <option value="Aluminium door">Aluminium door</option>
-              <option value="Fire door">Fire door</option>
-              <option value="Steel door">Steel door</option>
+            <select value={safeNewOpening.doorLeafType} onChange={(e) => updateOpening({ doorLeafType: e.target.value as "Hollow core timber door" | "Semi-solid timber door" | "Solid timber door" | "Aluminium door" | "Fire door" | "Steel door" })}>
+              <option>Hollow core timber door</option><option>Semi-solid timber door</option><option>Solid timber door</option>
+              <option>Aluminium door</option><option>Fire door</option><option>Steel door</option>
             </select>
-            <select value={newOpening.doorFrameType || "Timber frame"} onChange={(e) => updateOpening({ doorFrameType: e.target.value as DoorFrameType })}>
-              <option value="Timber frame">Timber frame</option><option value="Steel frame">Steel frame</option><option value="Aluminium frame">Aluminium frame</option>
+            <select value={safeNewOpening.doorFrameType} onChange={(e) => updateOpening({ doorFrameType: e.target.value as "Timber frame" | "Steel frame" | "Aluminium frame" })}>
+              <option>Timber frame</option><option>Steel frame</option><option>Aluminium frame</option>
             </select>
-            <label><input type="checkbox" checked={newOpening.paintDoor || false} onChange={(e) => updateOpening({ paintDoor: e.target.checked })} /> Paint door</label>
-            <label><input type="checkbox" checked={newOpening.paintFrame || false} onChange={(e) => updateOpening({ paintFrame: e.target.checked })} /> Paint frame</label>
-            <label><input type="checkbox" checked={newOpening.includeIronmongery || false} onChange={(e) => updateOpening({ includeIronmongery: e.target.checked })} /> Include ironmongery</label>
-            <label><input type="checkbox" checked={newOpening.includeThreshold || false} onChange={(e) => updateOpening({ includeThreshold: e.target.checked })} /> Include threshold</label>
+            <label><input type="checkbox" checked={safeNewOpening.paintDoor} onChange={(e) => updateOpening({ paintDoor: e.target.checked })} /> Paint door</label>
+            <label><input type="checkbox" checked={safeNewOpening.paintFrame} onChange={(e) => updateOpening({ paintFrame: e.target.checked })} /> Paint frame</label>
+            <label><input type="checkbox" checked={safeNewOpening.includeIronmongery} onChange={(e) => updateOpening({ includeIronmongery: e.target.checked })} /> Ironmongery</label>
+            <label><input type="checkbox" checked={safeNewOpening.includeThreshold} onChange={(e) => updateOpening({ includeThreshold: e.target.checked })} /> Threshold</label>
           </>
         )}
 
-        {category === "Window" && (
+        {safeNewOpening.category === "Window" && (
           <>
-            <select value={newOpening.windowType || "Aluminium window"} onChange={(e) => updateOpening({ windowType: e.target.value as WindowType })}>
-              <option value="Aluminium window">Aluminium window</option>
-              <option value="Steel window">Steel window</option>
-              <option value="Timber window">Timber window</option>
+            <select value={safeNewOpening.windowType} onChange={(e) => updateOpening({ windowType: e.target.value as "Aluminium window" | "Steel window" | "Timber window" })}>
+              <option>Aluminium window</option><option>Steel window</option><option>Timber window</option>
             </select>
-            <select value={newOpening.windowFrameType || "Aluminium"} onChange={(e) => updateOpening({ windowFrameType: e.target.value as WindowFrameType })}>
-              <option value="Aluminium">Aluminium</option><option value="Steel">Steel</option><option value="Timber">Timber</option>
+            <select value={safeNewOpening.windowFrameType} onChange={(e) => updateOpening({ windowFrameType: e.target.value as "Aluminium" | "Steel" | "Timber" })}>
+              <option>Aluminium</option><option>Steel</option><option>Timber</option>
             </select>
-            <label><input type="checkbox" checked={newOpening.externalSill || false} onChange={(e) => updateOpening({ externalSill: e.target.checked })} /> External sill</label>
-            <label><input type="checkbox" checked={newOpening.internalSill || false} onChange={(e) => updateOpening({ internalSill: e.target.checked })} /> Internal sill</label>
-            <label><input type="checkbox" checked={newOpening.paintFrame || false} onChange={(e) => updateOpening({ paintFrame: e.target.checked })} /> Paint frame</label>
+            <label><input type="checkbox" checked={safeNewOpening.externalSill} onChange={(e) => updateOpening({ externalSill: e.target.checked })} /> External sill</label>
+            <label><input type="checkbox" checked={safeNewOpening.internalSill} onChange={(e) => updateOpening({ internalSill: e.target.checked })} /> Internal sill</label>
+            <label><input type="checkbox" checked={safeNewOpening.paintFrame} onChange={(e) => updateOpening({ paintFrame: e.target.checked })} /> Paint frame</label>
           </>
         )}
 
@@ -183,21 +197,22 @@ const OpeningsModule = ({
       </div>
 
       <table style={tableStyle} border={1} cellPadding={8}>
-        <thead>
-          <tr>
-            <th style={thStyle}>Name</th><th style={thStyle}>Category</th><th style={thStyle}>Width (mm)</th>
-            <th style={thStyle}>Height (mm)</th><th style={thStyle}>Qty</th><th style={thStyle}>Lintel</th>
-            <th style={thStyle}>Plaster</th><th style={thStyle}>Actions</th>
-          </tr>
-        </thead>
+        <thead><tr>
+          <th style={thStyle}>Name</th><th style={thStyle}>Category</th>
+          <th style={thStyle}>W</th><th style={thStyle}>H</th>
+          <th style={thStyle}>Qty</th><th style={thStyle}>Wall Thk</th>
+          <th style={thStyle}>Lintel</th><th style={thStyle}>Reveal</th>
+          <th style={thStyle}>Actions</th>
+        </tr></thead>
         <tbody>
-          {openingTypes.map((op) => (
+          {safeOpeningTypes.map((op) => (
             <tr key={op.id}>
               <td style={tdStyle}>{op.name}</td>
               <td style={tdStyle}>{op.category}</td>
-              <td style={tdStyle}>{op.widthMm}</td>
-              <td style={tdStyle}>{op.heightMm}</td>
-              <td style={tdStyle}>{op.quantity}</td>
+              <td style={tdStyle}>{op.widthMm || 0}mm</td>
+              <td style={tdStyle}>{op.heightMm || 0}mm</td>
+              <td style={tdStyle}>{op.quantity || 0}</td>
+              <td style={tdStyle}>{op.wallThicknessOption}</td>
               <td style={tdStyle}>{op.includeLintel ? "Yes" : "No"}</td>
               <td style={tdStyle}>{op.includeRevealPlaster ? "Yes" : "No"}</td>
               <td style={tdStyle}>
@@ -210,15 +225,16 @@ const OpeningsModule = ({
       </table>
 
       <hr />
+
       <h2>Opening Measurements</h2>
       <div style={formGridStyle}>
-        <input placeholder="Mark" value={newOpeningMeas.mark} onChange={(e) => updateOpeningMeas({ mark: e.target.value })} />
-        <select value={newOpeningMeas.openingTypeId} onChange={(e) => updateOpeningMeas({ openingTypeId: Number(e.target.value) })}>
+        <input placeholder="Mark (e.g., D1)" value={safeNewOpeningMeas.mark} onChange={(e) => updateOpeningMeas({ mark: e.target.value })} />
+        <select value={safeNewOpeningMeas.openingTypeId} onChange={(e) => updateOpeningMeas({ openingTypeId: Number(e.target.value) })}>
           <option value={0}>Select Type</option>
-          {openingTypes.map((op) => <option key={op.id} value={op.id}>{op.name} ({op.category})</option>)}
+          {safeOpeningTypes.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
         </select>
-        <input type="number" placeholder="Quantity" value={newOpeningMeas.quantity} onChange={(e) => updateOpeningMeas({ quantity: Number(e.target.value) })} />
-        <button onClick={saveOpeningMeasurement}>
+        <input type="number" placeholder="Quantity" value={safeNewOpeningMeas.quantity || ''} onChange={(e) => updateOpeningMeas({ quantity: Number(e.target.value) || 0 })} />
+        <button onClick={addOpeningMeasurement}>
           {editingOpeningMeasurementId !== null ? "Update Measurement" : "Add Measurement"}
         </button>
         {editingOpeningMeasurementId !== null && (
@@ -227,18 +243,17 @@ const OpeningsModule = ({
       </div>
 
       <table style={tableStyle} border={1} cellPadding={8}>
-        <thead>
-          <tr><th style={thStyle}>Mark</th><th style={thStyle}>Opening Type</th><th style={thStyle}>Quantity</th><th style={thStyle}>Wall ID (future)</th><th style={thStyle}>Actions</th></tr>
-        </thead>
+        <thead><tr>
+          <th style={thStyle}>Mark</th><th style={thStyle}>Type</th><th style={thStyle}>Quantity</th><th style={thStyle}>Actions</th>
+        </tr></thead>
         <tbody>
-          {openingMeasurements.map((m) => {
-            const op = openingTypes.find((o) => o.id === m.openingTypeId);
+          {safeOpeningMeasurements.map((m) => {
+            const op = safeOpeningTypes.find((o) => o.id === m.openingTypeId);
             return (
               <tr key={m.id}>
                 <td style={tdStyle}>{m.mark}</td>
                 <td style={tdStyle}>{op?.name}</td>
                 <td style={tdStyle}>{m.quantity}</td>
-                <td style={tdStyle}>{m.linkedWallId || "-"}</td>
                 <td style={tdStyle}>
                   <button onClick={() => editOpeningMeasurement(m.id)}>Edit</button>
                   <button onClick={() => deleteOpeningMeasurement(m.id)}>Delete</button>
@@ -250,6 +265,4 @@ const OpeningsModule = ({
       </table>
     </div>
   );
-};
-
-export default OpeningsModule;
+}

@@ -47,6 +47,16 @@ import {
   generateSlabBoqItems,
 } from "@/lib/measurementOutputEngine";
 
+import { 
+  wallDefaults, 
+  slabDefaults, 
+  padFootingDefaults,
+  groundBeamDefaults,
+  columnDefaults,
+  surfaceBedDefaults,
+  openingDefaults 
+} from "@/lib/moduleDefaults";
+
 // Layout components
 import BoqSummary from "@/components/modules/BoqSummary";
 import Dashboard from "@/components/dashboard/Dashboard";
@@ -72,11 +82,20 @@ function getConcreteStrength(concreteClass: string): string {
   return parts[0]; // e.g., "25MPa"
 }
 
-// CUSTOM HOOK
-function useFormState<T>(initialState: T) {
-  const [values, setValues] = useState<T>(initialState);
-  const reset = () => setValues(initialState);
+// ============================================
+// FIXED: useFormState hook with proper defaults
+// ============================================
+function useFormState<T extends Record<string, any>>(
+  initialState: T,
+  defaults: Partial<T> = {}
+) {
+  // Merge defaults with initial state (defaults override initial undefined values)
+  const fullInitialState = { ...defaults, ...initialState };
+  const [values, setValues] = useState<T>(fullInitialState);
+  
+  const reset = () => setValues(fullInitialState);
   const update = (partial: Partial<T>) => setValues((prev) => ({ ...prev, ...partial }));
+  
   return { values, update, reset };
 }
 
@@ -128,24 +147,24 @@ export default function Home() {
   const [editingBeamId, setEditingBeamId] = useState<number | null>(null);
   const { values: newBeam, update: updateBeam, reset: resetBeam } = useFormState({
     name: "",
-    width: undefined,
-    depth: undefined,
-    reinfKg: undefined,
+    width: 0,
+    depth: 0,
+    reinfKg: 0,
     formworkFinish: "Smooth",
     concreteClass: "25MPa/19mm",
     beamProfileType: "Downstand Beam",
-    beamWidthMm: undefined,
-    downstandDepthMm: undefined,
-    upstandHeightMm: undefined,
-    slabThicknessMm: undefined,
+    beamWidthMm: 0,
+    downstandDepthMm: 0,
+    upstandHeightMm: 0,
+    slabThicknessMm: 0,
     proppingHeightBand: "Not exceeding 1.5m",
-    customProppingHeightDescription: undefined,
+    customProppingHeightDescription: "",
   });
   const [beamMeasurements, setBeamMeasurements] = useState<BeamMeasurement[]>([]);
   const { values: newBeamMeas, update: updateBeamMeas, reset: resetBeamMeas } = useFormState({
     mark: "",
     beamTypeId: 0,
-    length: undefined,
+    length: 0,
   });
 
   // ---------- SURFACE BED ----------
@@ -154,29 +173,29 @@ export default function Home() {
   const { values: newSurfaceBed, update: updateSurfaceBed, reset: resetSurfaceBed } = useFormState({
     name: "",
     category: "Internal",
-    thickness: undefined,
+    thickness: 0,
     concreteClass: "35MPa/19mm",
     meshType: "Ref193",
     dpm: true,
     soilPoison: true,
     layer1Material: "",
-    layer1Thickness: undefined,
+    layer1Thickness: 0,
     layer2Material: "",
-    layer2Thickness: undefined,
+    layer2Thickness: 0,
     layer3Material: "",
-    layer3Thickness: undefined,
+    layer3Thickness: 0,
     powerfloat: true,
     screedRequired: false,
-    screedThickness: undefined,
+    screedThickness: 0,
     screedType: "Normal",
     tileRequired: false,
-    tilePcSum: undefined,
+    tilePcSum: 0,
   });
   const [surfaceBedMeasurements, setSurfaceBedMeasurements] = useState<SurfaceBedMeasurement[]>([]);
   const { values: newSurfaceBedMeas, update: updateSurfaceBedMeas, reset: resetSurfaceBedMeas } = useFormState({
     mark: "",
     surfaceBedTypeId: 0,
-    area: undefined,
+    area: 0,
   });
 
   // ---------- PAD FOOTING ----------
@@ -184,17 +203,17 @@ export default function Home() {
   const [editingPadFootingId, setEditingPadFootingId] = useState<number | null>(null);
   const { values: newPadFooting, update: updatePadFooting, reset: resetPadFooting } = useFormState({
     name: "",
-    padLength: undefined,
-    padWidth: undefined,
-    padDepth: undefined,
-    excavationLength: undefined,
-    excavationWidth: undefined,
-    excavationDepth: undefined,
+    padLength: 0,
+    padWidth: 0,
+    padDepth: 0,
+    excavationLength: 0,
+    excavationWidth: 0,
+    excavationDepth: 0,
     concreteClass: "30MPa/19mm",
-    reinfKg: undefined,
+    reinfKg: 0,
     formworkRequired: true,
     blindingRequired: true,
-    blindingThickness: undefined,
+    blindingThickness: 0,
     soilPoison: false,
     backfill: true,
     workingSpaceRequired: false,
@@ -204,7 +223,7 @@ export default function Home() {
   const { values: newPadFootingMeas, update: updatePadFootingMeas, reset: resetPadFootingMeas } = useFormState({
     mark: "",
     padFootingTypeId: 0,
-    quantity: undefined,
+    quantity: 0,
   });
 
   // ---------- GROUND BEAM ----------
@@ -212,15 +231,15 @@ export default function Home() {
   const [editingGroundBeamId, setEditingGroundBeamId] = useState<number | null>(null);
   const { values: newGroundBeam, update: updateGroundBeam, reset: resetGroundBeam } = useFormState({
     name: "",
-    trenchWidth: undefined,
-    trenchDepth: undefined,
-    beamWidth: undefined,
-    beamDepth: undefined,
+    trenchWidth: 0,
+    trenchDepth: 0,
+    beamWidth: 0,
+    beamDepth: 0,
     concreteClass: "30MPa/19mm",
-    reinfKgPerM3: undefined,
+    reinfKgPerM3: 0,
     formworkRequired: true,
     blindingRequired: true,
-    blindingThickness: undefined,
+    blindingThickness: 0,
     backfillRequired: true,
     dpcRequired: false,
     soilPoisonRequired: false,
@@ -231,7 +250,7 @@ export default function Home() {
   const { values: newGroundBeamMeas, update: updateGroundBeamMeas, reset: resetGroundBeamMeas } = useFormState({
     mark: "",
     groundBeamTypeId: 0,
-    length: undefined,
+    length: 0,
   });
 
   // ---------- COLUMN ----------
@@ -239,11 +258,11 @@ export default function Home() {
   const [editingColumnId, setEditingColumnId] = useState<number | null>(null);
   const { values: newColumn, update: updateColumn, reset: resetColumn } = useFormState({
     name: "",
-    width: undefined,
-    depth: undefined,
-    height: undefined,
+    width: 0,
+    depth: 0,
+    height: 0,
     concreteClass: "35MPa/19mm",
-    reinfKgPerM3: undefined,
+    reinfKgPerM3: 0,
     formworkRequired: true,
     formworkFinish: "Smooth",
   });
@@ -251,7 +270,7 @@ export default function Home() {
   const { values: newColumnMeas, update: updateColumnMeas, reset: resetColumnMeas } = useFormState({
     mark: "",
     columnTypeId: 0,
-    quantity: undefined,
+    quantity: 0,
   });
 
   // ---------- WALL ----------
@@ -261,27 +280,26 @@ export default function Home() {
     name: "",
     brickType: "Common",
     thicknessType: "Single Skin (Half Brick)",
-    thicknessMm: undefined,
+    thicknessMm: 0,
     courseHeight: 75,
     side1Plaster: true,
     side1Finish: "Paint",
-    side1TilePcSum: undefined,
+    side1TilePcSum: 0,
     side2Plaster: true,
     side2Finish: "Paint",
-    side2TilePcSum: undefined,
+    side2TilePcSum: 0,
     dpcRequired: true,
     reinforcementRequired: false,
     coursesPerReinforcement: 4,
     reinforcementType: "Galvanised mesh",
   });
-
   const [wallMeasurements, setWallMeasurements] = useState<WallMeasurement[]>([]);
   const { values: newWallMeas, update: updateWallMeas, reset: resetWallMeas } = useFormState({
     mark: "",
     wallTypeId: 0,
-    length: undefined,
-    height: undefined,
-    area: undefined,
+    length: 0,
+    height: 0,
+    area: 0,
     wallLocation: "Internal Division",
   });
 
@@ -305,10 +323,10 @@ export default function Home() {
   const { values: newSlabMeas, update: updateSlabMeas, reset: resetSlabMeas } = useFormState({
     mark: "",
     slabTypeId: 0,
-    length: undefined,
-    width: undefined,
-    quantity: undefined,
-    area: undefined,
+    length: 0,
+    width: 0,
+    quantity: 0,
+    area: 0,
   });
 
   // ---------- OPENINGS ----------
@@ -317,11 +335,11 @@ export default function Home() {
   const { values: newOpening, update: updateOpening, reset: resetOpening } = useFormState({
     name: "",
     category: "Door",
-    widthMm: undefined,
-    heightMm: undefined,
-    quantity: undefined,
+    widthMm: 0,
+    heightMm: 0,
+    quantity: 0,
     wallThicknessOption: "Half brick",
-    wallThicknessMm: undefined,
+    wallThicknessMm: 0,
     includeLintel: true,
     lintelBearingMm: 230,
     includeRevealPlaster: true,
@@ -341,8 +359,8 @@ export default function Home() {
   const { values: newOpeningMeas, update: updateOpeningMeas, reset: resetOpeningMeas } = useFormState({
     mark: "",
     openingTypeId: 0,
-    quantity: undefined,
-    linkedWallId: undefined,
+    quantity: 0,
+    linkedWallId: 0,
   });
 
   // ============================================
@@ -358,16 +376,12 @@ export default function Home() {
   // ============================================
   // AUTO-GENERATE COST PLAN COMPONENTS
   // ============================================
-  // ============================================
-// AUTO-GENERATE COST PLAN COMPONENTS
-// ============================================
-
-useEffect(() => {
-  const wallComponents = generateWallCostPlanComponents(wallMeasurements, wallTypes);
-  const slabComponents = generateSlabCostPlanComponents(slabMeasurements, slabTypes);
-  setCostPlanComponents([...wallComponents, ...slabComponents]);
-  console.log("Generated cost plan components:", wallComponents.length + slabComponents.length);
-}, [wallMeasurements, wallTypes, slabMeasurements, slabTypes]);
+  useEffect(() => {
+    const wallComponents = generateWallCostPlanComponents(wallMeasurements, wallTypes);
+    const slabComponents = generateSlabCostPlanComponents(slabMeasurements, slabTypes);
+    setCostPlanComponents([...wallComponents, ...slabComponents]);
+    console.log("Generated cost plan components:", wallComponents.length + slabComponents.length);
+  }, [wallMeasurements, wallTypes, slabMeasurements, slabTypes]);
 
   // ============================================
   // MEASUREMENT EDITING STATES
@@ -387,25 +401,25 @@ useEffect(() => {
   useEffect(() => {
     const savedData = loadProjectData();
     if (savedData) {
-      setBeamTypes(savedData.beamTypes);
-      setBeamMeasurements(savedData.beamMeasurements);
-      setSurfaceBedTypes(savedData.surfaceBedTypes);
-      setSurfaceBedMeasurements(savedData.surfaceBedMeasurements);
-      setPadFootingTypes(savedData.padFootingTypes);
-      setPadFootingMeasurements(savedData.padFootingMeasurements);
-      setGroundBeamTypes(savedData.groundBeamTypes);
-      setGroundBeamMeasurements(savedData.groundBeamMeasurements);
-      setColumnTypes(savedData.columnTypes);
-      setColumnMeasurements(savedData.columnMeasurements);
-      setWallTypes(savedData.wallTypes);
-      setWallMeasurements(savedData.wallMeasurements);
-      setSlabTypes(savedData.slabTypes);
-      setSlabMeasurements(savedData.slabMeasurements);
+      setBeamTypes(savedData.beamTypes || []);
+      setBeamMeasurements(savedData.beamMeasurements || []);
+      setSurfaceBedTypes(savedData.surfaceBedTypes || []);
+      setSurfaceBedMeasurements(savedData.surfaceBedMeasurements || []);
+      setPadFootingTypes(savedData.padFootingTypes || []);
+      setPadFootingMeasurements(savedData.padFootingMeasurements || []);
+      setGroundBeamTypes(savedData.groundBeamTypes || []);
+      setGroundBeamMeasurements(savedData.groundBeamMeasurements || []);
+      setColumnTypes(savedData.columnTypes || []);
+      setColumnMeasurements(savedData.columnMeasurements || []);
+      setWallTypes(savedData.wallTypes || []);
+      setWallMeasurements(savedData.wallMeasurements || []);
+      setSlabTypes(savedData.slabTypes || []);
+      setSlabMeasurements(savedData.slabMeasurements || []);
       setOpeningTypes(savedData.openingTypes || []);
       setOpeningMeasurements(savedData.openingMeasurements || []);
       setRates(savedData.rates || {});
       setCostPlanComponents(savedData.costPlanComponents || []);
-          }
+    }
   }, []);
 
   const saveAllData = () => {
@@ -429,7 +443,7 @@ useEffect(() => {
       rates,
       costPlanComponents,
     };
-        saveProjectData(data);
+    saveProjectData(data);
   };
 
   useEffect(() => {
@@ -828,13 +842,23 @@ useEffect(() => {
   }
 
   function addSlabMeasurement() {
-    if (!newSlabMeas.mark.trim() || newSlabMeas.slabTypeId === 0 || !newSlabMeas.length || newSlabMeas.length <= 0 || !newSlabMeas.width || newSlabMeas.width <= 0 || !newSlabMeas.quantity || newSlabMeas.quantity <= 0) return;
-    const area = newSlabMeas.length * newSlabMeas.width * newSlabMeas.quantity;
+    if (!newSlabMeas.mark.trim() || newSlabMeas.slabTypeId === 0 || 
+        !newSlabMeas.length || newSlabMeas.length <= 0 || 
+        !newSlabMeas.width || newSlabMeas.width <= 0 || 
+        !newSlabMeas.quantity || newSlabMeas.quantity <= 0) {
+      return;
+    }
+    
+    const length = Number(newSlabMeas.length) || 0;
+    const width = Number(newSlabMeas.width) || 0;
+    const quantity = Number(newSlabMeas.quantity) || 0;
+    const area = length * width * quantity;
+    
     const measurement = {
       id: Date.now(),
       ...newSlabMeas,
       area,
-      elementalSectionId: "Structural Frame",
+      elementalSectionId: "structural-frame",
       elementalElementId: "slabs",
     };
     if (editingSlabMeasurementId !== null) {
@@ -905,7 +929,6 @@ useEffect(() => {
   }
 
   function addWallMeasurement() {
-    // Validation
     if (!newWallMeas.mark.trim() || newWallMeas.wallTypeId === 0 || !newWallMeas.length || newWallMeas.length <= 0 || !newWallMeas.height || newWallMeas.height <= 0) {
       return;
     }
@@ -913,7 +936,6 @@ useEffect(() => {
     const area = newWallMeas.length * newWallMeas.height;
     const wallLocation = newWallMeas.wallLocation || "Internal Division";
 
-    // Create the measurement
     const measurement = {
       id: Date.now(),
       ...newWallMeas,
@@ -923,7 +945,6 @@ useEffect(() => {
       elementalElementId: "walls",
     };
 
-    // Save measurement
     if (editingWallMeasurementId !== null) {
       setWallMeasurements((prev) =>
         prev.map((m) => (m.id === editingWallMeasurementId ? { ...m, ...measurement } : m))
@@ -1035,7 +1056,6 @@ useEffect(() => {
     const widthM = beamWidth / 1000;
     const downstandM = downstandDepth / 1000;
 
-    // Concrete
     let concrete = 0;
     const profileType = beam.beamProfileType || "Downstand Beam";
     if (profileType === "Combined Downstand / Inverted Beam") {
@@ -1058,7 +1078,6 @@ useEffect(() => {
       qty,
     });
 
-    // Concrete
     let concreteDesc = `${beam.concreteClass} concrete in beams`;
     if (profileType === "Combined Downstand / Inverted Beam") {
       concreteDesc = `${beam.concreteClass} concrete in combined downstand / inverted beams`;
@@ -1073,7 +1092,6 @@ useEffect(() => {
       baseContribution(concrete)
     );
 
-    // Reinforcement
     if (highTensile > 0) {
       addBoqItemFromBillKey(
         masterBoqItems,
@@ -1097,7 +1115,6 @@ useEffect(() => {
       );
     }
 
-    // Formwork
     if (profileType === "Integrated Beam / No Separate Beam Formwork") return;
 
     let proppingHeightDesc = "";
@@ -1107,7 +1124,6 @@ useEffect(() => {
       proppingHeightDesc = beam.proppingHeightBand || "Not exceeding 1.5m";
     }
 
-    // Combined beam formwork
     if (profileType === "Combined Downstand / Inverted Beam") {
       const overallDepth = downstandDepth + slabThickness + upstandHeight;
       const outerGirth = overallDepth + beamWidth + downstandDepth;
@@ -1150,10 +1166,9 @@ useEffect(() => {
           );
         }
       }
-      return; // skip standard formwork
+      return;
     }
 
-    // Standard profiles
     let girth = 0;
     let desc = "";
     switch (profileType) {
@@ -1205,7 +1220,6 @@ useEffect(() => {
       qty,
     });
 
-    // Layers
     if (sb.layer1Material && sb.layer1Thickness > 0) {
       addLayerToBoq(masterBoqItems, sb.layer1Material, sb.layer1Thickness, m.area, baseContribution(m.area));
     }
@@ -1216,7 +1230,6 @@ useEffect(() => {
       addLayerToBoq(masterBoqItems, sb.layer3Material, sb.layer3Thickness, m.area, baseContribution(m.area));
     }
 
-    // DPM
     if (sb.dpm) {
       addBoqItemFromBillKey(
         masterBoqItems,
@@ -1229,7 +1242,6 @@ useEffect(() => {
       );
     }
 
-    // Soil Poison
     if (sb.soilPoison) {
       addBoqItemFromBillKey(
         masterBoqItems,
@@ -1242,7 +1254,6 @@ useEffect(() => {
       );
     }
 
-    // Mesh
     if (sb.meshType !== "None") {
       addBoqItemFromBillKey(
         masterBoqItems,
@@ -1255,7 +1266,6 @@ useEffect(() => {
       );
     }
 
-    // Concrete
     addBoqItemFromBillKey(
       masterBoqItems,
       "CONCRETE",
@@ -1266,7 +1276,6 @@ useEffect(() => {
       baseContribution(concreteVol)
     );
 
-    // Screed
     if (sb.screedRequired) {
       addBoqItemFromBillKey(
         masterBoqItems,
@@ -1279,7 +1288,6 @@ useEffect(() => {
       );
     }
 
-    // Tiles
     if (sb.tileRequired && sb.tilePcSum && sb.tilePcSum > 0) {
       addBoqItemFromBillKey(
         masterBoqItems,
@@ -1292,7 +1300,6 @@ useEffect(() => {
       );
     }
 
-    // Powerfloat
     if (sb.powerfloat) {
       addBoqItemFromBillKey(
         masterBoqItems,
@@ -1325,7 +1332,6 @@ useEffect(() => {
       qty: q,
     });
 
-    // Excavation
     addBoqItemFromBillKey(
       masterBoqItems,
       "EARTHWORKS",
@@ -1336,7 +1342,6 @@ useEffect(() => {
       baseContribution(excavationVol)
     );
 
-    // Concrete
     addBoqItemFromBillKey(
       masterBoqItems,
       "CONCRETE",
@@ -1347,7 +1352,6 @@ useEffect(() => {
       baseContribution(padConcrete)
     );
 
-    // Reinforcement
     if (highTensile > 0) {
       addBoqItemFromBillKey(
         masterBoqItems,
@@ -1371,7 +1375,6 @@ useEffect(() => {
       );
     }
 
-    // Formwork
     if (pf.formworkRequired) {
       const formwork = 2 * ((pf.padLength / 1000) + (pf.padWidth / 1000)) * (pf.padDepth / 1000) * qty;
       addBoqItemFromBillKey(
@@ -1385,7 +1388,6 @@ useEffect(() => {
       );
     }
 
-    // Blinding
     if (pf.blindingRequired) {
       const blinding = (pf.excavationLength / 1000) * (pf.excavationWidth / 1000) * (pf.blindingThickness / 1000) * qty;
       addBoqItemFromBillKey(
@@ -1399,7 +1401,6 @@ useEffect(() => {
       );
     }
 
-    // Soil Poisoning
     if (pf.soilPoison) {
       const area = (pf.excavationLength / 1000) * (pf.excavationWidth / 1000) * qty;
       addBoqItemFromBillKey(
@@ -1413,7 +1414,6 @@ useEffect(() => {
       );
     }
 
-    // Backfill
     if (pf.backfill) {
       const backfill = excavationVol - padConcrete;
       addBoqItemFromBillKey(
@@ -1447,7 +1447,6 @@ useEffect(() => {
       qty: q,
     });
 
-    // Excavation
     addBoqItemFromBillKey(
       masterBoqItems,
       "EARTHWORKS",
@@ -1458,7 +1457,6 @@ useEffect(() => {
       baseContribution(trenchVol)
     );
 
-    // Concrete
     addBoqItemFromBillKey(
       masterBoqItems,
       "CONCRETE",
@@ -1469,7 +1467,6 @@ useEffect(() => {
       baseContribution(concreteVol)
     );
 
-    // Reinforcement
     if (highTensile > 0) {
       addBoqItemFromBillKey(
         masterBoqItems,
@@ -1493,7 +1490,6 @@ useEffect(() => {
       );
     }
 
-    // Formwork
     if (gb.formworkRequired) {
       const formwork = (gb.beamDepth / 1000) * length * 2;
       addBoqItemFromBillKey(
@@ -1507,7 +1503,6 @@ useEffect(() => {
       );
     }
 
-    // Blinding
     if (gb.blindingRequired) {
       const blinding = (gb.beamWidth / 1000) * (gb.blindingThickness / 1000) * length;
       addBoqItemFromBillKey(
@@ -1521,7 +1516,6 @@ useEffect(() => {
       );
     }
 
-    // Backfill
     if (gb.backfillRequired) {
       const backfill = trenchVol - concreteVol;
       addBoqItemFromBillKey(
@@ -1535,7 +1529,6 @@ useEffect(() => {
       );
     }
 
-    // DPC
     if (gb.dpcRequired) {
       const dpcArea = (gb.beamWidth / 1000) * length;
       addBoqItemFromBillKey(
@@ -1549,7 +1542,6 @@ useEffect(() => {
       );
     }
 
-    // Soil Poisoning
     if (gb.soilPoisonRequired) {
       const area = (gb.trenchWidth / 1000) * length;
       addBoqItemFromBillKey(
@@ -1563,7 +1555,6 @@ useEffect(() => {
       );
     }
 
-    // WORKING SPACE (only if formwork is required)
     if (gb.formworkRequired && gb.workingSpaceRequired) {
       const trenchWidthM = gb.trenchWidth / 1000;
       const depthM = gb.trenchDepth / 1000;
@@ -1602,7 +1593,6 @@ useEffect(() => {
       }
     }
 
-    // RISK OF COLLAPSE (applies regardless of formwork)
     if (gb.riskOfCollapseRequired) {
       const trenchWidthM = gb.trenchWidth / 1000;
       const depthM = gb.trenchDepth / 1000;
@@ -1689,12 +1679,10 @@ useEffect(() => {
   });
 
   // ---------- WALLS ----------
-// Generate BOQ items using the new output engine
-generateWallBoqItems(wallMeasurements, wallTypes, masterBoqItems);
+  generateWallBoqItems(wallMeasurements, wallTypes, masterBoqItems);
 
   // ---------- SLABS ----------
-// Using the new Measurement Output Engine
-generateSlabBoqItems(slabMeasurements, slabTypes, masterBoqItems);
+  generateSlabBoqItems(slabMeasurements, slabTypes, masterBoqItems);
 
   // ---------- OPENINGS ----------
   openingMeasurements.forEach((m) => {
@@ -1804,46 +1792,45 @@ generateSlabBoqItems(slabMeasurements, slabTypes, masterBoqItems);
     }
   });
 
- // ============================================
-// TAB STATE
-// ============================================
-const [activeTab, setActiveTab] = useState<"dashboard" | "measurement" | "boq" | "reports" | "settings">("dashboard");
+  // ============================================
+  // TAB STATE
+  // ============================================
+  const [activeTab, setActiveTab] = useState<"dashboard" | "measurement" | "boq" | "reports" | "settings">("dashboard");
 
-// ============================================
-// TAB STYLES - ADD THIS HERE
-// ============================================
-const tabBarStyle = {
-  display: "flex",
-  gap: "4px",
-  marginBottom: "24px",
-  borderBottom: "2px solid #ddd",
-  paddingBottom: "0",
-  backgroundColor: "#ffffff",
-  borderRadius: "8px 8px 0 0",
-  padding: "8px 12px 0 12px",
-  flexWrap: "wrap" as const,
-};
+  // ============================================
+  // TAB STYLES
+  // ============================================
+  const tabBarStyle = {
+    display: "flex",
+    gap: "4px",
+    marginBottom: "24px",
+    borderBottom: "2px solid #ddd",
+    paddingBottom: "0",
+    backgroundColor: "#ffffff",
+    borderRadius: "8px 8px 0 0",
+    padding: "8px 12px 0 12px",
+    flexWrap: "wrap" as const,
+  };
 
-const tabButtonStyle = (isActive: boolean) => ({
-  padding: "10px 20px",
-  border: "none",
-  backgroundColor: isActive ? "#0066cc" : "transparent",
-  color: isActive ? "#ffffff" : "#333333",
-  borderRadius: "6px 6px 0 0",
-  cursor: "pointer",
-  fontSize: "14px",
-  fontWeight: isActive ? "600" : "400",
-  transition: "all 0.2s",
-  borderBottom: isActive ? "3px solid #0066cc" : "3px solid transparent",
-  marginBottom: "-2px",
-});
+  const tabButtonStyle = (isActive: boolean) => ({
+    padding: "10px 20px",
+    border: "none",
+    backgroundColor: isActive ? "#0066cc" : "transparent",
+    color: isActive ? "#ffffff" : "#333333",
+    borderRadius: "6px 6px 0 0",
+    cursor: "pointer",
+    fontSize: "14px",
+    fontWeight: isActive ? "600" : "400",
+    transition: "all 0.2s",
+    borderBottom: isActive ? "3px solid #0066cc" : "3px solid transparent",
+    marginBottom: "-2px",
+  });
 
   // ============================================
   // RENDER
   // ============================================
   return (
     <main style={pageStyle}>
-      {/* Header with title and buttons */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
         <h1>BOQ Measurement Software</h1>
         <div style={{ display: "flex", gap: "10px" }}>
@@ -1880,7 +1867,6 @@ const tabButtonStyle = (isActive: boolean) => ({
         </div>
       </div>
 
-      {/* Top Navigation */}
       <div style={tabBarStyle}>
         <button style={tabButtonStyle(activeTab === "dashboard")} onClick={() => setActiveTab("dashboard")}>
           Dashboard
@@ -1899,7 +1885,6 @@ const tabButtonStyle = (isActive: boolean) => ({
         </button>
       </div>
 
-      {/* Content */}
       <div style={{ marginTop: "20px" }}>
         {activeTab === "dashboard" && (
           <Dashboard boqItems={masterBoqItems} styles={{ cardStyle }} />
@@ -2057,14 +2042,11 @@ const tabButtonStyle = (isActive: boolean) => ({
 
         {activeTab === "reports" && (
           <>
-            {/* Cost Summary */}
             <ElementalCostSummary
               costPlanComponents={costPlanComponents}
               rates={rates}
               styles={{ cardStyle, tableStyle, thStyle, tdStyle }}
             />
-
-            {/* Quantity Summary */}
             <ElementalSummary
               beamMeasurements={beamMeasurements}
               surfaceBedMeasurements={surfaceBedMeasurements}

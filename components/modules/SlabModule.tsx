@@ -20,36 +20,65 @@ interface SlabModuleProps {
   styles: any;
 }
 
-const SlabModule = ({
+export default function SlabModule({
   slabTypes,
   setSlabTypes,
   editingSlabId,
   setEditingSlabId,
   newSlab,
-  updateSlab,
-  resetSlab,
+  updateSlab = () => {},
+  resetSlab = () => {},
   slabMeasurements,
   setSlabMeasurements,
   newSlabMeas,
-  updateSlabMeas,
-  resetSlabMeas,
+  updateSlabMeas = () => {},
+  resetSlabMeas = () => {},
   editingSlabMeasurementId,
   setEditingSlabMeasurementId,
   styles,
-}: SlabModuleProps) => {
+}: SlabModuleProps) {
+  const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles || {};
+
+  // SAFEGUARD: Safe versions of all props
+  const safeNewSlab = {
+    name: newSlab?.name || "",
+    thickness: newSlab?.thickness || 0,
+    concreteClass: newSlab?.concreteClass || "30MPa/19mm",
+    reinfType: newSlab?.reinfType || "Rebar",
+    reinfKgPerM3: newSlab?.reinfKgPerM3 || 0,
+    meshType: newSlab?.meshType || "A193",
+    formworkToEdges: newSlab?.formworkToEdges ?? true,
+    screedRequired: newSlab?.screedRequired ?? false,
+    screedThickness: newSlab?.screedThickness || 0,
+    floorFinishPcSum: newSlab?.floorFinishPcSum || 0,
+    floorFinishDescription: newSlab?.floorFinishDescription || "Tiles",
+  };
+
+  const safeNewSlabMeas = {
+    mark: newSlabMeas?.mark || "",
+    slabTypeId: newSlabMeas?.slabTypeId || 0,
+    length: newSlabMeas?.length || 0,
+    width: newSlabMeas?.width || 0,
+    quantity: newSlabMeas?.quantity || 0,
+    area: newSlabMeas?.area || 0,
+  };
+
+  const safeSlabTypes = slabTypes || [];
+  const safeSlabMeasurements = slabMeasurements || [];
+
   const saveSlabType = () => {
-    if (!newSlab.name.trim()) return;
+    if (!safeNewSlab.name.trim()) return;
     if (editingSlabId !== null) {
-      setSlabTypes((prev) => prev.map((s) => (s.id === editingSlabId ? { ...s, ...newSlab } : s)));
+      setSlabTypes((prev) => prev.map((s) => (s.id === editingSlabId ? { ...s, ...safeNewSlab } : s)));
       setEditingSlabId(null);
     } else {
-      setSlabTypes((prev) => [...prev, { id: Date.now(), ...newSlab }]);
+      setSlabTypes((prev) => [...prev, { id: Date.now(), ...safeNewSlab }]);
     }
     resetSlab();
   };
 
   const editSlabType = (id: number) => {
-    const slab = slabTypes.find((s) => s.id === id);
+    const slab = safeSlabTypes.find((s) => s.id === id);
     if (slab) {
       updateSlab(slab);
       setEditingSlabId(id);
@@ -61,27 +90,35 @@ const SlabModule = ({
     setSlabMeasurements((prev) => prev.filter((m) => m.slabTypeId !== id));
   };
 
-  const saveSlabMeasurement = () => {
-    if (!newSlabMeas.mark.trim() || newSlabMeas.slabTypeId === 0 || newSlabMeas.length <= 0 || newSlabMeas.width <= 0 || newSlabMeas.quantity <= 0) return;
+  const addSlabMeasurement = () => {
+    if (!safeNewSlabMeas.mark.trim() || safeNewSlabMeas.slabTypeId === 0 || 
+        !safeNewSlabMeas.length || safeNewSlabMeas.length <= 0 || 
+        !safeNewSlabMeas.width || safeNewSlabMeas.width <= 0 || 
+        !safeNewSlabMeas.quantity || safeNewSlabMeas.quantity <= 0) {
+      return;
+    }
     
-    const area = newSlabMeas.length * newSlabMeas.width * newSlabMeas.quantity;
-    const measurementData = { ...newSlabMeas, area };
-    
+    const area = safeNewSlabMeas.length * safeNewSlabMeas.width * safeNewSlabMeas.quantity;
+    const measurement = {
+      id: Date.now(),
+      ...safeNewSlabMeas,
+      area,
+      elementalSectionId: "structural-frame",
+      elementalElementId: "slabs",
+    };
     if (editingSlabMeasurementId !== null) {
       setSlabMeasurements((prev) =>
-        prev.map((m) =>
-          m.id === editingSlabMeasurementId ? { ...m, ...measurementData } : m
-        )
+        prev.map((m) => (m.id === editingSlabMeasurementId ? { ...m, ...measurement } : m))
       );
       setEditingSlabMeasurementId(null);
     } else {
-      setSlabMeasurements((prev) => [...prev, { id: Date.now(), ...measurementData }]);
+      setSlabMeasurements((prev) => [...prev, measurement]);
     }
     resetSlabMeas();
   };
 
   const editSlabMeasurement = (id: number) => {
-    const measurement = slabMeasurements.find((m) => m.id === id);
+    const measurement = safeSlabMeasurements.find((m) => m.id === id);
     if (measurement) {
       updateSlabMeas(measurement);
       setEditingSlabMeasurementId(id);
@@ -98,57 +135,61 @@ const SlabModule = ({
     }
   };
 
-  const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles;
-
   return (
     <div style={cardStyle}>
-      <h1>Suspended Slab Module</h1>
       <h2>Slab Type Library</h2>
       <div style={formGridStyle}>
-        <input placeholder="Name" value={newSlab.name} onChange={(e) => updateSlab({ name: e.target.value })} />
-        <input type="number" placeholder="Thickness (mm) e.g., 175" value={newSlab.thickness} onChange={(e) => updateSlab({ thickness: Number(e.target.value) })} />
-        <select value={newSlab.concreteClass} onChange={(e) => updateSlab({ concreteClass: e.target.value })}>
+        <input placeholder="Name" value={safeNewSlab.name} onChange={(e) => updateSlab({ name: e.target.value })} />
+        <input type="number" placeholder="Thickness (mm) e.g., 175" value={safeNewSlab.thickness || ''} onChange={(e) => updateSlab({ thickness: Number(e.target.value) || 0 })} />
+        <select value={safeNewSlab.concreteClass} onChange={(e) => updateSlab({ concreteClass: e.target.value })}>
           <option>25MPa/19mm</option><option>30MPa/19mm</option><option>35MPa/19mm</option>
+          <option>40MPa/19mm</option>
         </select>
-        <select value={newSlab.reinfType} onChange={(e) => updateSlab({ reinfType: e.target.value as "Mesh" | "Rebar" })}>
-          <option>Rebar</option><option>Mesh</option>
+        <select value={safeNewSlab.reinfType} onChange={(e) => updateSlab({ reinfType: e.target.value as "Mesh" | "Rebar" })}>
+          <option value="Rebar">Rebar</option>
+          <option value="Mesh">Mesh</option>
         </select>
-        {newSlab.reinfType === "Rebar" && (
-          <input type="number" placeholder="Reinforcement (kg/m³) e.g., 120" value={newSlab.reinfKgPerM3} onChange={(e) => updateSlab({ reinfKgPerM3: Number(e.target.value) })} />
+        {safeNewSlab.reinfType === "Rebar" && (
+          <input type="number" placeholder="Reinforcement (kg/m³) e.g., 100" value={safeNewSlab.reinfKgPerM3 || ''} onChange={(e) => updateSlab({ reinfKgPerM3: Number(e.target.value) || 0 })} />
         )}
-        {newSlab.reinfType === "Mesh" && (
-          <select value={newSlab.meshType} onChange={(e) => updateSlab({ meshType: e.target.value })}>
-            <option>A193</option><option>A252</option><option>B196</option><option>B283</option><option>None</option>
+        {safeNewSlab.reinfType === "Mesh" && (
+          <select value={safeNewSlab.meshType} onChange={(e) => updateSlab({ meshType: e.target.value })}>
+            <option>A193</option><option>B193</option><option>C193</option>
           </select>
         )}
-        <label><input type="checkbox" checked={newSlab.formworkToEdges} onChange={(e) => updateSlab({ formworkToEdges: e.target.checked })} /> Formwork to edges</label>
-        <label><input type="checkbox" checked={newSlab.screedRequired} onChange={(e) => updateSlab({ screedRequired: e.target.checked })} /> Screed</label>
-        {newSlab.screedRequired && (
-          <input type="number" placeholder="Screed thickness (mm) e.g., 50" value={newSlab.screedThickness} onChange={(e) => updateSlab({ screedThickness: Number(e.target.value) })} />
+        <label><input type="checkbox" checked={safeNewSlab.formworkToEdges} onChange={(e) => updateSlab({ formworkToEdges: e.target.checked })} /> Formwork to edges</label>
+        <label><input type="checkbox" checked={safeNewSlab.screedRequired} onChange={(e) => updateSlab({ screedRequired: e.target.checked })} /> Screed required</label>
+        {safeNewSlab.screedRequired && (
+          <input type="number" placeholder="Screed thickness (mm)" value={safeNewSlab.screedThickness || ''} onChange={(e) => updateSlab({ screedThickness: Number(e.target.value) || 0 })} />
         )}
-        <input type="number" placeholder="Floor finish PC sum (R/m²) e.g., 450" value={newSlab.floorFinishPcSum} onChange={(e) => updateSlab({ floorFinishPcSum: Number(e.target.value) })} />
-        <input placeholder="Finish description" value={newSlab.floorFinishDescription} onChange={(e) => updateSlab({ floorFinishDescription: e.target.value })} />
+        <input type="number" placeholder="Floor finish PC sum (R/m²)" value={safeNewSlab.floorFinishPcSum || ''} onChange={(e) => updateSlab({ floorFinishPcSum: Number(e.target.value) || 0 })} />
+        <input placeholder="Floor finish description" value={safeNewSlab.floorFinishDescription} onChange={(e) => updateSlab({ floorFinishDescription: e.target.value })} />
         <button onClick={saveSlabType}>{editingSlabId !== null ? "Update" : "Save"}</button>
       </div>
 
       <table style={tableStyle} border={1} cellPadding={8}>
-        <thead>
-          <tr>
-            <th style={thStyle}>Name</th><th style={thStyle}>Thick</th><th style={thStyle}>Concrete</th>
-            <th style={thStyle}>Reinf</th><th style={thStyle}>Edges</th><th style={thStyle}>Screed</th>
-            <th style={thStyle}>Floor Finish</th><th style={thStyle}>Actions</th>
-          </tr>
-        </thead>
+        <thead><tr>
+          <th style={thStyle}>Name</th>
+          <th style={thStyle}>Thickness</th>
+          <th style={thStyle}>Concrete</th>
+          <th style={thStyle}>Reinf Type</th>
+          <th style={thStyle}>Reinf</th>
+          <th style={thStyle}>Formwork</th>
+          <th style={thStyle}>Screed</th>
+          <th style={thStyle}>Finish PC</th>
+          <th style={thStyle}>Actions</th>
+        </tr></thead>
         <tbody>
-          {slabTypes.map((slab) => (
+          {safeSlabTypes.map((slab) => (
             <tr key={slab.id}>
               <td style={tdStyle}>{slab.name}</td>
               <td style={tdStyle}>{slab.thickness}mm</td>
               <td style={tdStyle}>{slab.concreteClass}</td>
-              <td style={tdStyle}>{slab.reinfType === "Rebar" ? `${slab.reinfKgPerM3} kg/m³` : slab.meshType}</td>
+              <td style={tdStyle}>{slab.reinfType}</td>
+              <td style={tdStyle}>{slab.reinfType === "Rebar" ? `${slab.reinfKgPerM3}kg` : slab.meshType}</td>
               <td style={tdStyle}>{slab.formworkToEdges ? "Yes" : "No"}</td>
               <td style={tdStyle}>{slab.screedRequired ? `${slab.screedThickness}mm` : "No"}</td>
-              <td style={tdStyle}>{slab.floorFinishPcSum > 0 ? `${slab.floorFinishDescription} R${slab.floorFinishPcSum}/m²` : "None"}</td>
+              <td style={tdStyle}>{slab.floorFinishPcSum > 0 ? `R${slab.floorFinishPcSum}` : "-"}</td>
               <td style={tdStyle}>
                 <button onClick={() => editSlabType(slab.id)}>Edit</button>
                 <button onClick={() => deleteSlabType(slab.id)}>Delete</button>
@@ -159,17 +200,18 @@ const SlabModule = ({
       </table>
 
       <hr />
+
       <h2>Slab Measurements</h2>
       <div style={formGridStyle}>
-        <input placeholder="Mark" value={newSlabMeas.mark} onChange={(e) => updateSlabMeas({ mark: e.target.value })} />
-        <select value={newSlabMeas.slabTypeId} onChange={(e) => updateSlabMeas({ slabTypeId: Number(e.target.value) })}>
+        <input placeholder="Mark (e.g., S1)" value={safeNewSlabMeas.mark} onChange={(e) => updateSlabMeas({ mark: e.target.value })} />
+        <select value={safeNewSlabMeas.slabTypeId} onChange={(e) => updateSlabMeas({ slabTypeId: Number(e.target.value) })}>
           <option value={0}>Select Type</option>
-          {slabTypes.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          {safeSlabTypes.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
-        <input type="number" placeholder="Length (m)" value={newSlabMeas.length} onChange={(e) => updateSlabMeas({ length: Number(e.target.value) })} />
-        <input type="number" placeholder="Width (m)" value={newSlabMeas.width} onChange={(e) => updateSlabMeas({ width: Number(e.target.value) })} />
-        <input type="number" placeholder="Quantity" value={newSlabMeas.quantity} onChange={(e) => updateSlabMeas({ quantity: Number(e.target.value) })} />
-        <button onClick={saveSlabMeasurement}>
+        <input type="number" placeholder="Length (m)" value={safeNewSlabMeas.length || ''} onChange={(e) => updateSlabMeas({ length: Number(e.target.value) || 0 })} />
+        <input type="number" placeholder="Width (m)" value={safeNewSlabMeas.width || ''} onChange={(e) => updateSlabMeas({ width: Number(e.target.value) || 0 })} />
+        <input type="number" placeholder="Quantity" value={safeNewSlabMeas.quantity || ''} onChange={(e) => updateSlabMeas({ quantity: Number(e.target.value) || 0 })} />
+        <button onClick={addSlabMeasurement}>
           {editingSlabMeasurementId !== null ? "Update Measurement" : "Add Measurement"}
         </button>
         {editingSlabMeasurementId !== null && (
@@ -178,12 +220,18 @@ const SlabModule = ({
       </div>
 
       <table style={tableStyle} border={1} cellPadding={8}>
-        <thead>
-          <tr><th style={thStyle}>Mark</th><th style={thStyle}>Slab Type</th><th style={thStyle}>Length</th><th style={thStyle}>Width</th><th style={thStyle}>Qty</th><th style={thStyle}>Area</th><th style={thStyle}>Actions</th></tr>
-        </thead>
+        <thead><tr>
+          <th style={thStyle}>Mark</th>
+          <th style={thStyle}>Type</th>
+          <th style={thStyle}>Length</th>
+          <th style={thStyle}>Width</th>
+          <th style={thStyle}>Qty</th>
+          <th style={thStyle}>Area (m²)</th>
+          <th style={thStyle}>Actions</th>
+        </tr></thead>
         <tbody>
-          {slabMeasurements.map((m) => {
-            const slab = slabTypes.find((s) => s.id === m.slabTypeId);
+          {safeSlabMeasurements.map((m) => {
+            const slab = safeSlabTypes.find((s) => s.id === m.slabTypeId);
             return (
               <tr key={m.id}>
                 <td style={tdStyle}>{m.mark}</td>
@@ -203,6 +251,4 @@ const SlabModule = ({
       </table>
     </div>
   );
-};
-
-export default SlabModule;
+}

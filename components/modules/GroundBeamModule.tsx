@@ -20,36 +20,66 @@ interface GroundBeamModuleProps {
   styles: any;
 }
 
-const GroundBeamModule = ({
+export default function GroundBeamModule({
   groundBeamTypes,
   setGroundBeamTypes,
   editingGroundBeamId,
   setEditingGroundBeamId,
   newGroundBeam,
-  updateGroundBeam,
-  resetGroundBeam,
+  updateGroundBeam = () => {},
+  resetGroundBeam = () => {},
   groundBeamMeasurements,
   setGroundBeamMeasurements,
   newGroundBeamMeas,
-  updateGroundBeamMeas,
-  resetGroundBeamMeas,
+  updateGroundBeamMeas = () => {},
+  resetGroundBeamMeas = () => {},
   editingGroundBeamMeasurementId,
   setEditingGroundBeamMeasurementId,
   styles,
-}: GroundBeamModuleProps) => {
+}: GroundBeamModuleProps) {
+  const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles || {};
+
+  // SAFEGUARD: Safe versions of all props
+  const safeNewGroundBeam = {
+    name: newGroundBeam?.name || "",
+    trenchWidth: newGroundBeam?.trenchWidth || 0,
+    trenchDepth: newGroundBeam?.trenchDepth || 0,
+    beamWidth: newGroundBeam?.beamWidth || 0,
+    beamDepth: newGroundBeam?.beamDepth || 0,
+    concreteClass: newGroundBeam?.concreteClass || "30MPa/19mm",
+    reinfKgPerM3: newGroundBeam?.reinfKgPerM3 || 0,
+    formworkRequired: newGroundBeam?.formworkRequired ?? true,
+    blindingRequired: newGroundBeam?.blindingRequired ?? true,
+    blindingThickness: newGroundBeam?.blindingThickness || 0,
+    backfillRequired: newGroundBeam?.backfillRequired ?? true,
+    dpcRequired: newGroundBeam?.dpcRequired ?? false,
+    soilPoisonRequired: newGroundBeam?.soilPoisonRequired ?? false,
+    workingSpaceRequired: newGroundBeam?.workingSpaceRequired ?? false,
+    riskOfCollapseRequired: newGroundBeam?.riskOfCollapseRequired ?? false,
+  };
+
+  const safeNewGroundBeamMeas = {
+    mark: newGroundBeamMeas?.mark || "",
+    groundBeamTypeId: newGroundBeamMeas?.groundBeamTypeId || 0,
+    length: newGroundBeamMeas?.length || 0,
+  };
+
+  const safeGroundBeamTypes = groundBeamTypes || [];
+  const safeGroundBeamMeasurements = groundBeamMeasurements || [];
+
   const saveGroundBeamType = () => {
-    if (!newGroundBeam.name.trim()) return;
+    if (!safeNewGroundBeam.name.trim()) return;
     if (editingGroundBeamId !== null) {
-      setGroundBeamTypes((prev) => prev.map((gb) => (gb.id === editingGroundBeamId ? { ...gb, ...newGroundBeam } : gb)));
+      setGroundBeamTypes((prev) => prev.map((gb) => (gb.id === editingGroundBeamId ? { ...gb, ...safeNewGroundBeam } : gb)));
       setEditingGroundBeamId(null);
     } else {
-      setGroundBeamTypes((prev) => [...prev, { id: Date.now(), ...newGroundBeam }]);
+      setGroundBeamTypes((prev) => [...prev, { id: Date.now(), ...safeNewGroundBeam }]);
     }
     resetGroundBeam();
   };
 
   const editGroundBeamType = (id: number) => {
-    const gb = groundBeamTypes.find((g) => g.id === id);
+    const gb = safeGroundBeamTypes.find((g) => g.id === id);
     if (gb) {
       updateGroundBeam(gb);
       setEditingGroundBeamId(id);
@@ -61,21 +91,27 @@ const GroundBeamModule = ({
     setGroundBeamMeasurements((prev) => prev.filter((m) => m.groundBeamTypeId !== id));
   };
 
-  const saveGroundBeamMeasurement = () => {
-    if (!newGroundBeamMeas.mark.trim() || newGroundBeamMeas.groundBeamTypeId === 0 || !newGroundBeamMeas.length || newGroundBeamMeas.length <= 0) return;
+  const addGroundBeamMeasurement = () => {
+    if (!safeNewGroundBeamMeas.mark.trim() || safeNewGroundBeamMeas.groundBeamTypeId === 0 || !safeNewGroundBeamMeas.length || safeNewGroundBeamMeas.length <= 0) return;
+    const measurement = {
+      id: Date.now(),
+      ...safeNewGroundBeamMeas,
+      elementalSectionId: "substructure",
+      elementalElementId: "ground-beams",
+    };
     if (editingGroundBeamMeasurementId !== null) {
       setGroundBeamMeasurements((prev) =>
-        prev.map((m) => (m.id === editingGroundBeamMeasurementId ? { ...m, ...newGroundBeamMeas } : m))
+        prev.map((m) => (m.id === editingGroundBeamMeasurementId ? { ...m, ...measurement } : m))
       );
       setEditingGroundBeamMeasurementId(null);
     } else {
-      setGroundBeamMeasurements((prev) => [...prev, { id: Date.now(), ...newGroundBeamMeas }]);
+      setGroundBeamMeasurements((prev) => [...prev, measurement]);
     }
     resetGroundBeamMeas();
   };
 
   const editGroundBeamMeasurement = (id: number) => {
-    const measurement = groundBeamMeasurements.find((m) => m.id === id);
+    const measurement = safeGroundBeamMeasurements.find((m) => m.id === id);
     if (measurement) {
       updateGroundBeamMeas(measurement);
       setEditingGroundBeamMeasurementId(id);
@@ -92,83 +128,52 @@ const GroundBeamModule = ({
     }
   };
 
-  const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles;
-
   return (
     <div style={cardStyle}>
-      <h1>Ground Beam Module</h1>
       <h2>Ground Beam Type Library</h2>
       <div style={formGridStyle}>
-        <input placeholder="Name" value={newGroundBeam.name} onChange={(e) => updateGroundBeam({ name: e.target.value })} />
-        <input type="number" placeholder="Trench width (mm) e.g., 600" value={newGroundBeam.trenchWidth || ''} onChange={(e) => updateGroundBeam({ trenchWidth: Number(e.target.value) })} />
-        <input type="number" placeholder="Trench depth (mm) e.g., 1000" value={newGroundBeam.trenchDepth || ''} onChange={(e) => updateGroundBeam({ trenchDepth: Number(e.target.value) })} />
-        <input type="number" placeholder="Beam width (mm) e.g., 350" value={newGroundBeam.beamWidth || ''} onChange={(e) => updateGroundBeam({ beamWidth: Number(e.target.value) })} />
-        <input type="number" placeholder="Beam depth (mm) e.g., 600" value={newGroundBeam.beamDepth || ''} onChange={(e) => updateGroundBeam({ beamDepth: Number(e.target.value) })} />
-        <select value={newGroundBeam.concreteClass} onChange={(e) => updateGroundBeam({ concreteClass: e.target.value })}>
-          <option>25MPa/19mm</option><option>30MPa/19mm</option><option>35MPa/19mm</option>
+        <input placeholder="Name" value={safeNewGroundBeam.name} onChange={(e) => updateGroundBeam({ name: e.target.value })} />
+        <input type="number" placeholder="Trench width (mm) e.g., 600" value={safeNewGroundBeam.trenchWidth || ''} onChange={(e) => updateGroundBeam({ trenchWidth: Number(e.target.value) || 0 })} />
+        <input type="number" placeholder="Trench depth (mm) e.g., 1000" value={safeNewGroundBeam.trenchDepth || ''} onChange={(e) => updateGroundBeam({ trenchDepth: Number(e.target.value) || 0 })} />
+        <input type="number" placeholder="Beam width (mm) e.g., 350" value={safeNewGroundBeam.beamWidth || ''} onChange={(e) => updateGroundBeam({ beamWidth: Number(e.target.value) || 0 })} />
+        <input type="number" placeholder="Beam depth (mm) e.g., 450" value={safeNewGroundBeam.beamDepth || ''} onChange={(e) => updateGroundBeam({ beamDepth: Number(e.target.value) || 0 })} />
+        <select value={safeNewGroundBeam.concreteClass} onChange={(e) => updateGroundBeam({ concreteClass: e.target.value })}>
+          <option>25MPa/19mm</option><option>30MPa/19mm</option><option>35MPa/19mm</option><option>40MPa/19mm</option>
         </select>
-        <input type="number" placeholder="Reinforcement (kg/m³) e.g., 150" value={newGroundBeam.reinfKgPerM3 || ''} onChange={(e) => updateGroundBeam({ reinfKgPerM3: Number(e.target.value) })} />
-        <label><input type="checkbox" checked={newGroundBeam.formworkRequired} onChange={(e) => updateGroundBeam({ formworkRequired: e.target.checked })} /> Formwork</label>
-        <label><input type="checkbox" checked={newGroundBeam.blindingRequired} onChange={(e) => updateGroundBeam({ blindingRequired: e.target.checked })} /> Blinding</label>
-        <input type="number" placeholder="Blinding thickness (mm) e.g., 50" value={newGroundBeam.blindingThickness || ''} onChange={(e) => updateGroundBeam({ blindingThickness: Number(e.target.value) })} />
-        <label><input type="checkbox" checked={newGroundBeam.backfillRequired} onChange={(e) => updateGroundBeam({ backfillRequired: e.target.checked })} /> Backfill</label>
-        <label><input type="checkbox" checked={newGroundBeam.dpcRequired} onChange={(e) => updateGroundBeam({ dpcRequired: e.target.checked })} /> DPC</label>
-        <label><input type="checkbox" checked={newGroundBeam.soilPoisonRequired} onChange={(e) => updateGroundBeam({ soilPoisonRequired: e.target.checked })} /> Soil Poison</label>
-
-        {/* New checkboxes for Working Space and Risk of Collapse */}
-        <label>
-          <input
-            type="checkbox"
-            checked={newGroundBeam.workingSpaceRequired || false}
-            onChange={(e) => updateGroundBeam({ workingSpaceRequired: e.target.checked })}
-          />
-          Working space required
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={newGroundBeam.riskOfCollapseRequired || false}
-            onChange={(e) => updateGroundBeam({ riskOfCollapseRequired: e.target.checked })}
-          />
-          Risk of collapse required
-        </label>
-
+        <input type="number" placeholder="Reinforcement (kg/m³) e.g., 150" value={safeNewGroundBeam.reinfKgPerM3 || ''} onChange={(e) => updateGroundBeam({ reinfKgPerM3: Number(e.target.value) || 0 })} />
+        <label><input type="checkbox" checked={safeNewGroundBeam.formworkRequired} onChange={(e) => updateGroundBeam({ formworkRequired: e.target.checked })} /> Formwork required</label>
+        <label><input type="checkbox" checked={safeNewGroundBeam.blindingRequired} onChange={(e) => updateGroundBeam({ blindingRequired: e.target.checked })} /> Blinding required</label>
+        {safeNewGroundBeam.blindingRequired && (
+          <input type="number" placeholder="Blinding thickness (mm) e.g., 50" value={safeNewGroundBeam.blindingThickness || ''} onChange={(e) => updateGroundBeam({ blindingThickness: Number(e.target.value) || 0 })} />
+        )}
+        <label><input type="checkbox" checked={safeNewGroundBeam.backfillRequired} onChange={(e) => updateGroundBeam({ backfillRequired: e.target.checked })} /> Backfill required</label>
+        <label><input type="checkbox" checked={safeNewGroundBeam.dpcRequired} onChange={(e) => updateGroundBeam({ dpcRequired: e.target.checked })} /> DPC required</label>
+        <label><input type="checkbox" checked={safeNewGroundBeam.soilPoisonRequired} onChange={(e) => updateGroundBeam({ soilPoisonRequired: e.target.checked })} /> Soil poison</label>
+        <label><input type="checkbox" checked={safeNewGroundBeam.workingSpaceRequired} onChange={(e) => updateGroundBeam({ workingSpaceRequired: e.target.checked })} /> Working space</label>
+        <label><input type="checkbox" checked={safeNewGroundBeam.riskOfCollapseRequired} onChange={(e) => updateGroundBeam({ riskOfCollapseRequired: e.target.checked })} /> Risk of collapse</label>
         <button onClick={saveGroundBeamType}>{editingGroundBeamId !== null ? "Update" : "Save"}</button>
       </div>
 
       <table style={tableStyle} border={1} cellPadding={8}>
-        <thead>
-          <tr>
-            <th style={thStyle}>Name</th>
-            <th style={thStyle}>Trench</th>
-            <th style={thStyle}>Beam</th>
-            <th style={thStyle}>Concrete</th>
-            <th style={thStyle}>Reinf</th>
-            <th style={thStyle}>Formwork</th>
-            <th style={thStyle}>Blinding</th>
-            <th style={thStyle}>Backfill</th>
-            <th style={thStyle}>DPC</th>
-            <th style={thStyle}>Soil</th>
-            <th style={thStyle}>Working</th>
-            <th style={thStyle}>Risk</th>
-            <th style={thStyle}>Actions</th>
-          </tr>
-        </thead>
+        <thead><tr>
+          <th style={thStyle}>Name</th><th style={thStyle}>Trench W</th><th style={thStyle}>Trench D</th>
+          <th style={thStyle}>Beam W</th><th style={thStyle}>Beam D</th>
+          <th style={thStyle}>Concrete</th><th style={thStyle}>Reinf</th>
+          <th style={thStyle}>Formwork</th><th style={thStyle}>Blinding</th>
+          <th style={thStyle}>Actions</th>
+        </tr></thead>
         <tbody>
-          {groundBeamTypes.map((gb) => (
+          {safeGroundBeamTypes.map((gb) => (
             <tr key={gb.id}>
               <td style={tdStyle}>{gb.name}</td>
-              <td style={tdStyle}>{gb.trenchWidth || '-'}x{gb.trenchDepth || '-'}</td>
-              <td style={tdStyle}>{gb.beamWidth || '-'}x{gb.beamDepth || '-'}</td>
+              <td style={tdStyle}>{gb.trenchWidth || 0}mm</td>
+              <td style={tdStyle}>{gb.trenchDepth || 0}mm</td>
+              <td style={tdStyle}>{gb.beamWidth || 0}mm</td>
+              <td style={tdStyle}>{gb.beamDepth || 0}mm</td>
               <td style={tdStyle}>{gb.concreteClass}</td>
-              <td style={tdStyle}>{gb.reinfKgPerM3 || '-'}</td>
+              <td style={tdStyle}>{gb.reinfKgPerM3 || 0}kg</td>
               <td style={tdStyle}>{gb.formworkRequired ? "Yes" : "No"}</td>
-              <td style={tdStyle}>{gb.blindingRequired ? `${gb.blindingThickness || '-'}mm` : "No"}</td>
-              <td style={tdStyle}>{gb.backfillRequired ? "Yes" : "No"}</td>
-              <td style={tdStyle}>{gb.dpcRequired ? "Yes" : "No"}</td>
-              <td style={tdStyle}>{gb.soilPoisonRequired ? "Yes" : "No"}</td>
-              <td style={tdStyle}>{gb.workingSpaceRequired ? "Yes" : "No"}</td>
-              <td style={tdStyle}>{gb.riskOfCollapseRequired ? "Yes" : "No"}</td>
+              <td style={tdStyle}>{gb.blindingRequired ? "Yes" : "No"}</td>
               <td style={tdStyle}>
                 <button onClick={() => editGroundBeamType(gb.id)}>Edit</button>
                 <button onClick={() => deleteGroundBeamType(gb.id)}>Delete</button>
@@ -179,15 +184,16 @@ const GroundBeamModule = ({
       </table>
 
       <hr />
+
       <h2>Ground Beam Measurements</h2>
       <div style={formGridStyle}>
-        <input placeholder="Mark (e.g., GB1)" value={newGroundBeamMeas.mark} onChange={(e) => updateGroundBeamMeas({ mark: e.target.value })} />
-        <select value={newGroundBeamMeas.groundBeamTypeId} onChange={(e) => updateGroundBeamMeas({ groundBeamTypeId: Number(e.target.value) })}>
+        <input placeholder="Mark (e.g., GB1)" value={safeNewGroundBeamMeas.mark} onChange={(e) => updateGroundBeamMeas({ mark: e.target.value })} />
+        <select value={safeNewGroundBeamMeas.groundBeamTypeId} onChange={(e) => updateGroundBeamMeas({ groundBeamTypeId: Number(e.target.value) })}>
           <option value={0}>Select Type</option>
-          {groundBeamTypes.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+          {safeGroundBeamTypes.map((gb) => <option key={gb.id} value={gb.id}>{gb.name}</option>)}
         </select>
-        <input type="number" placeholder="Length (m) e.g., 5.5" value={newGroundBeamMeas.length || ''} onChange={(e) => updateGroundBeamMeas({ length: Number(e.target.value) })} />
-        <button onClick={saveGroundBeamMeasurement}>
+        <input type="number" placeholder="Length (m)" value={safeNewGroundBeamMeas.length || ''} onChange={(e) => updateGroundBeamMeas({ length: Number(e.target.value) || 0 })} />
+        <button onClick={addGroundBeamMeasurement}>
           {editingGroundBeamMeasurementId !== null ? "Update Measurement" : "Add Measurement"}
         </button>
         {editingGroundBeamMeasurementId !== null && (
@@ -196,12 +202,12 @@ const GroundBeamModule = ({
       </div>
 
       <table style={tableStyle} border={1} cellPadding={8}>
-        <thead>
-          <tr><th style={thStyle}>Mark</th><th style={thStyle}>Ground Beam Type</th><th style={thStyle}>Length</th><th style={thStyle}>Actions</th></tr>
-        </thead>
+        <thead><tr>
+          <th style={thStyle}>Mark</th><th style={thStyle}>Type</th><th style={thStyle}>Length (m)</th><th style={thStyle}>Actions</th>
+        </tr></thead>
         <tbody>
-          {groundBeamMeasurements.map((m) => {
-            const gb = groundBeamTypes.find((g) => g.id === m.groundBeamTypeId);
+          {safeGroundBeamMeasurements.map((m) => {
+            const gb = safeGroundBeamTypes.find((g) => g.id === m.groundBeamTypeId);
             return (
               <tr key={m.id}>
                 <td style={tdStyle}>{m.mark}</td>
@@ -218,6 +224,4 @@ const GroundBeamModule = ({
       </table>
     </div>
   );
-};
-
-export default GroundBeamModule;
+}

@@ -1,9 +1,8 @@
 "use client";
 
+import React from "react";
 import type { CostPlanComponent } from "@/types/boq";
 import { elementalStructure, getElementById } from "@/lib/elementalStructure";
-
-import React from "react";
 
 interface ElementalCostSummaryProps {
   costPlanComponents: CostPlanComponent[];
@@ -25,13 +24,11 @@ export default function ElementalCostSummary({
 
   // Helper: get rate for a component
   const getRate = (component: CostPlanComponent): number => {
-    // Try to find a rate from the BOQ rates by matching description
     for (const [key, rate] of Object.entries(rates)) {
       if (key.includes(component.description) || component.description.includes(key)) {
         return rate;
       }
     }
-    // Fallback: use component rate if set
     return component.rate || 0;
   };
 
@@ -82,7 +79,7 @@ export default function ElementalCostSummary({
     const sectionId = component.elementalSectionId || "uncategorised";
     const elementId = component.elementalElementId || "uncategorised";
     const rate = getRate(component);
-    const amount = component.qty * rate;
+    const amount = (component.qty || 0) * rate;
     const key = `${sectionId}|${elementId}`;
 
     if (!elements[key]) {
@@ -100,7 +97,7 @@ export default function ElementalCostSummary({
         components: [],
       };
     }
-    elements[key].totalQty += component.qty;
+    elements[key].totalQty += component.qty || 0;
     elements[key].totalCost += amount;
     elements[key].components.push({ ...component, rate, amount });
     totalProjectCost += amount;
@@ -119,6 +116,15 @@ export default function ElementalCostSummary({
   });
 
   const sortedSectionIds = Object.keys(sections).sort();
+
+  // Group components for the "View All Components" table
+  const grouped = costPlanComponents.reduce((acc, comp) => {
+    const key = comp.id;
+    if (!acc[key]) {
+      acc[key] = { ...comp };
+    }
+    return acc;
+  }, {} as Record<string, CostPlanComponent>);
 
   // If totalProjectCost is 0, show message
   if (totalProjectCost === 0) {
@@ -142,7 +148,7 @@ export default function ElementalCostSummary({
   }
 
   const formatCurrency = (value: number) => {
-    return value.toLocaleString("en-ZA", {
+    return (value || 0).toLocaleString("en-ZA", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
@@ -152,7 +158,6 @@ export default function ElementalCostSummary({
     <div style={cardStyle}>
       <h2>Elemental Cost Summary</h2>
       
-      {/* Debug info */}
       <div style={{ padding: "8px 12px", background: "#f0f8ff", borderRadius: "4px", marginBottom: "16px" }}>
         <p style={{ margin: "4px 0", fontSize: "13px", color: "#0066cc" }}>
           <strong>Debug:</strong> {costPlanComponents.length} components | 
@@ -183,50 +188,45 @@ export default function ElementalCostSummary({
         </thead>
         <tbody>
           {sortedSectionIds.map((sectionId) => {
-  const section = sections[sectionId];
-  const elements = section.elements.sort((a, b) => b.totalCost - a.totalCost);
-  let sectionTotalCost = 0;
-  let sectionTotalQty = 0;
+            const section = sections[sectionId];
+            const elements = section.elements.sort((a, b) => b.totalCost - a.totalCost);
+            let sectionTotalCost = 0;
+            let sectionTotalQty = 0;
 
-  return (
-    <React.Fragment key={sectionId}>
-      {/* Section header */}
-      <tr style={{ backgroundColor: "#f0f4f8", fontWeight: "bold" }}>
-        <td style={tdStyle} colSpan={4}>
-          {section.sectionName}
-        </td>
-      </tr>
-      {/* Elements */}
-      {elements.map((element) => {
-        sectionTotalCost += element.totalCost;
-        sectionTotalQty += element.totalQty;
-        const percentage = totalProjectCost > 0 ? (element.totalCost / totalProjectCost) * 100 : 0;
-        return (
-          <tr key={`${element.sectionId}|${element.elementId}`}>
-            <td style={{ ...tdStyle, paddingLeft: "24px" }}>{element.elementName}</td>
-            <td style={tdStyle}>{element.totalQty.toFixed(3)}</td>
-            <td style={tdStyle}>{formatCurrency(element.totalCost)}</td>
-            <td style={tdStyle}>{percentage.toFixed(1)}%</td>
-          </tr>
-        );
-      })}
-      {/* Section subtotal */}
-      <tr style={{ fontWeight: "bold", backgroundColor: "#e8edf2" }}>
-        <td style={{ ...tdStyle, fontStyle: "italic" }}>Section Subtotal</td>
-        <td style={tdStyle}>{sectionTotalQty.toFixed(3)}</td>
-        <td style={tdStyle}>{formatCurrency(sectionTotalCost)}</td>
-        <td style={tdStyle}>
-          {totalProjectCost > 0 ? ((sectionTotalCost / totalProjectCost) * 100).toFixed(1) : "0.0"}%
-        </td>
-      </tr>
-      <tr>
-        <td colSpan={4} style={{ padding: "4px" }} />
-      </tr>
-    </React.Fragment>
-  );
-})}
-
-          {/* Grand total */}
+            return (
+              <React.Fragment key={sectionId}>
+                <tr style={{ backgroundColor: "#f0f4f8", fontWeight: "bold" }}>
+                  <td style={tdStyle} colSpan={4}>
+                    {section.sectionName}
+                  </td>
+                </tr>
+                {elements.map((element) => {
+                  sectionTotalCost += element.totalCost || 0;
+                  sectionTotalQty += element.totalQty || 0;
+                  const percentage = totalProjectCost > 0 ? ((element.totalCost || 0) / totalProjectCost) * 100 : 0;
+                  return (
+                    <tr key={`${element.sectionId}|${element.elementId}`}>
+                      <td style={{ ...tdStyle, paddingLeft: "24px" }}>{element.elementName}</td>
+                      <td style={tdStyle}>{((element.totalQty || 0)).toFixed(3)}</td>
+                      <td style={tdStyle}>{formatCurrency(element.totalCost || 0)}</td>
+                      <td style={tdStyle}>{percentage.toFixed(1)}%</td>
+                    </tr>
+                  );
+                })}
+                <tr style={{ fontWeight: "bold", backgroundColor: "#e8edf2" }}>
+                  <td style={{ ...tdStyle, fontStyle: "italic" }}>Section Subtotal</td>
+                  <td style={tdStyle}>{((sectionTotalQty || 0)).toFixed(3)}</td>
+                  <td style={tdStyle}>{formatCurrency(sectionTotalCost || 0)}</td>
+                  <td style={tdStyle}>
+                    {totalProjectCost > 0 ? ((sectionTotalCost || 0) / totalProjectCost * 100).toFixed(1) : "0.0"}%
+                  </td>
+                </tr>
+                <tr>
+                  <td colSpan={4} style={{ padding: "4px" }} />
+                </tr>
+              </React.Fragment>
+            );
+          })}
           <tr style={{ fontWeight: "bold", fontSize: "16px", backgroundColor: "#d9e2ec" }}>
             <td style={tdStyle}>PROJECT TOTAL</td>
             <td style={tdStyle}>-</td>
@@ -236,7 +236,6 @@ export default function ElementalCostSummary({
         </tbody>
       </table>
 
-      {/* Component Details - expandable */}
       <details style={{ marginTop: "24px" }}>
         <summary style={{ cursor: "pointer", fontWeight: "bold", fontSize: "14px" }}>
           View All Components ({costPlanComponents.length})
@@ -254,18 +253,18 @@ export default function ElementalCostSummary({
             </tr>
           </thead>
           <tbody>
-            {costPlanComponents.map((comp) => {
+            {Object.values(grouped).map((comp) => {
               const rate = getRate(comp);
-              const amount = comp.qty * rate;
+              const amount = (comp.qty || 0) * rate;
               return (
                 <tr key={comp.id}>
                   <td style={tdStyle}>{comp.module}</td>
                   <td style={tdStyle}>{comp.mark}</td>
                   <td style={tdStyle}>{comp.description}</td>
                   <td style={tdStyle}>{comp.unit}</td>
-                  <td style={tdStyle}>{comp.qty.toFixed(3)}</td>
-                  <td style={tdStyle}>{rate.toFixed(2)}</td>
-                  <td style={tdStyle}>{amount.toFixed(2)}</td>
+                  <td style={tdStyle}>{((comp.qty || 0)).toFixed(3)}</td>
+                  <td style={tdStyle}>{(rate || 0).toFixed(2)}</td>
+                  <td style={tdStyle}>{(amount || 0).toFixed(2)}</td>
                 </tr>
               );
             })}

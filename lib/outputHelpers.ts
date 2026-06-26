@@ -91,7 +91,10 @@ export function createConcreteOutputs(
   elementId?: string
 ): MeasurementOutput[] {
   const outputs: MeasurementOutput[] = [];
-  const strengthLabel = strength || concreteClass.split('/')[0];
+  const safeQty = qty || 0;
+  if (isNaN(safeQty) || safeQty === 0) return outputs; // Skip if invalid
+  
+  const strengthLabel = strength || concreteClass?.split('/')[0] || "Unknown";
 
   // Cost Plan
   outputs.push(

@@ -6,178 +6,120 @@ interface BoqSummaryProps {
   boqItems: Record<string, BoqItem>;
   rates: Record<string, number>;
   onRateChange: (key: string, rate: number) => void;
-  styles: {
-    tableStyle: React.CSSProperties;
-    thStyle: React.CSSProperties;
-    tdStyle: React.CSSProperties;
-  };
+  styles: any;
 }
 
-export default function BoqSummary({ boqItems, rates, onRateChange, styles }: BoqSummaryProps) {
-  const { tableStyle, thStyle, tdStyle } = styles;
+export default function BoqSummary({
+  boqItems,
+  rates,
+  onRateChange,
+  styles,
+}: BoqSummaryProps) {
+  const { cardStyle, tableStyle, thStyle, tdStyle } = styles || {};
 
-  if (!boqItems || Object.keys(boqItems).length === 0) {
-    return <p>No BOQ items generated yet. Add measurements to see the summary.</p>;
+  const safeBoqItems = boqItems || {};
+
+  // Group by bill
+  const bills: Record<string, BoqItem[]> = {};
+  Object.values(safeBoqItems).forEach((item) => {
+    if (!bills[item.billNo]) {
+      bills[item.billNo] = [];
+    }
+    bills[item.billNo].push(item);
+  });
+
+  const sortedBillKeys = Object.keys(bills).sort();
+
+  if (Object.keys(safeBoqItems).length === 0) {
+    return (
+      <div style={cardStyle}>
+        <p>No BOQ items yet. Add measurements to generate BOQ items.</p>
+      </div>
+    );
   }
 
-  // Group items by billNo → section
-  const bills: Record<string, { billName: string; sections: Record<string, BoqItem[]> }> = {};
-  Object.values(boqItems).forEach((item) => {
-    const billKey = item.billNo;
-    if (!bills[billKey]) {
-      bills[billKey] = { billName: item.billName, sections: {} };
-    }
-    const sectionKey = item.section;
-    if (!bills[billKey].sections[sectionKey]) {
-      bills[billKey].sections[sectionKey] = [];
-    }
-    bills[billKey].sections[sectionKey].push(item);
-  });
-
-  const activeBillNos = Object.keys(bills).sort((a, b) => parseInt(a) - parseInt(b));
-  const billDisplayMap: Record<string, number> = {};
-  activeBillNos.forEach((billNo, index) => {
-    billDisplayMap[billNo] = index + 1;
-  });
-
-  // Helper to get rate for an item
-  const getRate = (item: BoqItem): number => {
-    const key = `${item.billNo}|${item.section}|${item.description}|${item.unit}`;
-    return rates[key] || 0;
-  };
-
-  // Helper to get amount for an item
-  const getAmount = (item: BoqItem): number => {
-    const rate = getRate(item);
-    return item.qty * rate;
-  };
-
-  // Calculate grand total
-  let grandTotal = 0;
-
   return (
-    <div>
-      {activeBillNos.map((billNo) => {
-        const bill = bills[billNo];
-        const displayBillNo = billDisplayMap[billNo];
-        const sectionKeys = Object.keys(bill.sections).sort();
-        let billTotal = 0;
+    <div style={cardStyle}>
+      <table style={tableStyle} border={1} cellPadding={8}>
+        <thead>
+          <tr>
+            <th style={thStyle}>Bill</th>
+            <th style={thStyle}>Section</th>
+            <th style={thStyle}>Description</th>
+            <th style={thStyle}>Unit</th>
+            <th style={thStyle}>Qty</th>
+            <th style={thStyle}>Rate (R)</th>
+            <th style={thStyle}>Amount (R)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sortedBillKeys.map((billKey) => {
+            const items = bills[billKey];
+            let billTotal = 0;
 
-        return (
-          <div key={billNo} style={{ marginBottom: "32px" }}>
-            <h2 style={{ marginBottom: "12px", fontSize: "20px", fontWeight: "bold" }}>
-              BILL {displayBillNo}: {bill.billName}
-            </h2>
+            return (
+              <React.Fragment key={billKey}>
+                <tr style={{ backgroundColor: "#f0f4f8", fontWeight: "bold" }}>
+                  <td style={tdStyle} colSpan={7}>
+                    {billKey}
+                  </td>
+                </tr>
+                {items.map((item) => {
+                  const rate = rates[`${item.billNo}|${item.section}|${item.description}|${item.unit}`] || item.rate || 0;
+                  const amount = (item.qty || 0) * rate;
+                  billTotal += amount;
 
-            {sectionKeys.map((sectionKey) => {
-              const items = bill.sections[sectionKey];
-              let sectionTotal = 0;
-
-              return (
-                <div key={sectionKey} style={{ marginBottom: "24px" }}>
-                  <h3 style={{ marginBottom: "8px", fontSize: "16px", fontWeight: "600" }}>
-                    {sectionKey}
-                  </h3>
-                  <table style={tableStyle} border={1} cellPadding={8}>
-                    <thead>
-                      <tr>
-                        <th style={thStyle}>Description</th>
-                        <th style={thStyle}>Unit</th>
-                        <th style={thStyle}>Quantity</th>
-                        <th style={thStyle}>Rate (R)</th>
-                        <th style={thStyle}>Amount (R)</th>
-                        <th style={thStyle}>Trace</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {items.map((item) => {
-                        const key = `${item.billNo}|${item.section}|${item.description}|${item.unit}`;
-                        const rate = getRate(item);
-                        const amount = getAmount(item);
-                        sectionTotal += amount;
-                        billTotal += amount;
-                        grandTotal += amount;
-
-                        const hasContributions = item.contributions && item.contributions.length > 0;
-
-                        return (
-                          <tr key={key}>
-                            <td style={tdStyle}>{item.description}</td>
-                            <td style={tdStyle}>{item.unit}</td>
-                            <td style={tdStyle}>{item.qty.toFixed(3)}</td>
-                            <td style={tdStyle}>
-                              <input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                value={rate || ''}
-                                onChange={(e) => {
-                                  const val = parseFloat(e.target.value);
-                                  onRateChange(key, isNaN(val) ? 0 : val);
-                                }}
-                                style={{
-                                  width: "100px",
-                                  padding: "4px 6px",
-                                  border: "1px solid #ccc",
-                                  borderRadius: "4px",
-                                }}
-                              />
-                            </td>
-                            <td style={tdStyle}>{amount.toFixed(2)}</td>
-                            <td style={tdStyle}>
-                              {hasContributions ? (
-                                <details>
-                                  <summary style={{ cursor: "pointer", color: "#0066cc" }}>
-                                    View sources ({item.contributions.length})
-                                  </summary>
-                                  <table style={{ width: "100%", marginTop: "8px", borderCollapse: "collapse", fontSize: "0.9em" }}>
-                                    <thead>
-                                      <tr>
-                                        <th style={{ textAlign: "left", padding: "2px 6px" }}>Module</th>
-                                        <th style={{ textAlign: "left", padding: "2px 6px" }}>Mark</th>
-                                        <th style={{ textAlign: "right", padding: "2px 6px" }}>Qty</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {item.contributions.map((c, idx) => (
-                                        <tr key={idx}>
-                                          <td style={{ padding: "2px 6px" }}>{c.module}</td>
-                                          <td style={{ padding: "2px 6px" }}>{c.mark}</td>
-                                          <td style={{ padding: "2px 6px", textAlign: "right" }}>{c.qty.toFixed(3)}</td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                </details>
-                              ) : (
-                                <span style={{ color: "#999" }}>–</span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                      {/* Section subtotal */}
-                      <tr style={{ fontWeight: "bold" }}>
-                        <td colSpan={4} style={{ textAlign: "right", padding: "8px" }}>Section Subtotal:</td>
-                        <td style={{ padding: "8px" }}>{sectionTotal.toFixed(2)}</td>
-                        <td></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              );
-            })}
-            {/* Bill total */}
-            <div style={{ textAlign: "right", fontWeight: "bold", fontSize: "16px", marginTop: "8px" }}>
-              Bill {displayBillNo} Total: R {billTotal.toFixed(2)}
-            </div>
-          </div>
-        );
-      })}
-      {/* Grand total */}
-      <div style={{ textAlign: "right", fontWeight: "bold", fontSize: "20px", marginTop: "24px", padding: "12px", borderTop: "2px solid #333" }}>
-        GRAND TOTAL: R {grandTotal.toFixed(2)}
-      </div>
+                  return (
+                    <tr key={`${item.billNo}|${item.section}|${item.description}|${item.unit}`}>
+                      <td style={tdStyle}></td>
+                      <td style={tdStyle}>{item.section}</td>
+                      <td style={tdStyle}>{item.description}</td>
+                      <td style={tdStyle}>{item.unit}</td>
+                      <td style={tdStyle}>{((item.qty || 0)).toFixed(3)}</td>
+                      <td style={tdStyle}>
+                        <input
+                          type="number"
+                          value={rate || ''}
+                          onChange={(e) => {
+                            const newRate = Number(e.target.value) || 0;
+                            onRateChange(
+                              `${item.billNo}|${item.section}|${item.description}|${item.unit}`,
+                              newRate
+                            );
+                          }}
+                          style={{ width: "100px", padding: "4px" }}
+                          step="0.01"
+                        />
+                      </td>
+                      <td style={tdStyle}>{(amount || 0).toFixed(2)}</td>
+                    </tr>
+                  );
+                })}
+                <tr style={{ fontWeight: "bold", backgroundColor: "#e8edf2" }}>
+                  <td style={{ ...tdStyle, fontStyle: "italic" }} colSpan={6}>
+                    Bill Subtotal
+                  </td>
+                  <td style={tdStyle}>{(billTotal || 0).toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td colSpan={7} style={{ padding: "4px" }} />
+                </tr>
+              </React.Fragment>
+            );
+          })}
+          <tr style={{ fontWeight: "bold", fontSize: "16px", backgroundColor: "#d9e2ec" }}>
+            <td style={tdStyle} colSpan={6}>
+              GRAND TOTAL
+            </td>
+            <td style={tdStyle}>
+              {Object.values(safeBoqItems).reduce((sum, item) => {
+                const rate = rates[`${item.billNo}|${item.section}|${item.description}|${item.unit}`] || item.rate || 0;
+                return sum + ((item.qty || 0) * rate);
+              }, 0).toFixed(2)}
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 }

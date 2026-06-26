@@ -27,17 +27,50 @@ const WallModule = ({
   editingWallId,
   setEditingWallId,
   newWall,
-  updateWall,
-  resetWall,
+  updateWall = () => {},
+  resetWall = () => {},
   wallMeasurements,
   setWallMeasurements,
   newWallMeas,
-  updateWallMeas,
-  resetWallMeas,
+  updateWallMeas = () => {},
+  resetWallMeas = () => {},
   editingWallMeasurementId,
   setEditingWallMeasurementId,
   styles,
 }: WallModuleProps) => {
+  const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles || {};
+
+  // SAFEGUARD: Create safe versions of all props
+  const safeNewWall = {
+    name: newWall?.name || "",
+    brickType: newWall?.brickType || "Common",
+    thicknessType: newWall?.thicknessType || "Single Skin (Half Brick)",
+    thicknessMm: newWall?.thicknessMm || 0,
+    courseHeight: newWall?.courseHeight || 75,
+    side1Plaster: newWall?.side1Plaster ?? true,
+    side1Finish: newWall?.side1Finish || "Paint",
+    side1TilePcSum: newWall?.side1TilePcSum || 0,
+    side2Plaster: newWall?.side2Plaster ?? true,
+    side2Finish: newWall?.side2Finish || "Paint",
+    side2TilePcSum: newWall?.side2TilePcSum || 0,
+    dpcRequired: newWall?.dpcRequired ?? true,
+    reinforcementRequired: newWall?.reinforcementRequired ?? false,
+    coursesPerReinforcement: newWall?.coursesPerReinforcement || 4,
+    reinforcementType: newWall?.reinforcementType || "Galvanised mesh",
+  };
+
+  const safeNewWallMeas = {
+    mark: newWallMeas?.mark || "",
+    wallTypeId: newWallMeas?.wallTypeId || 0,
+    length: newWallMeas?.length || 0,
+    height: newWallMeas?.height || 0,
+    area: newWallMeas?.area || 0,
+    wallLocation: newWallMeas?.wallLocation || "Internal Division",
+  };
+
+  const safeWallTypes = wallTypes || [];
+  const safeWallMeasurements = wallMeasurements || [];
+
   const handleThicknessTypeChange = (type: WallThicknessType) => {
     const thicknessMm = getThicknessFromType(type);
     updateWall({ thicknessType: type, thicknessMm });
@@ -49,18 +82,18 @@ const WallModule = ({
   };
 
   const saveWallType = () => {
-    if (!newWall.name.trim()) return;
+    if (!safeNewWall.name.trim()) return;
     if (editingWallId !== null) {
-      setWallTypes((prev) => prev.map((w) => (w.id === editingWallId ? { ...w, ...newWall } : w)));
+      setWallTypes((prev) => prev.map((w) => (w.id === editingWallId ? { ...w, ...safeNewWall } : w)));
       setEditingWallId(null);
     } else {
-      setWallTypes((prev) => [...prev, { id: Date.now(), ...newWall }]);
+      setWallTypes((prev) => [...prev, { id: Date.now(), ...safeNewWall }]);
     }
     resetWall();
   };
 
   const editWallType = (id: number) => {
-    const wall = wallTypes.find((w) => w.id === id);
+    const wall = safeWallTypes.find((w) => w.id === id);
     if (wall) {
       updateWall(wall);
       setEditingWallId(id);
@@ -73,12 +106,12 @@ const WallModule = ({
   };
 
   const saveWallMeasurement = () => {
-    if (!newWallMeas.mark.trim() || newWallMeas.wallTypeId === 0 || !newWallMeas.length || newWallMeas.length <= 0 || !newWallMeas.height || newWallMeas.height <= 0) return;
-    const area = newWallMeas.length * newWallMeas.height;
+    if (!safeNewWallMeas.mark.trim() || safeNewWallMeas.wallTypeId === 0 || !safeNewWallMeas.length || safeNewWallMeas.length <= 0 || !safeNewWallMeas.height || safeNewWallMeas.height <= 0) return;
+    const area = safeNewWallMeas.length * safeNewWallMeas.height;
     const data = {
-      ...newWallMeas,
+      ...safeNewWallMeas,
       area,
-      wallLocation: newWallMeas.wallLocation || "Internal Division",
+      wallLocation: safeNewWallMeas.wallLocation || "Internal Division",
     };
     if (editingWallMeasurementId !== null) {
       setWallMeasurements((prev) =>
@@ -92,7 +125,7 @@ const WallModule = ({
   };
 
   const editWallMeasurement = (id: number) => {
-    const measurement = wallMeasurements.find((m) => m.id === id);
+    const measurement = safeWallMeasurements.find((m) => m.id === id);
     if (measurement) {
       updateWallMeas(measurement);
       setEditingWallMeasurementId(id);
@@ -109,53 +142,51 @@ const WallModule = ({
     }
   };
 
-  const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles;
-
   return (
     <div style={cardStyle}>
       <h1>Wall Module</h1>
 
       <h2>Wall Type Library</h2>
       <div style={formGridStyle}>
-        <input placeholder="Name" value={newWall.name} onChange={(e) => updateWall({ name: e.target.value })} />
-        <select value={newWall.brickType} onChange={(e) => handleBrickTypeChange(e.target.value as BrickType)}>
+        <input placeholder="Name" value={safeNewWall.name} onChange={(e) => updateWall({ name: e.target.value })} />
+        <select value={safeNewWall.brickType} onChange={(e) => handleBrickTypeChange(e.target.value as BrickType)}>
           <option>Common</option><option>Imperial</option><option>Maxi 90</option>
         </select>
-        <select value={newWall.thicknessType} onChange={(e) => handleThicknessTypeChange(e.target.value as WallThicknessType)}>
+        <select value={safeNewWall.thicknessType} onChange={(e) => handleThicknessTypeChange(e.target.value as WallThicknessType)}>
           <option>Single Skin (Half Brick)</option>
           <option>Double Skin (One Brick)</option>
           <option>Cavity Wall</option>
           <option>Triple Skin</option>
         </select>
-        <div style={{ padding: "8px", background: "#eef", borderRadius: "4px" }}>Thickness: {newWall.thicknessMm || '-'}mm</div>
-        <input type="number" placeholder="Course height (mm) e.g., 75" value={newWall.courseHeight || ''} onChange={(e) => updateWall({ courseHeight: Number(e.target.value) })} />
+        <div style={{ padding: "8px", background: "#eef", borderRadius: "4px" }}>Thickness: {safeNewWall.thicknessMm || '-'}mm</div>
+        <input type="number" placeholder="Course height (mm) e.g., 75" value={safeNewWall.courseHeight || ''} onChange={(e) => updateWall({ courseHeight: Number(e.target.value) })} />
 
         <h3 style={{ gridColumn: "1 / -1", margin: "8px 0 4px", fontSize: "16px", fontWeight: "600" }}>Side 1</h3>
-        <label><input type="checkbox" checked={newWall.side1Plaster} onChange={(e) => updateWall({ side1Plaster: e.target.checked })} /> Plaster</label>
-        <select value={newWall.side1Finish} onChange={(e) => updateWall({ side1Finish: e.target.value as WallFinish })}>
+        <label><input type="checkbox" checked={safeNewWall.side1Plaster} onChange={(e) => updateWall({ side1Plaster: e.target.checked })} /> Plaster</label>
+        <select value={safeNewWall.side1Finish} onChange={(e) => updateWall({ side1Finish: e.target.value as WallFinish })}>
           <option value="None">None</option>
           <option value="Paint">Paint</option>
           <option value="Tile">Tile</option>
         </select>
-        {newWall.side1Finish === "Tile" && (
-          <input type="number" placeholder="PC sum (R/m²) e.g., 350" value={newWall.side1TilePcSum || ''} onChange={(e) => updateWall({ side1TilePcSum: Number(e.target.value) })} />
+        {safeNewWall.side1Finish === "Tile" && (
+          <input type="number" placeholder="PC sum (R/m²) e.g., 350" value={safeNewWall.side1TilePcSum || ''} onChange={(e) => updateWall({ side1TilePcSum: Number(e.target.value) })} />
         )}
 
         <h3 style={{ gridColumn: "1 / -1", margin: "8px 0 4px", fontSize: "16px", fontWeight: "600" }}>Side 2</h3>
-        <label><input type="checkbox" checked={newWall.side2Plaster} onChange={(e) => updateWall({ side2Plaster: e.target.checked })} /> Plaster</label>
-        <select value={newWall.side2Finish} onChange={(e) => updateWall({ side2Finish: e.target.value as WallFinish })}>
+        <label><input type="checkbox" checked={safeNewWall.side2Plaster} onChange={(e) => updateWall({ side2Plaster: e.target.checked })} /> Plaster</label>
+        <select value={safeNewWall.side2Finish} onChange={(e) => updateWall({ side2Finish: e.target.value as WallFinish })}>
           <option value="None">None</option>
           <option value="Paint">Paint</option>
           <option value="Tile">Tile</option>
         </select>
-        {newWall.side2Finish === "Tile" && (
-          <input type="number" placeholder="PC sum (R/m²) e.g., 350" value={newWall.side2TilePcSum || ''} onChange={(e) => updateWall({ side2TilePcSum: Number(e.target.value) })} />
+        {safeNewWall.side2Finish === "Tile" && (
+          <input type="number" placeholder="PC sum (R/m²) e.g., 350" value={safeNewWall.side2TilePcSum || ''} onChange={(e) => updateWall({ side2TilePcSum: Number(e.target.value) })} />
         )}
 
-        <label><input type="checkbox" checked={newWall.dpcRequired} onChange={(e) => updateWall({ dpcRequired: e.target.checked })} /> DPC required</label>
-        <label><input type="checkbox" checked={newWall.reinforcementRequired} onChange={(e) => updateWall({ reinforcementRequired: e.target.checked })} /> Bed joint reinforcement</label>
-        {newWall.reinforcementRequired && (
-          <input type="number" placeholder="Courses per layer" value={newWall.coursesPerReinforcement || ''} onChange={(e) => updateWall({ coursesPerReinforcement: Number(e.target.value) })} />
+        <label><input type="checkbox" checked={safeNewWall.dpcRequired} onChange={(e) => updateWall({ dpcRequired: e.target.checked })} /> DPC required</label>
+        <label><input type="checkbox" checked={safeNewWall.reinforcementRequired} onChange={(e) => updateWall({ reinforcementRequired: e.target.checked })} /> Bed joint reinforcement</label>
+        {safeNewWall.reinforcementRequired && (
+          <input type="number" placeholder="Courses per layer" value={safeNewWall.coursesPerReinforcement || ''} onChange={(e) => updateWall({ coursesPerReinforcement: Number(e.target.value) })} />
         )}
         <button onClick={saveWallType}>{editingWallId !== null ? "Update" : "Save"}</button>
       </div>
@@ -177,7 +208,7 @@ const WallModule = ({
           <th style={thStyle}>Actions</th>
         </tr></thead>
         <tbody>
-          {wallTypes.map((wall) => (
+          {safeWallTypes.map((wall) => (
             <tr key={wall.id}>
               <td style={tdStyle}>{wall.name}</td>
               <td style={tdStyle}>{wall.brickType}</td>
@@ -204,15 +235,15 @@ const WallModule = ({
 
       <h2>Wall Measurements</h2>
       <div style={formGridStyle}>
-        <input placeholder="Mark (e.g., W1)" value={newWallMeas.mark} onChange={(e) => updateWallMeas({ mark: e.target.value })} />
-        <select value={newWallMeas.wallTypeId} onChange={(e) => updateWallMeas({ wallTypeId: Number(e.target.value) })}>
+        <input placeholder="Mark (e.g., W1)" value={safeNewWallMeas.mark} onChange={(e) => updateWallMeas({ mark: e.target.value })} />
+        <select value={safeNewWallMeas.wallTypeId} onChange={(e) => updateWallMeas({ wallTypeId: Number(e.target.value) })}>
           <option value={0}>Select Type</option>
-          {wallTypes.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+          {safeWallTypes.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
         </select>
-        <input type="number" placeholder="Length (m) e.g., 5.5" value={newWallMeas.length || ''} onChange={(e) => updateWallMeas({ length: Number(e.target.value) })} />
-        <input type="number" placeholder="Height (m) e.g., 2.7" value={newWallMeas.height || ''} onChange={(e) => updateWallMeas({ height: Number(e.target.value) })} />
+        <input type="number" placeholder="Length (m) e.g., 5.5" value={safeNewWallMeas.length || ''} onChange={(e) => updateWallMeas({ length: Number(e.target.value) })} />
+        <input type="number" placeholder="Height (m) e.g., 2.7" value={safeNewWallMeas.height || ''} onChange={(e) => updateWallMeas({ height: Number(e.target.value) })} />
         <select
-          value={newWallMeas.wallLocation || "Internal Division"}
+          value={safeNewWallMeas.wallLocation || "Internal Division"}
           onChange={(e) => updateWallMeas({ wallLocation: e.target.value as WallLocation })}
           style={{ padding: "8px", border: "1px solid #ccc", borderRadius: "4px" }}
         >
@@ -239,8 +270,8 @@ const WallModule = ({
           <th style={thStyle}>Actions</th>
         </tr></thead>
         <tbody>
-          {wallMeasurements.map((m) => {
-            const wall = wallTypes.find((w) => w.id === m.wallTypeId);
+          {safeWallMeasurements.map((m) => {
+            const wall = safeWallTypes.find((w) => w.id === m.wallTypeId);
             return (
               <tr key={m.id}>
                 <td style={tdStyle}>{m.mark}</td>

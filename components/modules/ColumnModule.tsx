@@ -20,36 +20,59 @@ interface ColumnModuleProps {
   styles: any;
 }
 
-const ColumnModule = ({
+export default function ColumnModule({
   columnTypes,
   setColumnTypes,
   editingColumnId,
   setEditingColumnId,
   newColumn,
-  updateColumn,
-  resetColumn,
+  updateColumn = () => {},
+  resetColumn = () => {},
   columnMeasurements,
   setColumnMeasurements,
   newColumnMeas,
-  updateColumnMeas,
-  resetColumnMeas,
+  updateColumnMeas = () => {},
+  resetColumnMeas = () => {},
   editingColumnMeasurementId,
   setEditingColumnMeasurementId,
   styles,
-}: ColumnModuleProps) => {
+}: ColumnModuleProps) {
+  const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles || {};
+
+  // SAFEGUARD: Safe versions of all props
+  const safeNewColumn = {
+    name: newColumn?.name || "",
+    width: newColumn?.width || 0,
+    depth: newColumn?.depth || 0,
+    height: newColumn?.height || 0,
+    concreteClass: newColumn?.concreteClass || "35MPa/19mm",
+    reinfKgPerM3: newColumn?.reinfKgPerM3 || 0,
+    formworkRequired: newColumn?.formworkRequired ?? true,
+    formworkFinish: newColumn?.formworkFinish || "Smooth",
+  };
+
+  const safeNewColumnMeas = {
+    mark: newColumnMeas?.mark || "",
+    columnTypeId: newColumnMeas?.columnTypeId || 0,
+    quantity: newColumnMeas?.quantity || 0,
+  };
+
+  const safeColumnTypes = columnTypes || [];
+  const safeColumnMeasurements = columnMeasurements || [];
+
   const saveColumnType = () => {
-    if (!newColumn.name.trim()) return;
+    if (!safeNewColumn.name.trim()) return;
     if (editingColumnId !== null) {
-      setColumnTypes((prev) => prev.map((c) => (c.id === editingColumnId ? { ...c, ...newColumn } : c)));
+      setColumnTypes((prev) => prev.map((c) => (c.id === editingColumnId ? { ...c, ...safeNewColumn } : c)));
       setEditingColumnId(null);
     } else {
-      setColumnTypes((prev) => [...prev, { id: Date.now(), ...newColumn }]);
+      setColumnTypes((prev) => [...prev, { id: Date.now(), ...safeNewColumn }]);
     }
     resetColumn();
   };
 
   const editColumnType = (id: number) => {
-    const col = columnTypes.find((c) => c.id === id);
+    const col = safeColumnTypes.find((c) => c.id === id);
     if (col) {
       updateColumn(col);
       setEditingColumnId(id);
@@ -61,24 +84,27 @@ const ColumnModule = ({
     setColumnMeasurements((prev) => prev.filter((m) => m.columnTypeId !== id));
   };
 
-  const saveColumnMeasurement = () => {
-    if (!newColumnMeas.mark.trim() || newColumnMeas.columnTypeId === 0 || newColumnMeas.quantity <= 0) return;
-    
+  const addColumnMeasurement = () => {
+    if (!safeNewColumnMeas.mark.trim() || safeNewColumnMeas.columnTypeId === 0 || !safeNewColumnMeas.quantity || safeNewColumnMeas.quantity <= 0) return;
+    const measurement = {
+      id: Date.now(),
+      ...safeNewColumnMeas,
+      elementalSectionId: "Structural Frame",
+      elementalElementId: "columns",
+    };
     if (editingColumnMeasurementId !== null) {
       setColumnMeasurements((prev) =>
-        prev.map((m) =>
-          m.id === editingColumnMeasurementId ? { ...m, ...newColumnMeas } : m
-        )
+        prev.map((m) => (m.id === editingColumnMeasurementId ? { ...m, ...measurement } : m))
       );
       setEditingColumnMeasurementId(null);
     } else {
-      setColumnMeasurements((prev) => [...prev, { id: Date.now(), ...newColumnMeas }]);
+      setColumnMeasurements((prev) => [...prev, measurement]);
     }
     resetColumnMeas();
   };
 
   const editColumnMeasurement = (id: number) => {
-    const measurement = columnMeasurements.find((m) => m.id === id);
+    const measurement = safeColumnMeasurements.find((m) => m.id === id);
     if (measurement) {
       updateColumnMeas(measurement);
       setEditingColumnMeasurementId(id);
@@ -95,47 +121,42 @@ const ColumnModule = ({
     }
   };
 
-  const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles;
-
   return (
     <div style={cardStyle}>
-      <h1>Column Module</h1>
       <h2>Column Type Library</h2>
       <div style={formGridStyle}>
-        <input placeholder="Name" value={newColumn.name} onChange={(e) => updateColumn({ name: e.target.value })} />
-        <input type="number" placeholder="Width (mm) e.g., 300" value={newColumn.width} onChange={(e) => updateColumn({ width: Number(e.target.value) })} />
-        <input type="number" placeholder="Depth (mm) e.g., 400" value={newColumn.depth} onChange={(e) => updateColumn({ depth: Number(e.target.value) })} />
-        <input type="number" placeholder="Height (mm) e.g., 3000" value={newColumn.height} onChange={(e) => updateColumn({ height: Number(e.target.value) })} />
-        <select value={newColumn.concreteClass} onChange={(e) => updateColumn({ concreteClass: e.target.value })}>
-          <option>25MPa/19mm</option><option>30MPa/19mm</option><option>35MPa/19mm</option>
+        <input placeholder="Name" value={safeNewColumn.name} onChange={(e) => updateColumn({ name: e.target.value })} />
+        <input type="number" placeholder="Width (mm) e.g., 300" value={safeNewColumn.width || ''} onChange={(e) => updateColumn({ width: Number(e.target.value) || 0 })} />
+        <input type="number" placeholder="Depth (mm) e.g., 300" value={safeNewColumn.depth || ''} onChange={(e) => updateColumn({ depth: Number(e.target.value) || 0 })} />
+        <input type="number" placeholder="Height (mm) e.g., 3000" value={safeNewColumn.height || ''} onChange={(e) => updateColumn({ height: Number(e.target.value) || 0 })} />
+        <select value={safeNewColumn.concreteClass} onChange={(e) => updateColumn({ concreteClass: e.target.value })}>
+          <option>25MPa/19mm</option><option>30MPa/19mm</option><option>35MPa/19mm</option><option>40MPa/19mm</option>
         </select>
-        <input type="number" placeholder="Reinforcement (kg/m³) e.g., 200" value={newColumn.reinfKgPerM3} onChange={(e) => updateColumn({ reinfKgPerM3: Number(e.target.value) })} />
-        <label><input type="checkbox" checked={newColumn.formworkRequired} onChange={(e) => updateColumn({ formworkRequired: e.target.checked })} /> Formwork</label>
-        <select value={newColumn.formworkFinish} onChange={(e) => updateColumn({ formworkFinish: e.target.value })}>
-          <option>Smooth</option><option>Rough</option><option>Special</option>
+        <input type="number" placeholder="Reinforcement (kg/m³) e.g., 150" value={safeNewColumn.reinfKgPerM3 || ''} onChange={(e) => updateColumn({ reinfKgPerM3: Number(e.target.value) || 0 })} />
+        <label><input type="checkbox" checked={safeNewColumn.formworkRequired} onChange={(e) => updateColumn({ formworkRequired: e.target.checked })} /> Formwork required</label>
+        <select value={safeNewColumn.formworkFinish} onChange={(e) => updateColumn({ formworkFinish: e.target.value })}>
+          <option>Smooth</option><option>Rough</option><option>Fair Faced</option>
         </select>
         <button onClick={saveColumnType}>{editingColumnId !== null ? "Update" : "Save"}</button>
       </div>
 
       <table style={tableStyle} border={1} cellPadding={8}>
-        <thead>
-          <tr>
-            <th style={thStyle}>Name</th><th style={thStyle}>Width</th><th style={thStyle}>Depth</th>
-            <th style={thStyle}>Height</th><th style={thStyle}>Concrete</th><th style={thStyle}>Reinf</th>
-            <th style={thStyle}>Formwork</th><th style={thStyle}>Finish</th><th style={thStyle}>Actions</th>
-          </tr>
-        </thead>
+        <thead><tr>
+          <th style={thStyle}>Name</th><th style={thStyle}>Width</th><th style={thStyle}>Depth</th>
+          <th style={thStyle}>Height</th><th style={thStyle}>Concrete</th>
+          <th style={thStyle}>Reinf</th><th style={thStyle}>Formwork</th>
+          <th style={thStyle}>Actions</th>
+        </tr></thead>
         <tbody>
-          {columnTypes.map((col) => (
+          {safeColumnTypes.map((col) => (
             <tr key={col.id}>
               <td style={tdStyle}>{col.name}</td>
               <td style={tdStyle}>{col.width}mm</td>
               <td style={tdStyle}>{col.depth}mm</td>
               <td style={tdStyle}>{col.height}mm</td>
               <td style={tdStyle}>{col.concreteClass}</td>
-              <td style={tdStyle}>{col.reinfKgPerM3}</td>
-              <td style={tdStyle}>{col.formworkRequired ? "Yes" : "No"}</td>
-              <td style={tdStyle}>{col.formworkFinish}</td>
+              <td style={tdStyle}>{col.reinfKgPerM3 || 0}kg</td>
+              <td style={tdStyle}>{col.formworkRequired ? `Yes (${col.formworkFinish})` : "No"}</td>
               <td style={tdStyle}>
                 <button onClick={() => editColumnType(col.id)}>Edit</button>
                 <button onClick={() => deleteColumnType(col.id)}>Delete</button>
@@ -146,15 +167,16 @@ const ColumnModule = ({
       </table>
 
       <hr />
+
       <h2>Column Measurements</h2>
       <div style={formGridStyle}>
-        <input placeholder="Mark" value={newColumnMeas.mark} onChange={(e) => updateColumnMeas({ mark: e.target.value })} />
-        <select value={newColumnMeas.columnTypeId} onChange={(e) => updateColumnMeas({ columnTypeId: Number(e.target.value) })}>
+        <input placeholder="Mark (e.g., C1)" value={safeNewColumnMeas.mark} onChange={(e) => updateColumnMeas({ mark: e.target.value })} />
+        <select value={safeNewColumnMeas.columnTypeId} onChange={(e) => updateColumnMeas({ columnTypeId: Number(e.target.value) })}>
           <option value={0}>Select Type</option>
-          {columnTypes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          {safeColumnTypes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        <input type="number" placeholder="Quantity" value={newColumnMeas.quantity} onChange={(e) => updateColumnMeas({ quantity: Number(e.target.value) })} />
-        <button onClick={saveColumnMeasurement}>
+        <input type="number" placeholder="Quantity" value={safeNewColumnMeas.quantity || ''} onChange={(e) => updateColumnMeas({ quantity: Number(e.target.value) || 0 })} />
+        <button onClick={addColumnMeasurement}>
           {editingColumnMeasurementId !== null ? "Update Measurement" : "Add Measurement"}
         </button>
         {editingColumnMeasurementId !== null && (
@@ -163,12 +185,12 @@ const ColumnModule = ({
       </div>
 
       <table style={tableStyle} border={1} cellPadding={8}>
-        <thead>
-          <tr><th style={thStyle}>Mark</th><th style={thStyle}>Column Type</th><th style={thStyle}>Quantity</th><th style={thStyle}>Actions</th></tr>
-        </thead>
+        <thead><tr>
+          <th style={thStyle}>Mark</th><th style={thStyle}>Type</th><th style={thStyle}>Quantity</th><th style={thStyle}>Actions</th>
+        </tr></thead>
         <tbody>
-          {columnMeasurements.map((m) => {
-            const col = columnTypes.find((c) => c.id === m.columnTypeId);
+          {safeColumnMeasurements.map((m) => {
+            const col = safeColumnTypes.find((c) => c.id === m.columnTypeId);
             return (
               <tr key={m.id}>
                 <td style={tdStyle}>{m.mark}</td>
@@ -185,6 +207,4 @@ const ColumnModule = ({
       </table>
     </div>
   );
-};
-
-export default ColumnModule;
+}

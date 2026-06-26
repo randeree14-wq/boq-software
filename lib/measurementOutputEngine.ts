@@ -249,9 +249,19 @@ export function generateSlabMeasurementOutputs(
   context: OutputContext
 ): MeasurementOutput[] {
   const outputs: MeasurementOutput[] = [];
-  const area = measurement.area;
-  const concreteVol = area * (slabType.thickness / 1000);
-  const strength = slabType.concreteClass.split('/')[0];
+  
+  // SAFEGUARD: Ensure all values are numbers
+  const area = measurement.area || 0;
+  const thickness = slabType.thickness || 0;
+  const concreteVol = area * (thickness / 1000);
+  
+  // If concreteVol is 0 or NaN, return empty array (no outputs)
+  if (isNaN(concreteVol) || concreteVol === 0) {
+    console.warn("Slab measurement has invalid data:", { measurement, slabType });
+    return outputs;
+  }
+  
+  const strength = slabType.concreteClass?.split('/')[0] || "Unknown";
 
   // ============================================================
   // 1. CONCRETE

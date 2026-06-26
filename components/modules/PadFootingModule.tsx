@@ -20,36 +20,67 @@ interface PadFootingModuleProps {
   styles: any;
 }
 
-const PadFootingModule = ({
+export default function PadFootingModule({
   padFootingTypes,
   setPadFootingTypes,
   editingPadFootingId,
   setEditingPadFootingId,
   newPadFooting,
-  updatePadFooting,
-  resetPadFooting,
+  updatePadFooting = () => {},
+  resetPadFooting = () => {},
   padFootingMeasurements,
   setPadFootingMeasurements,
   newPadFootingMeas,
-  updatePadFootingMeas,
-  resetPadFootingMeas,
+  updatePadFootingMeas = () => {},
+  resetPadFootingMeas = () => {},
   editingPadFootingMeasurementId,
   setEditingPadFootingMeasurementId,
   styles,
-}: PadFootingModuleProps) => {
+}: PadFootingModuleProps) {
+  const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles || {};
+
+  // SAFEGUARD: Safe versions of all props
+  const safeNewPadFooting = {
+    name: newPadFooting?.name || "",
+    padLength: newPadFooting?.padLength || 0,
+    padWidth: newPadFooting?.padWidth || 0,
+    padDepth: newPadFooting?.padDepth || 0,
+    excavationLength: newPadFooting?.excavationLength || 0,
+    excavationWidth: newPadFooting?.excavationWidth || 0,
+    excavationDepth: newPadFooting?.excavationDepth || 0,
+    concreteClass: newPadFooting?.concreteClass || "30MPa/19mm",
+    reinfKg: newPadFooting?.reinfKg || 0,
+    formworkRequired: newPadFooting?.formworkRequired ?? true,
+    blindingRequired: newPadFooting?.blindingRequired ?? true,
+    blindingThickness: newPadFooting?.blindingThickness || 0,
+    soilPoison: newPadFooting?.soilPoison ?? false,
+    backfill: newPadFooting?.backfill ?? true,
+    workingSpaceRequired: newPadFooting?.workingSpaceRequired ?? false,
+    riskOfCollapseRequired: newPadFooting?.riskOfCollapseRequired ?? false,
+  };
+
+  const safeNewPadFootingMeas = {
+    mark: newPadFootingMeas?.mark || "",
+    padFootingTypeId: newPadFootingMeas?.padFootingTypeId || 0,
+    quantity: newPadFootingMeas?.quantity || 0,
+  };
+
+  const safePadFootingTypes = padFootingTypes || [];
+  const safePadFootingMeasurements = padFootingMeasurements || [];
+
   const savePadFootingType = () => {
-    if (!newPadFooting.name.trim()) return;
+    if (!safeNewPadFooting.name.trim()) return;
     if (editingPadFootingId !== null) {
-      setPadFootingTypes((prev) => prev.map((pf) => (pf.id === editingPadFootingId ? { ...pf, ...newPadFooting } : pf)));
+      setPadFootingTypes((prev) => prev.map((pf) => (pf.id === editingPadFootingId ? { ...pf, ...safeNewPadFooting } : pf)));
       setEditingPadFootingId(null);
     } else {
-      setPadFootingTypes((prev) => [...prev, { id: Date.now(), ...newPadFooting }]);
+      setPadFootingTypes((prev) => [...prev, { id: Date.now(), ...safeNewPadFooting }]);
     }
     resetPadFooting();
   };
 
   const editPadFootingType = (id: number) => {
-    const pf = padFootingTypes.find((p) => p.id === id);
+    const pf = safePadFootingTypes.find((p) => p.id === id);
     if (pf) {
       updatePadFooting(pf);
       setEditingPadFootingId(id);
@@ -61,21 +92,27 @@ const PadFootingModule = ({
     setPadFootingMeasurements((prev) => prev.filter((m) => m.padFootingTypeId !== id));
   };
 
-  const savePadFootingMeasurement = () => {
-    if (!newPadFootingMeas.mark.trim() || newPadFootingMeas.padFootingTypeId === 0 || !newPadFootingMeas.quantity || newPadFootingMeas.quantity <= 0) return;
+  const addPadFootingMeasurement = () => {
+    if (!safeNewPadFootingMeas.mark.trim() || safeNewPadFootingMeas.padFootingTypeId === 0 || !safeNewPadFootingMeas.quantity || safeNewPadFootingMeas.quantity <= 0) return;
+    const measurement = {
+      id: Date.now(),
+      ...safeNewPadFootingMeas,
+      elementalSectionId: "substructure",
+      elementalElementId: "pad-footings",
+    };
     if (editingPadFootingMeasurementId !== null) {
       setPadFootingMeasurements((prev) =>
-        prev.map((m) => (m.id === editingPadFootingMeasurementId ? { ...m, ...newPadFootingMeas } : m))
+        prev.map((m) => (m.id === editingPadFootingMeasurementId ? { ...m, ...measurement } : m))
       );
       setEditingPadFootingMeasurementId(null);
     } else {
-      setPadFootingMeasurements((prev) => [...prev, { id: Date.now(), ...newPadFootingMeas }]);
+      setPadFootingMeasurements((prev) => [...prev, measurement]);
     }
     resetPadFootingMeas();
   };
 
   const editPadFootingMeasurement = (id: number) => {
-    const measurement = padFootingMeasurements.find((m) => m.id === id);
+    const measurement = safePadFootingMeasurements.find((m) => m.id === id);
     if (measurement) {
       updatePadFootingMeas(measurement);
       setEditingPadFootingMeasurementId(id);
@@ -92,82 +129,56 @@ const PadFootingModule = ({
     }
   };
 
-  const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles;
-
   return (
     <div style={cardStyle}>
-      <h1>Pad Footing Module</h1>
       <h2>Pad Footing Type Library</h2>
       <div style={formGridStyle}>
-        <input placeholder="Name" value={newPadFooting.name} onChange={(e) => updatePadFooting({ name: e.target.value })} />
-        <input type="number" placeholder="Pad length (mm) e.g., 1200" value={newPadFooting.padLength || ''} onChange={(e) => updatePadFooting({ padLength: Number(e.target.value) })} />
-        <input type="number" placeholder="Pad width (mm) e.g., 1000" value={newPadFooting.padWidth || ''} onChange={(e) => updatePadFooting({ padWidth: Number(e.target.value) })} />
-        <input type="number" placeholder="Pad Depth (mm) e.g., 300" value={newPadFooting.padDepth || ''} onChange={(e) => updatePadFooting({ padDepth: Number(e.target.value) })} />
-        <input type="number" placeholder="Excavation Length (mm) e.g., 1800" value={newPadFooting.excavationLength || ''} onChange={(e) => updatePadFooting({ excavationLength: Number(e.target.value) })} />
-        <input type="number" placeholder="Excavation Width (mm) e.g., 1800" value={newPadFooting.excavationWidth || ''} onChange={(e) => updatePadFooting({ excavationWidth: Number(e.target.value) })} />
-        <input type="number" placeholder="Excavation Depth (mm) e.g., 800" value={newPadFooting.excavationDepth || ''} onChange={(e) => updatePadFooting({ excavationDepth: Number(e.target.value) })} />
-        <select value={newPadFooting.concreteClass} onChange={(e) => updatePadFooting({ concreteClass: e.target.value })}>
-          <option>25MPa/19mm</option><option>30MPa/19mm</option><option>35MPa/19mm</option>
+        <input placeholder="Name" value={safeNewPadFooting.name} onChange={(e) => updatePadFooting({ name: e.target.value })} />
+        <input type="number" placeholder="Pad length (mm) e.g., 1200" value={safeNewPadFooting.padLength || ''} onChange={(e) => updatePadFooting({ padLength: Number(e.target.value) || 0 })} />
+        <input type="number" placeholder="Pad width (mm) e.g., 1000" value={safeNewPadFooting.padWidth || ''} onChange={(e) => updatePadFooting({ padWidth: Number(e.target.value) || 0 })} />
+        <input type="number" placeholder="Pad Depth (mm) e.g., 300" value={safeNewPadFooting.padDepth || ''} onChange={(e) => updatePadFooting({ padDepth: Number(e.target.value) || 0 })} />
+        <input type="number" placeholder="Excavation Length (mm) e.g., 1800" value={safeNewPadFooting.excavationLength || ''} onChange={(e) => updatePadFooting({ excavationLength: Number(e.target.value) || 0 })} />
+        <input type="number" placeholder="Excavation Width (mm) e.g., 1800" value={safeNewPadFooting.excavationWidth || ''} onChange={(e) => updatePadFooting({ excavationWidth: Number(e.target.value) || 0 })} />
+        <input type="number" placeholder="Excavation Depth (mm) e.g., 800" value={safeNewPadFooting.excavationDepth || ''} onChange={(e) => updatePadFooting({ excavationDepth: Number(e.target.value) || 0 })} />
+        <select value={safeNewPadFooting.concreteClass} onChange={(e) => updatePadFooting({ concreteClass: e.target.value })}>
+          <option>25MPa/19mm</option><option>30MPa/19mm</option><option>35MPa/19mm</option><option>40MPa/19mm</option>
         </select>
-        <input type="number" placeholder="Reinforcement (kg/m³) e.g., 120" value={newPadFooting.reinfKg || ''} onChange={(e) => updatePadFooting({ reinfKg: Number(e.target.value) })} />
-        <label><input type="checkbox" checked={newPadFooting.formworkRequired} onChange={(e) => updatePadFooting({ formworkRequired: e.target.checked })} /> Formwork Required</label>
-        <label><input type="checkbox" checked={newPadFooting.blindingRequired} onChange={(e) => updatePadFooting({ blindingRequired: e.target.checked })} /> Blinding Required</label>
-        <input type="number" placeholder="Blinding thickness (mm) e.g., 50" value={newPadFooting.blindingThickness || ''} onChange={(e) => updatePadFooting({ blindingThickness: Number(e.target.value) })} />
-        <label><input type="checkbox" checked={newPadFooting.soilPoison} onChange={(e) => updatePadFooting({ soilPoison: e.target.checked })} /> Soil Poison</label>
-        <label><input type="checkbox" checked={newPadFooting.backfill} onChange={(e) => updatePadFooting({ backfill: e.target.checked })} /> Backfill</label>
-        
-        {/* New checkboxes for Working Space and Risk of Collapse */}
-        <label>
-  <input
-    type="checkbox"
-    checked={newPadFooting.workingSpaceRequired || false}
-    onChange={(e) => updatePadFooting({ workingSpaceRequired: e.target.checked })}
-  />
-  Working space required
-</label>
-<label>
-  <input
-    type="checkbox"
-    checked={newPadFooting.riskOfCollapseRequired || false}
-    onChange={(e) => updatePadFooting({ riskOfCollapseRequired: e.target.checked })}
-  />
-  Risk of collapse required
-</label>
-
+        <input type="number" placeholder="Reinforcement (kg/m³) e.g., 150" value={safeNewPadFooting.reinfKg || ''} onChange={(e) => updatePadFooting({ reinfKg: Number(e.target.value) || 0 })} />
+        <label><input type="checkbox" checked={safeNewPadFooting.formworkRequired} onChange={(e) => updatePadFooting({ formworkRequired: e.target.checked })} /> Formwork required</label>
+        <label><input type="checkbox" checked={safeNewPadFooting.blindingRequired} onChange={(e) => updatePadFooting({ blindingRequired: e.target.checked })} /> Blinding required</label>
+        {safeNewPadFooting.blindingRequired && (
+          <input type="number" placeholder="Blinding thickness (mm) e.g., 50" value={safeNewPadFooting.blindingThickness || ''} onChange={(e) => updatePadFooting({ blindingThickness: Number(e.target.value) || 0 })} />
+        )}
+        <label><input type="checkbox" checked={safeNewPadFooting.soilPoison} onChange={(e) => updatePadFooting({ soilPoison: e.target.checked })} /> Soil poison</label>
+        <label><input type="checkbox" checked={safeNewPadFooting.backfill} onChange={(e) => updatePadFooting({ backfill: e.target.checked })} /> Backfill required</label>
+        <label><input type="checkbox" checked={safeNewPadFooting.workingSpaceRequired} onChange={(e) => updatePadFooting({ workingSpaceRequired: e.target.checked })} /> Working space</label>
+        <label><input type="checkbox" checked={safeNewPadFooting.riskOfCollapseRequired} onChange={(e) => updatePadFooting({ riskOfCollapseRequired: e.target.checked })} /> Risk of collapse</label>
         <button onClick={savePadFootingType}>{editingPadFootingId !== null ? "Update" : "Save"}</button>
       </div>
 
       <table style={tableStyle} border={1} cellPadding={8}>
-        <thead>
-          <tr>
-            <th style={thStyle}>Name</th>
-            <th style={thStyle}>Pad Size</th>
-            <th style={thStyle}>Excavation</th>
-            <th style={thStyle}>Concrete</th>
-            <th style={thStyle}>Reinf</th>
-            <th style={thStyle}>Formwork</th>
-            <th style={thStyle}>Blinding</th>
-            <th style={thStyle}>Soil</th>
-            <th style={thStyle}>Backfill</th>
-            <th style={thStyle}>Working</th>
-            <th style={thStyle}>Risk</th>
-            <th style={thStyle}>Actions</th>
-          </tr>
-        </thead>
+        <thead><tr>
+          <th style={thStyle}>Name</th>
+          <th style={thStyle}>Pad L</th><th style={thStyle}>Pad W</th><th style={thStyle}>Pad D</th>
+          <th style={thStyle}>Exc L</th><th style={thStyle}>Exc W</th><th style={thStyle}>Exc D</th>
+          <th style={thStyle}>Concrete</th><th style={thStyle}>Reinf</th>
+          <th style={thStyle}>Formwork</th><th style={thStyle}>Blinding</th>
+          <th style={thStyle}>Actions</th>
+        </tr></thead>
         <tbody>
-          {padFootingTypes.map((pf) => (
+          {safePadFootingTypes.map((pf) => (
             <tr key={pf.id}>
               <td style={tdStyle}>{pf.name}</td>
-              <td style={tdStyle}>{pf.padLength || '-'}x{pf.padWidth || '-'}x{pf.padDepth || '-'}</td>
-              <td style={tdStyle}>{pf.excavationLength || '-'}x{pf.excavationWidth || '-'}x{pf.excavationDepth || '-'}</td>
+              <td style={tdStyle}>{pf.padLength || 0}mm</td>
+              <td style={tdStyle}>{pf.padWidth || 0}mm</td>
+              <td style={tdStyle}>{pf.padDepth || 0}mm</td>
+              <td style={tdStyle}>{pf.excavationLength || 0}mm</td>
+              <td style={tdStyle}>{pf.excavationWidth || 0}mm</td>
+              <td style={tdStyle}>{pf.excavationDepth || 0}mm</td>
               <td style={tdStyle}>{pf.concreteClass}</td>
-              <td style={tdStyle}>{pf.reinfKg || '-'}</td>
+              <td style={tdStyle}>{pf.reinfKg || 0}kg</td>
               <td style={tdStyle}>{pf.formworkRequired ? "Yes" : "No"}</td>
-              <td style={tdStyle}>{pf.blindingRequired ? `${pf.blindingThickness || '-'}mm` : "No"}</td>
-              <td style={tdStyle}>{pf.soilPoison ? "Yes" : "No"}</td>
-              <td style={tdStyle}>{pf.backfill ? "Yes" : "No"}</td>
-              <td style={tdStyle}>{pf.workingSpaceRequired ? "Yes" : "No"}</td>
-              <td style={tdStyle}>{pf.riskOfCollapseRequired ? "Yes" : "No"}</td>
+              <td style={tdStyle}>{pf.blindingRequired ? "Yes" : "No"}</td>
               <td style={tdStyle}>
                 <button onClick={() => editPadFootingType(pf.id)}>Edit</button>
                 <button onClick={() => deletePadFootingType(pf.id)}>Delete</button>
@@ -178,15 +189,16 @@ const PadFootingModule = ({
       </table>
 
       <hr />
+
       <h2>Pad Footing Measurements</h2>
       <div style={formGridStyle}>
-        <input placeholder="Mark (e.g., PF1)" value={newPadFootingMeas.mark} onChange={(e) => updatePadFootingMeas({ mark: e.target.value })} />
-        <select value={newPadFootingMeas.padFootingTypeId} onChange={(e) => updatePadFootingMeas({ padFootingTypeId: Number(e.target.value) })}>
+        <input placeholder="Mark (e.g., PF1)" value={safeNewPadFootingMeas.mark} onChange={(e) => updatePadFootingMeas({ mark: e.target.value })} />
+        <select value={safeNewPadFootingMeas.padFootingTypeId} onChange={(e) => updatePadFootingMeas({ padFootingTypeId: Number(e.target.value) })}>
           <option value={0}>Select Type</option>
-          {padFootingTypes.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          {safePadFootingTypes.map((pf) => <option key={pf.id} value={pf.id}>{pf.name}</option>)}
         </select>
-        <input type="number" placeholder="Quantity" value={newPadFootingMeas.quantity || ''} onChange={(e) => updatePadFootingMeas({ quantity: Number(e.target.value) })} />
-        <button onClick={savePadFootingMeasurement}>
+        <input type="number" placeholder="Quantity" value={safeNewPadFootingMeas.quantity || ''} onChange={(e) => updatePadFootingMeas({ quantity: Number(e.target.value) || 0 })} />
+        <button onClick={addPadFootingMeasurement}>
           {editingPadFootingMeasurementId !== null ? "Update Measurement" : "Add Measurement"}
         </button>
         {editingPadFootingMeasurementId !== null && (
@@ -195,12 +207,12 @@ const PadFootingModule = ({
       </div>
 
       <table style={tableStyle} border={1} cellPadding={8}>
-        <thead>
-          <tr><th style={thStyle}>Mark</th><th style={thStyle}>Pad Type</th><th style={thStyle}>Quantity</th><th style={thStyle}>Actions</th></tr>
-        </thead>
+        <thead><tr>
+          <th style={thStyle}>Mark</th><th style={thStyle}>Type</th><th style={thStyle}>Quantity</th><th style={thStyle}>Actions</th>
+        </tr></thead>
         <tbody>
-          {padFootingMeasurements.map((m) => {
-            const pf = padFootingTypes.find((p) => p.id === m.padFootingTypeId);
+          {safePadFootingMeasurements.map((m) => {
+            const pf = safePadFootingTypes.find((p) => p.id === m.padFootingTypeId);
             return (
               <tr key={m.id}>
                 <td style={tdStyle}>{m.mark}</td>
@@ -217,6 +229,4 @@ const PadFootingModule = ({
       </table>
     </div>
   );
-};
-
-export default PadFootingModule;
+}
