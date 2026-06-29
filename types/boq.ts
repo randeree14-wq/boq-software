@@ -587,7 +587,9 @@ export type ExecutiveSummaryInputData = {
   buildingArea: number;
   specialistServices: SpecialistServiceItem[];
   preliminaries: number;
+  preliminariesPercent?: number;
   contingency: number;
+  contingencyPercent?: number;
   escalations: EscalationData;
   professionalFees: ProfessionalFees;
 };

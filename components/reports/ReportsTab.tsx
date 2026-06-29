@@ -43,7 +43,11 @@ export default function ReportsTab({
     return costPlanTotal + specialistTotal;
   }, [costPlans, specialistServices]);
 
-  // Helper to update preliminaries (syncing amount and percentage)
+  const updateExecutiveInput = (updates: Partial<ExecutiveSummaryInputData>) => {
+    setExecutiveInput({ ...executiveInput, ...updates });
+  };
+
+  // Preliminaries: sync amount ↔ percentage
   const updatePreliminaries = (amount?: number, percent?: number) => {
     let newAmount = amount;
     let newPercent = percent;
@@ -63,7 +67,7 @@ export default function ReportsTab({
     });
   };
 
-  // Helper to update contingency (syncing amount and percentage)
+  // Contingency: sync amount ↔ percentage
   const updateContingency = (amount?: number, percent?: number) => {
     let newAmount = amount;
     let newPercent = percent;
@@ -81,10 +85,6 @@ export default function ReportsTab({
       contingency: newAmount ?? 0,
       contingencyPercent: newPercent ?? 0,
     });
-  };
-
-  const updateExecutiveInput = (updates: Partial<ExecutiveSummaryInputData>) => {
-    setExecutiveInput({ ...executiveInput, ...updates });
   };
 
   const executiveEngineInput: ExecutiveSummaryInput = {
@@ -155,10 +155,10 @@ export default function ReportsTab({
             styles={styles}
           />
 
+          {/* ===== PRELIMINARIES & CONTINGENCIES ===== */}
           <div style={styles.cardStyle}>
             <h3>Preliminaries & Contingencies</h3>
             <div style={styles.formGridStyle}>
-              {/* Preliminaries */}
               <div>
                 <label style={{ display: "block", fontWeight: "bold", marginBottom: "4px" }}>
                   Preliminaries (%)
@@ -195,8 +195,6 @@ export default function ReportsTab({
                   = {netConstructionCost > 0 ? ((preliminaries / netConstructionCost) * 100).toFixed(2) : 0}%
                 </div>
               </div>
-
-              {/* Contingency */}
               <div>
                 <label style={{ display: "block", fontWeight: "bold", marginBottom: "4px" }}>
                   Contingency (%)
@@ -234,18 +232,157 @@ export default function ReportsTab({
                 </div>
               </div>
             </div>
-
             <div style={{ marginTop: "8px", fontSize: "13px", color: "#555" }}>
               <strong>Net Construction Cost:</strong> R {(netConstructionCost || 0).toFixed(2)}
-              <span style={{ marginLeft: "16px" }}>
-                (Cost Plans + Specialist Services)
-              </span>
+              <span style={{ marginLeft: "16px" }}>(Cost Plans + Specialist Services)</span>
             </div>
+          </div>
 
-            <h3 style={{ marginTop: "16px" }}>Escalations</h3>
-            {/* ... (unchanged) */}
-            <h3 style={{ marginTop: "16px" }}>Professional Fees</h3>
-            {/* ... (unchanged) */}
+          {/* ===== ESCALATIONS ===== */}
+          <div style={styles.cardStyle}>
+            <h3>Escalations</h3>
+            <div style={styles.formGridStyle}>
+              <div>
+                <label style={{ display: "block", fontWeight: "bold", marginBottom: "4px" }}>
+                  Pre-Construction (months)
+                </label>
+                <input
+                  type="number"
+                  value={escalations.preConstructionMonths || 0}
+                  onChange={(e) =>
+                    updateExecutiveInput({
+                      escalations: {
+                        ...escalations,
+                        preConstructionMonths: Number(e.target.value) || 0,
+                      },
+                    })
+                  }
+                  style={{ padding: "8px", border: "1px solid #ccc", borderRadius: "4px", width: "100%" }}
+                  step="0.5"
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontWeight: "bold", marginBottom: "4px" }}>
+                  Pre-Construction Rate (%)
+                </label>
+                <input
+                  type="number"
+                  value={escalations.preConstructionRate || 0}
+                  onChange={(e) =>
+                    updateExecutiveInput({
+                      escalations: {
+                        ...escalations,
+                        preConstructionRate: Number(e.target.value) || 0,
+                      },
+                    })
+                  }
+                  style={{ padding: "8px", border: "1px solid #ccc", borderRadius: "4px", width: "100%" }}
+                  step="0.01"
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontWeight: "bold", marginBottom: "4px" }}>
+                  Construction (months)
+                </label>
+                <input
+                  type="number"
+                  value={escalations.constructionMonths || 0}
+                  onChange={(e) =>
+                    updateExecutiveInput({
+                      escalations: {
+                        ...escalations,
+                        constructionMonths: Number(e.target.value) || 0,
+                      },
+                    })
+                  }
+                  style={{ padding: "8px", border: "1px solid #ccc", borderRadius: "4px", width: "100%" }}
+                  step="0.5"
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontWeight: "bold", marginBottom: "4px" }}>
+                  Construction Rate (%)
+                </label>
+                <input
+                  type="number"
+                  value={escalations.constructionRate || 0}
+                  onChange={(e) =>
+                    updateExecutiveInput({
+                      escalations: {
+                        ...escalations,
+                        constructionRate: Number(e.target.value) || 0,
+                      },
+                    })
+                  }
+                  style={{ padding: "8px", border: "1px solid #ccc", borderRadius: "4px", width: "100%" }}
+                  step="0.01"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* ===== PROFESSIONAL FEES ===== */}
+          <div style={styles.cardStyle}>
+            <h3>Professional Fees</h3>
+            <div style={styles.formGridStyle}>
+              <div>
+                <label style={{ display: "block", fontWeight: "bold", marginBottom: "4px" }}>
+                  Core Consultants (R)
+                </label>
+                <input
+                  type="number"
+                  value={professionalFees.coreConsultants || 0}
+                  onChange={(e) =>
+                    updateExecutiveInput({
+                      professionalFees: {
+                        ...professionalFees,
+                        coreConsultants: Number(e.target.value) || 0,
+                      },
+                    })
+                  }
+                  style={{ padding: "8px", border: "1px solid #ccc", borderRadius: "4px", width: "100%" }}
+                  step="0.01"
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontWeight: "bold", marginBottom: "4px" }}>
+                  Specialist Consultants (R)
+                </label>
+                <input
+                  type="number"
+                  value={professionalFees.specialistConsultants || 0}
+                  onChange={(e) =>
+                    updateExecutiveInput({
+                      professionalFees: {
+                        ...professionalFees,
+                        specialistConsultants: Number(e.target.value) || 0,
+                      },
+                    })
+                  }
+                  style={{ padding: "8px", border: "1px solid #ccc", borderRadius: "4px", width: "100%" }}
+                  step="0.01"
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontWeight: "bold", marginBottom: "4px" }}>
+                  Disbursements (R)
+                </label>
+                <input
+                  type="number"
+                  value={professionalFees.disbursements || 0}
+                  onChange={(e) =>
+                    updateExecutiveInput({
+                      professionalFees: {
+                        ...professionalFees,
+                        disbursements: Number(e.target.value) || 0,
+                      },
+                    })
+                  }
+                  style={{ padding: "8px", border: "1px solid #ccc", borderRadius: "4px", width: "100%" }}
+                  step="0.01"
+                />
+              </div>
+            </div>
           </div>
         </>
       )}
