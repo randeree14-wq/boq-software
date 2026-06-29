@@ -24,6 +24,9 @@ import type {
   OpeningMeasurement,
   CostPlanComponent,
   WallLocation,
+  CostPlan,
+  CostPlanItem,
+  ExecutiveSummaryInputData,
 } from "@/types/boq";
 import {
   addToBoqItem,
@@ -45,24 +48,35 @@ import {
   generateWallBoqItems,
   generateSlabCostPlanComponents,
   generateSlabBoqItems,
+  generateBeamCostPlanComponents,
+  generateBeamBoqItems,
+  generateColumnCostPlanComponents,
+  generateColumnBoqItems,
+  generateSurfaceBedCostPlanComponents,
+  generateSurfaceBedBoqItems,
+  generateGroundBeamCostPlanComponents,
+  generateGroundBeamBoqItems,
+  generatePadFootingCostPlanComponents,
+  generatePadFootingBoqItems,
+  generateOpeningCostPlanComponents,
+  generateOpeningBoqItems,
 } from "@/lib/measurementOutputEngine";
 
-import { 
-  wallDefaults, 
-  slabDefaults, 
+import {
+  wallDefaults,
+  slabDefaults,
   padFootingDefaults,
   groundBeamDefaults,
   columnDefaults,
   surfaceBedDefaults,
-  openingDefaults 
+  openingDefaults,
 } from "@/lib/moduleDefaults";
 
 // Layout components
 import BoqSummary from "@/components/modules/BoqSummary";
 import Dashboard from "@/components/dashboard/Dashboard";
 import ElementalMeasurement from "@/components/elements/ElementalMeasurement";
-import ElementalSummary from "@/components/elements/ElementalSummary";
-import ElementalCostSummary from "@/components/elements/ElementalCostSummary";
+import ReportsTab from "@/components/reports/ReportsTab";
 
 // Module components
 import BeamModule from "@/components/modules/BeamModule";
@@ -89,13 +103,12 @@ function useFormState<T extends Record<string, any>>(
   initialState: T,
   defaults: Partial<T> = {}
 ) {
-  // Merge defaults with initial state (defaults override initial undefined values)
   const fullInitialState = { ...defaults, ...initialState };
   const [values, setValues] = useState<T>(fullInitialState);
-  
+
   const reset = () => setValues(fullInitialState);
   const update = (partial: Partial<T>) => setValues((prev) => ({ ...prev, ...partial }));
-  
+
   return { values, update, reset };
 }
 
@@ -374,14 +387,74 @@ export default function Home() {
   const [rates, setRates] = useState<Record<string, number>>({});
 
   // ============================================
+  // EXECUTIVE SUMMARY INPUT STATE (Persisted)
+  // ============================================
+  const [executiveInput, setExecutiveInput] = useState<ExecutiveSummaryInputData>({
+    projectName: "My Project",
+    baseDate: new Date().toISOString().split("T")[0],
+    buildingArea: 0,
+    specialistServices: [],
+    preliminaries: 0,
+    preliminariesPercent: 0,
+    contingency: 0,
+    contingencyPercent: 0,
+    escalations: {
+      preConstructionMonths: 6,
+      preConstructionRate: 5,
+      constructionMonths: 12,
+      constructionRate: 8,
+    },
+    professionalFees: {
+      coreConsultants: 0,
+      specialistConsultants: 0,
+      disbursements: 0,
+    },
+  });
+
+  // ============================================
   // AUTO-GENERATE COST PLAN COMPONENTS
   // ============================================
   useEffect(() => {
     const wallComponents = generateWallCostPlanComponents(wallMeasurements, wallTypes);
     const slabComponents = generateSlabCostPlanComponents(slabMeasurements, slabTypes);
-    setCostPlanComponents([...wallComponents, ...slabComponents]);
-    console.log("Generated cost plan components:", wallComponents.length + slabComponents.length);
-  }, [wallMeasurements, wallTypes, slabMeasurements, slabTypes]);
+    const beamComponents = generateBeamCostPlanComponents(beamMeasurements, beamTypes);
+    const columnComponents = generateColumnCostPlanComponents(columnMeasurements, columnTypes);
+    const surfaceBedComponents = generateSurfaceBedCostPlanComponents(surfaceBedMeasurements, surfaceBedTypes);
+    const groundBeamComponents = generateGroundBeamCostPlanComponents(groundBeamMeasurements, groundBeamTypes);
+    const padFootingComponents = generatePadFootingCostPlanComponents(padFootingMeasurements, padFootingTypes);
+    const openingComponents = generateOpeningCostPlanComponents(openingMeasurements, openingTypes);
+
+    const allComponents = [
+      ...wallComponents,
+      ...slabComponents,
+      ...beamComponents,
+      ...columnComponents,
+      ...surfaceBedComponents,
+      ...groundBeamComponents,
+      ...padFootingComponents,
+      ...openingComponents,
+    ];
+
+    setCostPlanComponents(allComponents);
+    console.log("Generated cost plan components:", allComponents.length);
+  }, [
+    wallMeasurements,
+    wallTypes,
+    slabMeasurements,
+    slabTypes,
+    beamMeasurements,
+    beamTypes,
+    columnMeasurements,
+    columnTypes,
+    surfaceBedMeasurements,
+    surfaceBedTypes,
+    groundBeamMeasurements,
+    groundBeamTypes,
+    padFootingMeasurements,
+    padFootingTypes,
+    openingMeasurements,
+    openingTypes,
+  ]);
 
   // ============================================
   // MEASUREMENT EDITING STATES
@@ -419,6 +492,10 @@ export default function Home() {
       setOpeningMeasurements(savedData.openingMeasurements || []);
       setRates(savedData.rates || {});
       setCostPlanComponents(savedData.costPlanComponents || []);
+      // Restore executive input
+      if (savedData.executiveInput) {
+        setExecutiveInput(savedData.executiveInput);
+      }
     }
   }, []);
 
@@ -442,6 +519,7 @@ export default function Home() {
       openingMeasurements,
       rates,
       costPlanComponents,
+      executiveInput, // <-- ADDED
     };
     saveProjectData(data);
   };
@@ -467,6 +545,7 @@ export default function Home() {
     openingMeasurements,
     rates,
     costPlanComponents,
+    executiveInput, // <-- ADDED
   ]);
 
   const handleClearProject = () => {
@@ -490,6 +569,26 @@ export default function Home() {
       setOpeningMeasurements([]);
       setRates({});
       setCostPlanComponents([]);
+      // Reset executive input
+      setExecutiveInput({
+        projectName: "My Project",
+        baseDate: new Date().toISOString().split("T")[0],
+        buildingArea: 0,
+        specialistServices: [],
+        preliminaries: 0,
+        contingency: 0,
+        escalations: {
+          preConstructionMonths: 6,
+          preConstructionRate: 5,
+          constructionMonths: 12,
+          constructionRate: 8,
+        },
+        professionalFees: {
+          coreConsultants: 0,
+          specialistConsultants: 0,
+          disbursements: 0,
+        },
+      });
     }
   };
 
@@ -500,6 +599,31 @@ export default function Home() {
       return;
     }
     exportBOQToExcel(masterBoqItems, rates, "My Project");
+  };
+
+  // ============================================
+  // BUILD COST PLANS FROM COMPONENTS
+  // ============================================
+  const buildCostPlans = (): CostPlan[] => {
+    const items: CostPlanItem[] = costPlanComponents.map((comp, index) => ({
+      id: `item-${index}`,
+      description: comp.description,
+      elementCode: comp.elementalElementId || "uncategorised",
+      quantity: comp.qty,
+      unit: comp.unit,
+      rate: comp.rate || 0,
+      amount: (comp.qty || 0) * (comp.rate || 0),
+    }));
+
+    const costPlan: CostPlan = {
+      id: "cp-1",
+      name: "Main Cost Plan",
+      type: "floor",
+      gfa_m2: executiveInput.buildingArea || 0,
+      items,
+    };
+
+    return [costPlan];
   };
 
   // ============================================
@@ -842,18 +966,18 @@ export default function Home() {
   }
 
   function addSlabMeasurement() {
-    if (!newSlabMeas.mark.trim() || newSlabMeas.slabTypeId === 0 || 
-        !newSlabMeas.length || newSlabMeas.length <= 0 || 
-        !newSlabMeas.width || newSlabMeas.width <= 0 || 
+    if (!newSlabMeas.mark.trim() || newSlabMeas.slabTypeId === 0 ||
+        !newSlabMeas.length || newSlabMeas.length <= 0 ||
+        !newSlabMeas.width || newSlabMeas.width <= 0 ||
         !newSlabMeas.quantity || newSlabMeas.quantity <= 0) {
       return;
     }
-    
+
     const length = Number(newSlabMeas.length) || 0;
     const width = Number(newSlabMeas.width) || 0;
     const quantity = Number(newSlabMeas.quantity) || 0;
     const area = length * width * quantity;
-    
+
     const measurement = {
       id: Date.now(),
       ...newSlabMeas,
@@ -1045,638 +1169,19 @@ export default function Home() {
   const masterBoqItems: Record<string, BoqItem> = {};
 
   // ---------- BEAMS ----------
-  beamMeasurements.forEach((m) => {
-    const beam = beamTypes.find((b) => b.id === m.beamTypeId);
-    if (!beam) return;
-
-    const beamWidth = beam.beamWidthMm || beam.width || 230;
-    const downstandDepth = beam.downstandDepthMm || beam.depth || 400;
-    const upstandHeight = beam.upstandHeightMm || 0;
-    const slabThickness = beam.slabThicknessMm || 0;
-    const widthM = beamWidth / 1000;
-    const downstandM = downstandDepth / 1000;
-
-    let concrete = 0;
-    const profileType = beam.beamProfileType || "Downstand Beam";
-    if (profileType === "Combined Downstand / Inverted Beam") {
-      const overallDepth = downstandDepth + slabThickness + upstandHeight;
-      concrete = (beamWidth / 1000) * (overallDepth / 1000) * m.length;
-    } else {
-      concrete = widthM * downstandM * m.length;
-    }
-
-    const totalReinf = (concrete * (beam.reinfKg || 0)) / 1000;
-    const highTensile = totalReinf * 0.9;
-    const mildSteel = totalReinf * 0.1;
-    const strength = getConcreteStrength(beam.concreteClass);
-    const finish = beam.formworkFinish || "Smooth";
-
-    const baseContribution = (qty: number) => ({
-      module: "Beams",
-      measurementId: m.id,
-      mark: m.mark,
-      qty,
-    });
-
-    let concreteDesc = `${beam.concreteClass} concrete in beams`;
-    if (profileType === "Combined Downstand / Inverted Beam") {
-      concreteDesc = `${beam.concreteClass} concrete in combined downstand / inverted beams`;
-    }
-    addBoqItemFromBillKey(
-      masterBoqItems,
-      "CONCRETE",
-      `Concrete (${strength})`,
-      concreteDesc,
-      "m³",
-      concrete,
-      baseContribution(concrete)
-    );
-
-    if (highTensile > 0) {
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "CONCRETE",
-        SECTIONS.REINFORCEMENT,
-        "High tensile reinforcement",
-        "t",
-        highTensile,
-        baseContribution(highTensile)
-      );
-    }
-    if (mildSteel > 0) {
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "CONCRETE",
-        SECTIONS.REINFORCEMENT,
-        "Mild steel reinforcement",
-        "t",
-        mildSteel,
-        baseContribution(mildSteel)
-      );
-    }
-
-    if (profileType === "Integrated Beam / No Separate Beam Formwork") return;
-
-    let proppingHeightDesc = "";
-    if (beam.proppingHeightBand === "Custom") {
-      proppingHeightDesc = beam.customProppingHeightDescription || "custom height";
-    } else {
-      proppingHeightDesc = beam.proppingHeightBand || "Not exceeding 1.5m";
-    }
-
-    if (profileType === "Combined Downstand / Inverted Beam") {
-      const overallDepth = downstandDepth + slabThickness + upstandHeight;
-      const outerGirth = overallDepth + beamWidth + downstandDepth;
-      const outerArea = (outerGirth / 1000) * m.length;
-      if (outerArea > 0) {
-        const desc = `${finish} formwork to sides and soffits of combined downstand / inverted beams, propped up ${proppingHeightDesc} high`;
-        addBoqItemFromBillKey(
-          masterBoqItems,
-          "CONCRETE",
-          SECTIONS.FORMWORK,
-          desc,
-          "m²",
-          outerArea,
-          baseContribution(outerArea)
-        );
-      }
-      if (upstandHeight > 0) {
-        if (upstandHeight <= 300) {
-          const desc = `${finish} formwork to edges, risers, ends and reveals of inverted beams, propped up ${proppingHeightDesc} high`;
-          addBoqItemFromBillKey(
-            masterBoqItems,
-            "CONCRETE",
-            SECTIONS.FORMWORK,
-            desc,
-            "m",
-            m.length,
-            baseContribution(m.length)
-          );
-        } else {
-          const invArea = (upstandHeight / 1000) * m.length;
-          const desc = `${finish} formwork to sides of inverted beams, propped up ${proppingHeightDesc} high`;
-          addBoqItemFromBillKey(
-            masterBoqItems,
-            "CONCRETE",
-            SECTIONS.FORMWORK,
-            desc,
-            "m²",
-            invArea,
-            baseContribution(invArea)
-          );
-        }
-      }
-      return;
-    }
-
-    let girth = 0;
-    let desc = "";
-    switch (profileType) {
-      case "Downstand Beam":
-        girth = 2 * downstandDepth + beamWidth;
-        desc = `${finish} formwork to sides and soffits of downstand beams, propped up ${proppingHeightDesc} high`;
-        break;
-      case "Upstand Beam":
-        girth = 2 * upstandHeight;
-        desc = `${finish} formwork to sides of upstand beams, propped up ${proppingHeightDesc} high`;
-        break;
-      case "Perimeter Beam (Downstand Only)":
-        girth = 2 * downstandDepth + beamWidth;
-        desc = `${finish} formwork to sides and soffits of perimeter beams, propped up ${proppingHeightDesc} high`;
-        break;
-      case "Perimeter Beam (Downstand + Upstand)":
-        girth = 2 * downstandDepth + beamWidth + upstandHeight;
-        desc = `${finish} formwork to sides and soffits of perimeter beams with upstand, propped up ${proppingHeightDesc} high`;
-        break;
-      default:
-        girth = 2 * downstandDepth + beamWidth;
-        desc = `${finish} formwork to beams, propped up ${proppingHeightDesc} high`;
-    }
-    const formworkArea = (girth / 1000) * m.length;
-    if (formworkArea > 0) {
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "CONCRETE",
-        SECTIONS.FORMWORK,
-        desc,
-        "m²",
-        formworkArea,
-        baseContribution(formworkArea)
-      );
-    }
-  });
+  generateBeamBoqItems(beamMeasurements, beamTypes, masterBoqItems);
 
   // ---------- SURFACE BEDS ----------
-  surfaceBedMeasurements.forEach((m) => {
-    const sb = surfaceBedTypes.find((s) => s.id === m.surfaceBedTypeId);
-    if (!sb) return;
-
-    const concreteVol = m.area * (sb.thickness / 1000);
-    const strength = getConcreteStrength(sb.concreteClass);
-    const baseContribution = (qty: number) => ({
-      module: "Surface Beds",
-      measurementId: m.id,
-      mark: m.mark,
-      qty,
-    });
-
-    if (sb.layer1Material && sb.layer1Thickness > 0) {
-      addLayerToBoq(masterBoqItems, sb.layer1Material, sb.layer1Thickness, m.area, baseContribution(m.area));
-    }
-    if (sb.layer2Material && sb.layer2Thickness > 0) {
-      addLayerToBoq(masterBoqItems, sb.layer2Material, sb.layer2Thickness, m.area, baseContribution(m.area));
-    }
-    if (sb.layer3Material && sb.layer3Thickness > 0) {
-      addLayerToBoq(masterBoqItems, sb.layer3Material, sb.layer3Thickness, m.area, baseContribution(m.area));
-    }
-
-    if (sb.dpm) {
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "WATERPROOFING",
-        SECTIONS.DPM,
-        "DPM under surface beds",
-        "m²",
-        m.area,
-        baseContribution(m.area)
-      );
-    }
-
-    if (sb.soilPoison) {
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "EARTHWORKS",
-        SECTIONS.SOIL_POISONING,
-        "Soil poisoning under surface beds",
-        "m²",
-        m.area,
-        baseContribution(m.area)
-      );
-    }
-
-    if (sb.meshType !== "None") {
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "CONCRETE",
-        SECTIONS.REINFORCEMENT,
-        "Fabric reinforcement",
-        "m²",
-        m.area,
-        baseContribution(m.area)
-      );
-    }
-
-    addBoqItemFromBillKey(
-      masterBoqItems,
-      "CONCRETE",
-      `Concrete (${strength})`,
-      `${sb.concreteClass} concrete in surface beds`,
-      "m³",
-      concreteVol,
-      baseContribution(concreteVol)
-    );
-
-    if (sb.screedRequired) {
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "FLOOR_COVERINGS",
-        SECTIONS.SCREEDS,
-        `${sb.screedThickness}mm screed ${sb.screedType}`,
-        "m²",
-        m.area,
-        baseContribution(m.area)
-      );
-    }
-
-    if (sb.tileRequired && sb.tilePcSum && sb.tilePcSum > 0) {
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "TILING",
-        SECTIONS.TILING,
-        `Tiles PC Sum R${sb.tilePcSum}/m²`,
-        "m²",
-        m.area,
-        baseContribution(m.area)
-      );
-    }
-
-    if (sb.powerfloat) {
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "FLOOR_COVERINGS",
-        SECTIONS.FLOOR_FINISHES,
-        "Powerfloat finish",
-        "m²",
-        m.area,
-        baseContribution(m.area)
-      );
-    }
-  });
+  generateSurfaceBedBoqItems(surfaceBedMeasurements, surfaceBedTypes, masterBoqItems);
 
   // ---------- PAD FOOTINGS ----------
-  padFootingMeasurements.forEach((m) => {
-    const pf = padFootingTypes.find((p) => p.id === m.padFootingTypeId);
-    if (!pf) return;
-
-    const qty = m.quantity;
-    const padConcrete = (pf.padLength / 1000) * (pf.padWidth / 1000) * (pf.padDepth / 1000) * qty;
-    const excavationVol = (pf.excavationLength / 1000) * (pf.excavationWidth / 1000) * (pf.excavationDepth / 1000) * qty;
-    const totalReinf = (padConcrete * pf.reinfKg) / 1000;
-    const highTensile = totalReinf * 0.9;
-    const mildSteel = totalReinf * 0.1;
-    const strength = getConcreteStrength(pf.concreteClass);
-    const baseContribution = (q: number) => ({
-      module: "Pad Footings",
-      measurementId: m.id,
-      mark: m.mark,
-      qty: q,
-    });
-
-    addBoqItemFromBillKey(
-      masterBoqItems,
-      "EARTHWORKS",
-      SECTIONS.EXCAVATION,
-      "Excavation for pad footings",
-      "m³",
-      excavationVol,
-      baseContribution(excavationVol)
-    );
-
-    addBoqItemFromBillKey(
-      masterBoqItems,
-      "CONCRETE",
-      `Concrete (${strength})`,
-      `${pf.concreteClass} concrete in pad footings`,
-      "m³",
-      padConcrete,
-      baseContribution(padConcrete)
-    );
-
-    if (highTensile > 0) {
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "CONCRETE",
-        SECTIONS.REINFORCEMENT,
-        "High tensile reinforcement",
-        "t",
-        highTensile,
-        baseContribution(highTensile)
-      );
-    }
-    if (mildSteel > 0) {
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "CONCRETE",
-        SECTIONS.REINFORCEMENT,
-        "Mild steel reinforcement",
-        "t",
-        mildSteel,
-        baseContribution(mildSteel)
-      );
-    }
-
-    if (pf.formworkRequired) {
-      const formwork = 2 * ((pf.padLength / 1000) + (pf.padWidth / 1000)) * (pf.padDepth / 1000) * qty;
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "CONCRETE",
-        SECTIONS.FORMWORK,
-        "Formwork to sides of pad footings",
-        "m²",
-        formwork,
-        baseContribution(formwork)
-      );
-    }
-
-    if (pf.blindingRequired) {
-      const blinding = (pf.excavationLength / 1000) * (pf.excavationWidth / 1000) * (pf.blindingThickness / 1000) * qty;
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "EARTHWORKS",
-        SECTIONS.BLINDING,
-        `${pf.blindingThickness}mm blinding under pad footings`,
-        "m³",
-        blinding,
-        baseContribution(blinding)
-      );
-    }
-
-    if (pf.soilPoison) {
-      const area = (pf.excavationLength / 1000) * (pf.excavationWidth / 1000) * qty;
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "EARTHWORKS",
-        SECTIONS.SOIL_POISONING,
-        "Soil poisoning to pad footings",
-        "m²",
-        area,
-        baseContribution(area)
-      );
-    }
-
-    if (pf.backfill) {
-      const backfill = excavationVol - padConcrete;
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "EARTHWORKS",
-        SECTIONS.BACKFILLING,
-        "Backfill to pad footings",
-        "m³",
-        backfill,
-        baseContribution(backfill)
-      );
-    }
-  });
+  generatePadFootingBoqItems(padFootingMeasurements, padFootingTypes, masterBoqItems);
 
   // ---------- GROUND BEAMS ----------
-  groundBeamMeasurements.forEach((m) => {
-    const gb = groundBeamTypes.find((g) => g.id === m.groundBeamTypeId);
-    if (!gb) return;
-
-    const length = m.length;
-    const trenchVol = (gb.trenchWidth / 1000) * (gb.trenchDepth / 1000) * length;
-    const concreteVol = (gb.beamWidth / 1000) * (gb.beamDepth / 1000) * length;
-    const totalReinf = (concreteVol * gb.reinfKgPerM3) / 1000;
-    const highTensile = totalReinf * 0.9;
-    const mildSteel = totalReinf * 0.1;
-    const strength = getConcreteStrength(gb.concreteClass);
-    const baseContribution = (q: number) => ({
-      module: "Ground Beams",
-      measurementId: m.id,
-      mark: m.mark,
-      qty: q,
-    });
-
-    addBoqItemFromBillKey(
-      masterBoqItems,
-      "EARTHWORKS",
-      SECTIONS.EXCAVATION,
-      "Excavation for ground beams",
-      "m³",
-      trenchVol,
-      baseContribution(trenchVol)
-    );
-
-    addBoqItemFromBillKey(
-      masterBoqItems,
-      "CONCRETE",
-      `Concrete (${strength})`,
-      `${gb.concreteClass} concrete in ground beams`,
-      "m³",
-      concreteVol,
-      baseContribution(concreteVol)
-    );
-
-    if (highTensile > 0) {
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "CONCRETE",
-        SECTIONS.REINFORCEMENT,
-        "High tensile reinforcement",
-        "t",
-        highTensile,
-        baseContribution(highTensile)
-      );
-    }
-    if (mildSteel > 0) {
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "CONCRETE",
-        SECTIONS.REINFORCEMENT,
-        "Mild steel reinforcement",
-        "t",
-        mildSteel,
-        baseContribution(mildSteel)
-      );
-    }
-
-    if (gb.formworkRequired) {
-      const formwork = (gb.beamDepth / 1000) * length * 2;
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "CONCRETE",
-        SECTIONS.FORMWORK,
-        "Formwork to sides of ground beams",
-        "m²",
-        formwork,
-        baseContribution(formwork)
-      );
-    }
-
-    if (gb.blindingRequired) {
-      const blinding = (gb.beamWidth / 1000) * (gb.blindingThickness / 1000) * length;
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "EARTHWORKS",
-        SECTIONS.BLINDING,
-        `${gb.blindingThickness}mm blinding under ground beams`,
-        "m³",
-        blinding,
-        baseContribution(blinding)
-      );
-    }
-
-    if (gb.backfillRequired) {
-      const backfill = trenchVol - concreteVol;
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "EARTHWORKS",
-        SECTIONS.BACKFILLING,
-        "Backfill to ground beams",
-        "m³",
-        backfill,
-        baseContribution(backfill)
-      );
-    }
-
-    if (gb.dpcRequired) {
-      const dpcArea = (gb.beamWidth / 1000) * length;
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "MASONRY",
-        SECTIONS.DAMP_PROOF_COURSES,
-        "DPC to ground beams",
-        "m²",
-        dpcArea,
-        baseContribution(dpcArea)
-      );
-    }
-
-    if (gb.soilPoisonRequired) {
-      const area = (gb.trenchWidth / 1000) * length;
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "EARTHWORKS",
-        SECTIONS.SOIL_POISONING,
-        "Soil poisoning under ground beams",
-        "m²",
-        area,
-        baseContribution(area)
-      );
-    }
-
-    if (gb.formworkRequired && gb.workingSpaceRequired) {
-      const trenchWidthM = gb.trenchWidth / 1000;
-      const depthM = gb.trenchDepth / 1000;
-      const perimeter = 2 * (trenchWidthM + depthM);
-      let workingSpaceArea = 0;
-      let depthBandDesc = "";
-
-      if (depthM > 0.5 && depthM <= 1.5) {
-        workingSpaceArea = perimeter * length;
-        depthBandDesc = "Exceeding 0.5m and not exceeding 1.5m deep";
-      } else if (depthM > 1.5 && depthM <= 3.0) {
-        workingSpaceArea = perimeter * length;
-        depthBandDesc = "Exceeding 1.5m and not exceeding 3.0m deep";
-      } else if (depthM > 3.0 && depthM <= 4.5) {
-        workingSpaceArea = perimeter * length;
-        depthBandDesc = "Exceeding 3.0m and not exceeding 4.5m deep";
-      } else if (depthM > 4.5 && depthM <= 6.0) {
-        workingSpaceArea = perimeter * length;
-        depthBandDesc = "Exceeding 4.5m and not exceeding 6.0m deep";
-      } else if (depthM > 6.0) {
-        workingSpaceArea = perimeter * length;
-        depthBandDesc = "Exceeding 6.0m deep";
-      }
-
-      if (workingSpaceArea > 0) {
-        const desc = `Back excavation of vertical sides of excavations in earth for working space including backfilling compacted to 95% Mod AASHTO density: ${depthBandDesc} for placing and removing formwork to beams, bases etc, where excavated face abuts concrete face.`;
-        addBoqItemFromBillKey(
-          masterBoqItems,
-          "EARTHWORKS",
-          "Working Space",
-          desc,
-          "m²",
-          workingSpaceArea,
-          baseContribution(workingSpaceArea)
-        );
-      }
-    }
-
-    if (gb.riskOfCollapseRequired) {
-      const trenchWidthM = gb.trenchWidth / 1000;
-      const depthM = gb.trenchDepth / 1000;
-      const perimeter = 2 * (trenchWidthM + depthM);
-      const collapseArea = perimeter * length;
-      let bandDesc = depthM <= 1.5 ? "not exceeding 1.5m deep" : "exceeding 1.5m deep";
-      const desc = `Sides of trench and hole excavations ${bandDesc}`;
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "EARTHWORKS",
-        "Risk of Collapse",
-        desc,
-        "m²",
-        collapseArea,
-        baseContribution(collapseArea)
-      );
-    }
-  });
+  generateGroundBeamBoqItems(groundBeamMeasurements, groundBeamTypes, masterBoqItems);
 
   // ---------- COLUMNS ----------
-  columnMeasurements.forEach((m) => {
-    const col = columnTypes.find((c) => c.id === m.columnTypeId);
-    if (!col) return;
-
-    const qty = m.quantity;
-    const concreteVol = (col.width / 1000) * (col.depth / 1000) * (col.height / 1000) * qty;
-    const totalReinf = (concreteVol * col.reinfKgPerM3) / 1000;
-    const highTensile = totalReinf * 0.9;
-    const mildSteel = totalReinf * 0.1;
-    const strength = getConcreteStrength(col.concreteClass);
-    const baseContribution = (q: number) => ({
-      module: "Columns",
-      measurementId: m.id,
-      mark: m.mark,
-      qty: q,
-    });
-
-    addBoqItemFromBillKey(
-      masterBoqItems,
-      "CONCRETE",
-      `Concrete (${strength})`,
-      `${col.concreteClass} concrete in columns`,
-      "m³",
-      concreteVol,
-      baseContribution(concreteVol)
-    );
-
-    if (highTensile > 0) {
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "CONCRETE",
-        SECTIONS.REINFORCEMENT,
-        "High tensile reinforcement",
-        "t",
-        highTensile,
-        baseContribution(highTensile)
-      );
-    }
-    if (mildSteel > 0) {
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "CONCRETE",
-        SECTIONS.REINFORCEMENT,
-        "Mild steel reinforcement",
-        "t",
-        mildSteel,
-        baseContribution(mildSteel)
-      );
-    }
-
-    if (col.formworkRequired) {
-      const perimeter = 2 * ((col.width / 1000) + (col.depth / 1000));
-      const formwork = perimeter * (col.height / 1000) * qty;
-      addBoqItemFromBillKey(
-        masterBoqItems,
-        "CONCRETE",
-        SECTIONS.FORMWORK,
-        `${col.formworkFinish} formwork to sides of columns`,
-        "m²",
-        formwork,
-        baseContribution(formwork)
-      );
-    }
-  });
+  generateColumnBoqItems(columnMeasurements, columnTypes, masterBoqItems);
 
   // ---------- WALLS ----------
   generateWallBoqItems(wallMeasurements, wallTypes, masterBoqItems);
@@ -1685,112 +1190,7 @@ export default function Home() {
   generateSlabBoqItems(slabMeasurements, slabTypes, masterBoqItems);
 
   // ---------- OPENINGS ----------
-  openingMeasurements.forEach((m) => {
-    const op = openingTypes.find((o) => o.id === m.openingTypeId);
-    if (!op) return;
-
-    const qty = m.quantity;
-    const width = op.widthMm / 1000;
-    const height = op.heightMm / 1000;
-    const perimeter = 2 * height + width;
-    const wallThickness = op.wallThicknessOption === "Half brick" ? 0.102
-      : op.wallThicknessOption === "One brick" ? 0.215
-      : (op.wallThicknessMm || 0) / 1000;
-
-    const addItem = (billKey: string, section: string, desc: string, unit: string, q: number) => {
-      if (q > 0) {
-        addBoqItemFromBillKey(
-          masterBoqItems,
-          billKey,
-          section,
-          desc,
-          unit,
-          q,
-          { module: "Openings", measurementId: m.id, mark: m.mark, qty: q }
-        );
-      }
-    };
-
-    if (op.includeLintel) {
-      const lintelLength = (op.widthMm + 2 * op.lintelBearingMm) / 1000;
-      let category = "";
-      if (lintelLength <= 3.0) category = "not exceeding 3.0m";
-      else if (lintelLength <= 4.5) category = "exceeding 3.0m but not exceeding 4.5m";
-      else if (lintelLength <= 6.0) category = "exceeding 4.5m but not exceeding 6.0m";
-      else if (lintelLength <= 7.5) category = "exceeding 6.0m but not exceeding 7.5m";
-      else category = "exceeding 7.5m";
-      const desc = `Prestressed concrete lintel ${category} over openings`;
-      addItem("MASONRY", SECTIONS.LINTELS, desc, "m", lintelLength * qty);
-    }
-
-    if (op.includeRevealPlaster && wallThickness > 0) {
-      const area = perimeter * wallThickness;
-      const descPlaster = `Plaster to narrow widths around ${op.category.toLowerCase()} openings`;
-      addItem("PLASTERING", SECTIONS.NARROW_WIDTHS, descPlaster, "m²", area * qty);
-      const descPaint = `Paint to narrow widths around ${op.category.toLowerCase()} openings`;
-      addItem("PAINTWORK", SECTIONS.NARROW_WIDTHS, descPaint, "m²", area * qty);
-    }
-
-    if (op.category === "Door") {
-      const config = op.doorConfiguration || "Single";
-      const leafType = op.doorLeafType || "Hollow core timber door";
-      const frameType = op.doorFrameType || "Timber frame";
-      const doorW = op.widthMm;
-      const doorH = op.heightMm;
-
-      let leafBill = "CARPENTRY";
-      if (leafType.includes("Aluminium") || leafType.includes("Steel")) leafBill = "METALWORK";
-      const leafDesc = `${config} ${leafType} ${doorW} x ${doorH}mm high`;
-      addItem(leafBill, SECTIONS.DOORS, leafDesc, "No", qty);
-
-      let frameBill = "CARPENTRY";
-      if (frameType !== "Timber frame") frameBill = "METALWORK";
-      let frameLen = 2 * doorH + doorW;
-      if (op.includeThreshold) frameLen += doorW;
-      const frameLenM = frameLen / 1000;
-      const frameDesc = `${frameType} for ${config} door`;
-      addItem(frameBill, SECTIONS.FRAMES, frameDesc, "m", frameLenM * qty);
-
-      if (op.includeIronmongery) {
-        addItem("IRONMONGERY", SECTIONS.IRONMONGERY, "Standard ironmongery set", "No", qty);
-      }
-
-      if (op.paintDoor) {
-        const paintArea = (doorW / 1000) * (doorH / 1000) * 2;
-        addItem("PAINTWORK", SECTIONS.PAINT, "Paint to doors", "m²", paintArea * qty);
-      }
-      if (op.paintFrame) {
-        const paintArea = frameLenM * 0.1;
-        addItem("PAINTWORK", SECTIONS.PAINT, "Paint to door frames", "m²", paintArea * qty);
-      }
-    }
-
-    if (op.category === "Window") {
-      const winType = op.windowType || "Aluminium window";
-      const frameType = op.windowFrameType || "Aluminium";
-      const winW = op.widthMm;
-      const winH = op.heightMm;
-
-      let winBill = "METALWORK";
-      if (winType.includes("Timber")) winBill = "CARPENTRY";
-      const winDesc = `${winType} ${winW} x ${winH}mm high`;
-      addItem(winBill, SECTIONS.WINDOWS, winDesc, "No", qty);
-
-      if (op.externalSill) {
-        const sillLen = winW / 1000;
-        addItem("MASONRY", SECTIONS.SILLS, "External sill to window openings", "m", sillLen * qty);
-      }
-      if (op.internalSill) {
-        const sillLen = winW / 1000;
-        addItem("CARPENTRY", SECTIONS.SILLS, "Internal sill to window openings", "m", sillLen * qty);
-      }
-      if (op.paintFrame) {
-        const framePerim = 2 * (winW + winH) / 1000;
-        const paintArea = framePerim * 0.1;
-        addItem("PAINTWORK", SECTIONS.PAINT, "Paint to window frames", "m²", paintArea * qty);
-      }
-    }
-  });
+  generateOpeningBoqItems(openingMeasurements, openingTypes, masterBoqItems);
 
   // ============================================
   // TAB STATE
@@ -2041,25 +1441,12 @@ export default function Home() {
         )}
 
         {activeTab === "reports" && (
-          <>
-            <ElementalCostSummary
-              costPlanComponents={costPlanComponents}
-              rates={rates}
-              styles={{ cardStyle, tableStyle, thStyle, tdStyle }}
-            />
-            <ElementalSummary
-              beamMeasurements={beamMeasurements}
-              surfaceBedMeasurements={surfaceBedMeasurements}
-              padFootingMeasurements={padFootingMeasurements}
-              groundBeamMeasurements={groundBeamMeasurements}
-              columnMeasurements={columnMeasurements}
-              wallMeasurements={wallMeasurements}
-              slabMeasurements={slabMeasurements}
-              openingMeasurements={openingMeasurements}
-              boqItems={masterBoqItems}
-              styles={{ cardStyle, tableStyle, thStyle, tdStyle }}
-            />
-          </>
+          <ReportsTab
+            costPlans={buildCostPlans()}
+            executiveInput={executiveInput}
+            setExecutiveInput={setExecutiveInput}
+            styles={styles}
+          />
         )}
 
         {activeTab === "settings" && (

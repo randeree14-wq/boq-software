@@ -1,3 +1,142 @@
+// ============================================
+// LEVEL 1: COST PLAN ENGINE
+// ============================================
+
+export type CostPlan = {
+  id: string;
+  name: string;
+  type: "floor" | "zone" | "package";
+  gfa_m2: number;
+  multiplier?: number;
+  items: CostPlanItem[];
+};
+
+export type CostPlanItem = {
+  id: string;
+  description: string;
+  elementCode: string;
+  quantity: number;
+  unit: string;
+  rate: number;
+  amount: number;
+};
+
+// ============================================
+// LEVEL 2: ELEMENTAL SUMMARY (PER COST PLAN)
+// ============================================
+
+export type ElementalSummary = {
+  costPlanId: string;
+  elements: ElementalSummaryItem[];
+  totalValue: number;
+};
+
+export type ElementalSummaryItem = {
+  name: string;
+  code: string;
+  value: number;
+  percentageOfCostPlan: number;
+};
+
+// ============================================
+// LEVEL 3: EXECUTIVE SUMMARY (PROJECT-WIDE)
+// ============================================
+
+export type ExecutiveSummary = {
+  projectName: string;
+  totalGFA: number;
+  baseDate: string;
+  costPlanLines: ProjectCostLine[];
+  costPlanTotal: number;
+  specialistServices: {
+    items: SpecialistServiceItem[];
+    totalValue: number;
+  };
+  preliminaries: number;
+  contingency: number;
+  estimatedCurrentConstructionCost: number;
+  escalations: EscalationData;
+  escalationAmount: number;
+  estimatedConstructionCostAtCompletion: number;
+  professionalFees: {
+    coreConsultants: number;
+    specialistConsultants: number;
+    disbursements: number;
+    total: number;
+  };
+  estimatedDevelopmentCostAtCompletion: number;
+};
+
+export type ProjectCostLine = {
+  name: string;
+  value: number;
+  projectRatePerM2: number;
+  percentageOfTotalProject: number;
+};
+
+export type SpecialistServiceItem = {
+  id: string;
+  category: string;
+  name: string;
+  value: number;
+  ratePerM2: number;
+  percentageOfProject: number;
+};
+
+export type EscalationData = {
+  preConstructionMonths: number;
+  preConstructionRate: number;
+  constructionMonths: number;
+  constructionRate: number;
+};
+
+export type ProfessionalFeeItem = {
+  name: string;
+  value: number;
+  percentageOfConstructionCost: number;
+};
+
+export type ExecutiveSummary = {
+  projectName: string;
+  totalGFA: number;
+  baseDate: string;
+  
+  // Cost Plan Roll-up
+  costPlanLines: ProjectCostLine[];
+  costPlanTotal: number;
+  
+  // Specialist Services
+  specialistServices: {
+    items: SpecialistServiceItem[];
+    totalValue: number;
+  };
+  
+  // Preliminaries
+  preliminaries: number;
+  
+  // Contingencies
+  contingency: number;
+  
+  // Construction Cost
+  estimatedCurrentConstructionCost: number;
+  
+  // Escalations
+  escalations: EscalationData;
+  escalationAmount: number;
+  estimatedConstructionCostAtCompletion: number;
+  
+  // Professional Fees
+  professionalFees: {
+    coreConsultants: number;
+    specialistConsultants: number;
+    disbursements: number;
+    total: number;
+  };
+  
+  // Final Output
+  estimatedDevelopmentCostAtCompletion: number;
+};
+
 export type BeamProfileType = 
   | "Downstand Beam"
   | "Upstand Beam"
@@ -399,4 +538,61 @@ export type OutputContext = {
   module: string;
   sectionId: string;
   elementId: string;
+};
+
+// ============================================
+// SPECIALIST SERVICES
+// ============================================
+
+export type SpecialistServiceItem = {
+  id: string;
+  category: string;
+  name: string;
+  description: string;
+  value: number;              // Total value (calculated from rate/m² or lump sum)
+  ratePerM2: number;          // Optional: rate per m²
+  lumpSum: number;            // Optional: fixed lump sum
+  unit: "m²" | "lump";        // How it's calculated
+  percentageOfProject: number; // Calculated by engine
+};
+
+// Default specialist service categories
+export const SPECIALIST_CATEGORIES = {
+  ELECTRICAL: "Electrical Installation",
+  ELECTRONIC: "Electronic Installation",
+  AIRCONDITIONING: "Air Conditioning",
+  LIFT: "Lift Installation",
+  TENANT: "Tenant Installation",
+  CONTRACTOR: "Contractor Items",
+  OTHER: "Other",
+} as const;
+
+export type SpecialistCategory = keyof typeof SPECIALIST_CATEGORIES;
+
+// ============================================
+// EXECUTIVE SUMMARY INPUT (Persisted)
+// ============================================
+
+export type ProfessionalFees = {
+  coreConsultants: number;
+  specialistConsultants: number;
+  disbursements: number;
+};
+
+export type ExecutiveSummaryInputData = {
+  projectName: string;
+  baseDate: string;
+  buildingArea: number;
+  specialistServices: SpecialistServiceItem[];
+  preliminaries: number;
+  contingency: number;
+  escalations: EscalationData;
+  professionalFees: ProfessionalFees;
+};
+
+// Update ProjectData to include executiveInput
+export type ProjectData = {
+  // ... existing fields (beamTypes, beamMeasurements, etc.)
+  // ... rates, costPlanComponents
+  executiveInput: ExecutiveSummaryInputData;
 };

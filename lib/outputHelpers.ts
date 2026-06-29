@@ -92,11 +92,10 @@ export function createConcreteOutputs(
 ): MeasurementOutput[] {
   const outputs: MeasurementOutput[] = [];
   const safeQty = qty || 0;
-  if (isNaN(safeQty) || safeQty === 0) return outputs; // Skip if invalid
-  
+  if (isNaN(safeQty) || safeQty === 0) return outputs;
+
   const strengthLabel = strength || concreteClass?.split('/')[0] || "Unknown";
 
-  // Cost Plan
   outputs.push(
     createCostPlanOutput(
       context,
@@ -108,8 +107,6 @@ export function createConcreteOutputs(
       elementId || context.elementId
     )
   );
-
-  // BOQ
   outputs.push(
     createBoqOutput(
       context,
@@ -141,7 +138,6 @@ export function createRebarOutputs(
   const mildSteel = totalReinf * 0.1;
 
   if (highTensile > 0) {
-    // Cost Plan
     outputs.push(
       createCostPlanOutput(
         context,
@@ -153,7 +149,6 @@ export function createRebarOutputs(
         elementId || context.elementId
       )
     );
-    // BOQ
     outputs.push(
       createBoqOutput(
         context,
@@ -168,7 +163,6 @@ export function createRebarOutputs(
   }
 
   if (mildSteel > 0) {
-    // Cost Plan
     outputs.push(
       createCostPlanOutput(
         context,
@@ -180,7 +174,6 @@ export function createRebarOutputs(
         elementId || context.elementId
       )
     );
-    // BOQ
     outputs.push(
       createBoqOutput(
         context,
@@ -209,7 +202,6 @@ export function createMeshOutputs(
 ): MeasurementOutput[] {
   const outputs: MeasurementOutput[] = [];
 
-  // Cost Plan
   outputs.push(
     createCostPlanOutput(
       context,
@@ -221,8 +213,6 @@ export function createMeshOutputs(
       elementId || context.elementId
     )
   );
-
-  // BOQ
   outputs.push(
     createBoqOutput(
       context,
@@ -250,7 +240,6 @@ export function createFormworkOutputs(
 ): MeasurementOutput[] {
   const outputs: MeasurementOutput[] = [];
 
-  // Cost Plan
   outputs.push(
     createCostPlanOutput(
       context,
@@ -262,8 +251,6 @@ export function createFormworkOutputs(
       elementId || context.elementId
     )
   );
-
-  // BOQ
   outputs.push(
     createBoqOutput(
       context,
@@ -281,7 +268,7 @@ export function createFormworkOutputs(
 
 /**
  * Screed component
- * FIXED: Goes to PLASTERING bill
+ * Goes to PLASTERING bill
  */
 export function createScreedOutputs(
   context: OutputContext,
@@ -294,7 +281,6 @@ export function createScreedOutputs(
   const outputs: MeasurementOutput[] = [];
   const description = `${thickness}mm screed ${screedType}`;
 
-  // Cost Plan
   outputs.push(
     createCostPlanOutput(
       context,
@@ -306,8 +292,6 @@ export function createScreedOutputs(
       elementId || context.elementId
     )
   );
-
-  // BOQ - FIXED: Goes to PLASTERING bill
   outputs.push(
     createBoqOutput(
       context,
@@ -325,7 +309,7 @@ export function createScreedOutputs(
 
 /**
  * Floor Finish component (for tiles, vinyl, etc.)
- * FIXED: Goes to TILING bill
+ * Goes to TILING bill
  */
 export function createFloorFinishOutputs(
   context: OutputContext,
@@ -339,7 +323,6 @@ export function createFloorFinishOutputs(
   const outputs: MeasurementOutput[] = [];
   const fullDescription = `${description} floor finish PC R${pcSum}/m²`;
 
-  // Cost Plan
   outputs.push(
     createCostPlanOutput(
       context,
@@ -353,7 +336,6 @@ export function createFloorFinishOutputs(
     )
   );
 
-  // BOQ - FIXED: Goes to TILING bill (or appropriate bill)
   const billKey = isTiles ? "TILING" : "FLOOR_COVERINGS";
   const section = isTiles ? SECTIONS.TILING : SECTIONS.FLOOR_FINISHES;
   
@@ -388,7 +370,6 @@ export function createTileOutputs(
   const outputs: MeasurementOutput[] = [];
   const fullDescription = `${description} PC R${pcSum}/m²`;
 
-  // Cost Plan
   outputs.push(
     createCostPlanOutput(
       context,
@@ -401,8 +382,6 @@ export function createTileOutputs(
       pcSum
     )
   );
-
-  // BOQ - Goes to TILING bill
   outputs.push(
     createBoqOutput(
       context,
@@ -432,7 +411,6 @@ export function createPaintOutputs(
 ): MeasurementOutput[] {
   const outputs: MeasurementOutput[] = [];
 
-  // Cost Plan
   outputs.push(
     createCostPlanOutput(
       context,
@@ -444,8 +422,6 @@ export function createPaintOutputs(
       elementId || context.elementId
     )
   );
-
-  // BOQ - Goes to PAINTWORK bill
   outputs.push(
     createBoqOutput(
       context,
@@ -474,7 +450,6 @@ export function createPlasterOutputs(
 ): MeasurementOutput[] {
   const outputs: MeasurementOutput[] = [];
 
-  // Cost Plan
   outputs.push(
     createCostPlanOutput(
       context,
@@ -486,8 +461,6 @@ export function createPlasterOutputs(
       elementId || context.elementId
     )
   );
-
-  // BOQ - Goes to PLASTERING bill
   outputs.push(
     createBoqOutput(
       context,
@@ -516,7 +489,6 @@ export function createDpcOutputs(
 ): MeasurementOutput[] {
   const outputs: MeasurementOutput[] = [];
 
-  // Cost Plan
   outputs.push(
     createCostPlanOutput(
       context,
@@ -528,8 +500,6 @@ export function createDpcOutputs(
       elementId || context.elementId
     )
   );
-
-  // BOQ - Goes to MASONRY bill
   outputs.push(
     createBoqOutput(
       context,
@@ -558,7 +528,6 @@ export function createBrickworkOutputs(
 ): MeasurementOutput[] {
   const outputs: MeasurementOutput[] = [];
 
-  // Cost Plan
   outputs.push(
     createCostPlanOutput(
       context,
@@ -570,8 +539,6 @@ export function createBrickworkOutputs(
       elementId || context.elementId
     )
   );
-
-  // BOQ - Goes to MASONRY bill
   outputs.push(
     createBoqOutput(
       context,
@@ -581,6 +548,640 @@ export function createBrickworkOutputs(
       area,
       "MASONRY",
       SECTIONS.BRICKWORK
+    )
+  );
+
+  return outputs;
+}
+
+// ============================================================
+// NEW HELPER FUNCTIONS FOR ADDITIONAL MODULES
+// ============================================================
+
+/**
+ * Excavation component
+ * Goes to EARTHWORKS bill
+ */
+export function createExcavationOutputs(
+  context: OutputContext,
+  description: string,
+  qty: number,
+  sectionId?: string,
+  elementId?: string
+): MeasurementOutput[] {
+  const outputs: MeasurementOutput[] = [];
+
+  outputs.push(
+    createCostPlanOutput(
+      context,
+      "Excavation",
+      description,
+      "m³",
+      qty,
+      sectionId || context.sectionId,
+      elementId || context.elementId
+    )
+  );
+  outputs.push(
+    createBoqOutput(
+      context,
+      "Excavation",
+      description,
+      "m³",
+      qty,
+      "EARTHWORKS",
+      SECTIONS.EXCAVATION
+    )
+  );
+
+  return outputs;
+}
+
+/**
+ * Backfill component
+ * Goes to EARTHWORKS bill
+ */
+export function createBackfillOutputs(
+  context: OutputContext,
+  description: string,
+  qty: number,
+  sectionId?: string,
+  elementId?: string
+): MeasurementOutput[] {
+  const outputs: MeasurementOutput[] = [];
+
+  outputs.push(
+    createCostPlanOutput(
+      context,
+      "Backfill",
+      description,
+      "m³",
+      qty,
+      sectionId || context.sectionId,
+      elementId || context.elementId
+    )
+  );
+  outputs.push(
+    createBoqOutput(
+      context,
+      "Backfill",
+      description,
+      "m³",
+      qty,
+      "EARTHWORKS",
+      SECTIONS.BACKFILLING
+    )
+  );
+
+  return outputs;
+}
+
+/**
+ * Blinding component
+ * Goes to EARTHWORKS bill
+ */
+export function createBlindingOutputs(
+  context: OutputContext,
+  description: string,
+  qty: number,
+  sectionId?: string,
+  elementId?: string
+): MeasurementOutput[] {
+  const outputs: MeasurementOutput[] = [];
+
+  outputs.push(
+    createCostPlanOutput(
+      context,
+      "Blinding",
+      description,
+      "m³",
+      qty,
+      sectionId || context.sectionId,
+      elementId || context.elementId
+    )
+  );
+  outputs.push(
+    createBoqOutput(
+      context,
+      "Blinding",
+      description,
+      "m³",
+      qty,
+      "EARTHWORKS",
+      SECTIONS.BLINDING
+    )
+  );
+
+  return outputs;
+}
+
+/**
+ * Soil Poison component
+ * Goes to EARTHWORKS bill
+ */
+export function createSoilPoisonOutputs(
+  context: OutputContext,
+  description: string,
+  area: number,
+  sectionId?: string,
+  elementId?: string
+): MeasurementOutput[] {
+  const outputs: MeasurementOutput[] = [];
+
+  outputs.push(
+    createCostPlanOutput(
+      context,
+      "Soil Poison",
+      description,
+      "m²",
+      area,
+      sectionId || context.sectionId,
+      elementId || context.elementId
+    )
+  );
+  outputs.push(
+    createBoqOutput(
+      context,
+      "Soil Poison",
+      description,
+      "m²",
+      area,
+      "EARTHWORKS",
+      SECTIONS.SOIL_POISONING
+    )
+  );
+
+  return outputs;
+}
+
+/**
+ * DPM component
+ * Goes to WATERPROOFING bill
+ */
+export function createDpmOutputs(
+  context: OutputContext,
+  description: string,
+  area: number,
+  sectionId?: string,
+  elementId?: string
+): MeasurementOutput[] {
+  const outputs: MeasurementOutput[] = [];
+
+  outputs.push(
+    createCostPlanOutput(
+      context,
+      "DPM",
+      description,
+      "m²",
+      area,
+      sectionId || context.sectionId,
+      elementId || context.elementId
+    )
+  );
+  outputs.push(
+    createBoqOutput(
+      context,
+      "DPM",
+      description,
+      "m²",
+      area,
+      "WATERPROOFING",
+      SECTIONS.DPM
+    )
+  );
+
+  return outputs;
+}
+
+/**
+ * Powerfloat component
+ * Goes to FLOOR_COVERINGS bill
+ */
+export function createPowerfloatOutputs(
+  context: OutputContext,
+  description: string,
+  area: number,
+  sectionId?: string,
+  elementId?: string
+): MeasurementOutput[] {
+  const outputs: MeasurementOutput[] = [];
+
+  outputs.push(
+    createCostPlanOutput(
+      context,
+      "Powerfloat",
+      description,
+      "m²",
+      area,
+      sectionId || context.sectionId,
+      elementId || context.elementId
+    )
+  );
+  outputs.push(
+    createBoqOutput(
+      context,
+      "Powerfloat",
+      description,
+      "m²",
+      area,
+      "FLOOR_COVERINGS",
+      SECTIONS.FLOOR_FINISHES
+    )
+  );
+
+  return outputs;
+}
+
+/**
+ * Layer component (for surface beds)
+ * Goes to EARTHWORKS bill
+ */
+export function createLayerOutputs(
+  context: OutputContext,
+  material: string,
+  thickness: number,
+  area: number,
+  sectionId?: string,
+  elementId?: string
+): MeasurementOutput[] {
+  const outputs: MeasurementOutput[] = [];
+  const description = `${thickness}mm ${material} layer`;
+
+  outputs.push(
+    createCostPlanOutput(
+      context,
+      "Layer",
+      description,
+      "m²",
+      area,
+      sectionId || context.sectionId,
+      elementId || context.elementId
+    )
+  );
+  outputs.push(
+    createBoqOutput(
+      context,
+      "Layer",
+      description,
+      "m²",
+      area,
+      "EARTHWORKS",
+      "Layers"
+    )
+  );
+
+  return outputs;
+}
+
+/**
+ * Lintel component
+ * Goes to MASONRY bill
+ */
+export function createLintelOutputs(
+  context: OutputContext,
+  description: string,
+  qty: number,
+  sectionId?: string,
+  elementId?: string
+): MeasurementOutput[] {
+  const outputs: MeasurementOutput[] = [];
+
+  outputs.push(
+    createCostPlanOutput(
+      context,
+      "Lintel",
+      description,
+      "m",
+      qty,
+      sectionId || context.sectionId,
+      elementId || context.elementId
+    )
+  );
+  outputs.push(
+    createBoqOutput(
+      context,
+      "Lintel",
+      description,
+      "m",
+      qty,
+      "MASONRY",
+      SECTIONS.LINTELS
+    )
+  );
+
+  return outputs;
+}
+
+/**
+ * Reveal Plaster component
+ * Goes to PLASTERING bill (Narrow Widths)
+ */
+export function createRevealPlasterOutputs(
+  context: OutputContext,
+  description: string,
+  area: number,
+  sectionId?: string,
+  elementId?: string
+): MeasurementOutput[] {
+  const outputs: MeasurementOutput[] = [];
+
+  outputs.push(
+    createCostPlanOutput(
+      context,
+      "Reveal Plaster",
+      description,
+      "m²",
+      area,
+      sectionId || context.sectionId,
+      elementId || context.elementId
+    )
+  );
+  outputs.push(
+    createBoqOutput(
+      context,
+      "Reveal Plaster",
+      description,
+      "m²",
+      area,
+      "PLASTERING",
+      SECTIONS.NARROW_WIDTHS
+    )
+  );
+
+  return outputs;
+}
+
+/**
+ * Door component
+ * Goes to CARPENTRY or METALWORK bill
+ */
+export function createDoorOutputs(
+  context: OutputContext,
+  description: string,
+  qty: number,
+  billKey: string = "CARPENTRY",
+  sectionId?: string,
+  elementId?: string
+): MeasurementOutput[] {
+  const outputs: MeasurementOutput[] = [];
+
+  outputs.push(
+    createCostPlanOutput(
+      context,
+      "Door",
+      description,
+      "No",
+      qty,
+      sectionId || context.sectionId,
+      elementId || context.elementId
+    )
+  );
+  outputs.push(
+    createBoqOutput(
+      context,
+      "Door",
+      description,
+      "No",
+      qty,
+      billKey,
+      SECTIONS.DOORS
+    )
+  );
+
+  return outputs;
+}
+
+/**
+ * Window component
+ * Goes to METALWORK or CARPENTRY bill
+ */
+export function createWindowOutputs(
+  context: OutputContext,
+  description: string,
+  qty: number,
+  billKey: string = "METALWORK",
+  sectionId?: string,
+  elementId?: string
+): MeasurementOutput[] {
+  const outputs: MeasurementOutput[] = [];
+
+  outputs.push(
+    createCostPlanOutput(
+      context,
+      "Window",
+      description,
+      "No",
+      qty,
+      sectionId || context.sectionId,
+      elementId || context.elementId
+    )
+  );
+  outputs.push(
+    createBoqOutput(
+      context,
+      "Window",
+      description,
+      "No",
+      qty,
+      billKey,
+      SECTIONS.WINDOWS
+    )
+  );
+
+  return outputs;
+}
+
+/**
+ * Frame component (for doors/windows)
+ * Goes to CARPENTRY or METALWORK bill
+ */
+export function createFrameOutputs(
+  context: OutputContext,
+  description: string,
+  qty: number,
+  billKey: string = "CARPENTRY",
+  sectionId?: string,
+  elementId?: string
+): MeasurementOutput[] {
+  const outputs: MeasurementOutput[] = [];
+
+  outputs.push(
+    createCostPlanOutput(
+      context,
+      "Frame",
+      description,
+      "m",
+      qty,
+      sectionId || context.sectionId,
+      elementId || context.elementId
+    )
+  );
+  outputs.push(
+    createBoqOutput(
+      context,
+      "Frame",
+      description,
+      "m",
+      qty,
+      billKey,
+      SECTIONS.FRAMES
+    )
+  );
+
+  return outputs;
+}
+
+/**
+ * Sill component (for windows)
+ * Goes to MASONRY or CARPENTRY bill
+ */
+export function createSillOutputs(
+  context: OutputContext,
+  description: string,
+  qty: number,
+  billKey: string = "MASONRY",
+  sectionId?: string,
+  elementId?: string
+): MeasurementOutput[] {
+  const outputs: MeasurementOutput[] = [];
+
+  outputs.push(
+    createCostPlanOutput(
+      context,
+      "Sill",
+      description,
+      "m",
+      qty,
+      sectionId || context.sectionId,
+      elementId || context.elementId
+    )
+  );
+  outputs.push(
+    createBoqOutput(
+      context,
+      "Sill",
+      description,
+      "m",
+      qty,
+      billKey,
+      SECTIONS.SILLS
+    )
+  );
+
+  return outputs;
+}
+
+/**
+ * Ironmongery component
+ * Goes to IRONMONGERY bill
+ */
+export function createIronmongeryOutputs(
+  context: OutputContext,
+  description: string,
+  qty: number,
+  sectionId?: string,
+  elementId?: string
+): MeasurementOutput[] {
+  const outputs: MeasurementOutput[] = [];
+
+  outputs.push(
+    createCostPlanOutput(
+      context,
+      "Ironmongery",
+      description,
+      "No",
+      qty,
+      sectionId || context.sectionId,
+      elementId || context.elementId
+    )
+  );
+  outputs.push(
+    createBoqOutput(
+      context,
+      "Ironmongery",
+      description,
+      "No",
+      qty,
+      "IRONMONGERY",
+      SECTIONS.IRONMONGERY
+    )
+  );
+
+  return outputs;
+}
+
+/**
+ * Working Space component
+ * Goes to EARTHWORKS bill
+ */
+export function createWorkingSpaceOutputs(
+  context: OutputContext,
+  description: string,
+  area: number,
+  sectionId?: string,
+  elementId?: string
+): MeasurementOutput[] {
+  const outputs: MeasurementOutput[] = [];
+
+  outputs.push(
+    createCostPlanOutput(
+      context,
+      "Working Space",
+      description,
+      "m²",
+      area,
+      sectionId || context.sectionId,
+      elementId || context.elementId
+    )
+  );
+  outputs.push(
+    createBoqOutput(
+      context,
+      "Working Space",
+      description,
+      "m²",
+      area,
+      "EARTHWORKS",
+      "Working Space"
+    )
+  );
+
+  return outputs;
+}
+
+/**
+ * Risk of Collapse component
+ * Goes to EARTHWORKS bill
+ */
+export function createRiskOfCollapseOutputs(
+  context: OutputContext,
+  description: string,
+  area: number,
+  sectionId?: string,
+  elementId?: string
+): MeasurementOutput[] {
+  const outputs: MeasurementOutput[] = [];
+
+  outputs.push(
+    createCostPlanOutput(
+      context,
+      "Risk of Collapse",
+      description,
+      "m²",
+      area,
+      sectionId || context.sectionId,
+      elementId || context.elementId
+    )
+  );
+  outputs.push(
+    createBoqOutput(
+      context,
+      "Risk of Collapse",
+      description,
+      "m²",
+      area,
+      "EARTHWORKS",
+      "Risk of Collapse"
     )
   );
 

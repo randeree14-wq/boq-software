@@ -1,6 +1,8 @@
 "use client";
 
+import React from "react";
 import type { BoqItem } from "@/types/boq";
+import { BILLS } from "@/lib/boqStructure";
 
 interface BoqSummaryProps {
   boqItems: Record<string, BoqItem>;
@@ -28,7 +30,12 @@ export default function BoqSummary({
     bills[item.billNo].push(item);
   });
 
-  const sortedBillKeys = Object.keys(bills).sort();
+  // Sort bills by their defined order (using billNo from BILLS as numeric)
+  const sortedBillKeys = Object.keys(bills).sort((a, b) => {
+    const numA = parseInt(BILLS[a as keyof typeof BILLS]?.billNo ?? "999", 10);
+    const numB = parseInt(BILLS[b as keyof typeof BILLS]?.billNo ?? "999", 10);
+    return numA - numB;
+  });
 
   if (Object.keys(safeBoqItems).length === 0) {
     return (
@@ -37,6 +44,9 @@ export default function BoqSummary({
       </div>
     );
   }
+
+  // Assign sequential bill numbers starting from 1
+  let sequentialBillNumber = 0;
 
   return (
     <div style={cardStyle}>
@@ -56,12 +66,20 @@ export default function BoqSummary({
           {sortedBillKeys.map((billKey) => {
             const items = bills[billKey];
             let billTotal = 0;
+            const billInfo = BILLS[billKey as keyof typeof BILLS];
+            
+            // Increment sequential number for each bill that has items
+            sequentialBillNumber++;
+            
+            const billHeading = billInfo
+              ? `Bill No. ${sequentialBillNumber} - ${billInfo.billName}`
+              : billKey;
 
             return (
               <React.Fragment key={billKey}>
                 <tr style={{ backgroundColor: "#f0f4f8", fontWeight: "bold" }}>
                   <td style={tdStyle} colSpan={7}>
-                    {billKey}
+                    {billHeading}
                   </td>
                 </tr>
                 {items.map((item) => {
