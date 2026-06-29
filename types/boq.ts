@@ -53,7 +53,9 @@ export type ExecutiveSummary = {
     totalValue: number;
   };
   preliminaries: number;
+  preliminariesPercent?: number;
   contingency: number;
+  contingencyPercent?: number;
   estimatedCurrentConstructionCost: number;
   escalations: EscalationData;
   escalationAmount: number;

@@ -389,27 +389,27 @@ export default function Home() {
   // ============================================
   // EXECUTIVE SUMMARY INPUT STATE (Persisted)
   // ============================================
-  const [executiveInput, setExecutiveInput] = useState<ExecutiveSummaryInputData>({
-    projectName: "My Project",
-    baseDate: new Date().toISOString().split("T")[0],
-    buildingArea: 0,
-    specialistServices: [],
-    preliminaries: 0,
-    preliminariesPercent: 0,
-    contingency: 0,
-    contingencyPercent: 0,
-    escalations: {
-      preConstructionMonths: 6,
-      preConstructionRate: 5,
-      constructionMonths: 12,
-      constructionRate: 8,
-    },
-    professionalFees: {
-      coreConsultants: 0,
-      specialistConsultants: 0,
-      disbursements: 0,
-    },
-  });
+const [executiveInput, setExecutiveInput] = useState<ExecutiveSummaryInputData>({
+  projectName: "My Project",
+  baseDate: new Date().toISOString().split("T")[0],
+  buildingArea: 0,
+  specialistServices: [],
+  preliminaries: 0,
+  preliminariesPercent: 0,
+  contingency: 0,
+  contingencyPercent: 0,
+  escalations: {
+    preConstructionMonths: 6,
+    preConstructionRate: 5,
+    constructionMonths: 12,
+    constructionRate: 8,
+  },
+  professionalFees: {
+    coreConsultants: 0,
+    specialistConsultants: 0,
+    disbursements: 0,
+  },
+});
 
   // ============================================
   // AUTO-GENERATE COST PLAN COMPONENTS
