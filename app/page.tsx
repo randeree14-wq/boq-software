@@ -392,7 +392,6 @@ export default function Home() {
   // COST PLANS & MEASUREMENT ITEMS (NEW)
   // ============================================
   const [costPlans, setCostPlans] = useState<CostPlan[]>([]);
-  const [measurementItems, setMeasurementItems] = useState<MeasurementItem[]>([]);
   const [computedItems, setComputedItems] = useState<ComputedMeasurementItem[]>([]);
   const [elements, setElements] = useState<Element[]>(DEFAULT_ELEMENTS);
 
@@ -427,24 +426,199 @@ export default function Home() {
   });
 
   // ============================================
-  // MEASUREMENT EDITING STATES
+  // DERIVED VALUES FOR REPORTS
   // ============================================
-  const [editingBeamMeasurementId, setEditingBeamMeasurementId] = useState<number | null>(null);
-  const [editingSurfaceBedMeasurementId, setEditingSurfaceBedMeasurementId] = useState<number | null>(null);
-  const [editingPadFootingMeasurementId, setEditingPadFootingMeasurementId] = useState<number | null>(null);
-  const [editingGroundBeamMeasurementId, setEditingGroundBeamMeasurementId] = useState<number | null>(null);
-  const [editingColumnMeasurementId, setEditingColumnMeasurementId] = useState<number | null>(null);
-  const [editingWallMeasurementId, setEditingWallMeasurementId] = useState<number | null>(null);
-  const [editingSlabMeasurementId, setEditingSlabMeasurementId] = useState<number | null>(null);
-  const [editingOpeningMeasurementId, setEditingOpeningMeasurementId] = useState<number | null>(null);
-  // ✅ Selected Cost Plan for measurement assignment
-  const [selectedCostPlanId, setSelectedCostPlanId] = useState<string>("");
+  const escalationAmount = useMemo(() => {
+    const { preConstructionMonths, preConstructionRate, constructionMonths, constructionRate } = executiveInput.escalations;
+    // TODO: Replace 1000000 with actual net construction cost
+    const netCost = 1000000; // placeholder – replace with actual net cost
+    const preEsc = netCost * (preConstructionRate / 100) * (preConstructionMonths / 12);
+    const constEsc = netCost * (constructionRate / 100) * (constructionMonths / 12);
+    return preEsc + constEsc;
+  }, [executiveInput.escalations]);
+
+  const professionalFeesTotal = useMemo(() => {
+    return executiveInput.professionalFees.coreConsultants + 
+           executiveInput.professionalFees.specialistConsultants + 
+           executiveInput.professionalFees.disbursements;
+  }, [executiveInput.professionalFees]);
+
+  // ============================================
+  // MEASUREMENT ITEMS (Derived from module states)
+  // ============================================
+  const measurementItems = useMemo(() => {
+    const items: MeasurementItem[] = [];
+
+    // --- WALLS ---
+    wallMeasurements.forEach((m) => {
+      const wall = wallTypes.find((w) => w.id === m.wallTypeId);
+      if (!wall) return;
+      items.push({
+        id: `wall-${m.id}`,
+        description: `${wall.brickType} brickwork - ${wall.thicknessType}`,
+        quantity: m.area,
+        unit: "m²",
+        costPlanId: m.costPlanId || costPlans[0]?.id || "",
+        elementId: "walls",
+        module: "Walls",
+        mark: m.mark,
+        sourceMeasurementId: m.id,
+      });
+    });
+
+    // --- SLABS ---
+    slabMeasurements.forEach((m) => {
+      const slab = slabTypes.find((s) => s.id === m.slabTypeId);
+      if (!slab) return;
+      items.push({
+        id: `slab-${m.id}`,
+        description: `${slab.concreteClass} slab - ${slab.thickness}mm`,
+        quantity: m.area,
+        unit: "m²",
+        costPlanId: m.costPlanId || costPlans[0]?.id || "",
+        elementId: "slabs",
+        module: "Slabs",
+        mark: m.mark,
+        sourceMeasurementId: m.id,
+      });
+    });
+
+    // --- BEAMS ---
+    beamMeasurements.forEach((m) => {
+      const beam = beamTypes.find((b) => b.id === m.beamTypeId);
+      if (!beam) return;
+      const width = (beam.beamWidthMm || beam.width || 230) / 1000;
+      const depth = (beam.downstandDepthMm || beam.depth || 400) / 1000;
+      const volume = width * depth * m.length;
+      items.push({
+        id: `beam-${m.id}`,
+        description: `${beam.concreteClass} beam - ${beam.beamProfileType}`,
+        quantity: volume,
+        unit: "m³",
+        costPlanId: m.costPlanId || costPlans[0]?.id || "",
+        elementId: "beams",
+        module: "Beams",
+        mark: m.mark,
+        sourceMeasurementId: m.id,
+      });
+    });
+
+    // --- COLUMNS ---
+    columnMeasurements.forEach((m) => {
+      const col = columnTypes.find((c) => c.id === m.columnTypeId);
+      if (!col) return;
+      const volume = (col.width / 1000) * (col.depth / 1000) * (col.height / 1000) * m.quantity;
+      items.push({
+        id: `col-${m.id}`,
+        description: `${col.concreteClass} column - ${col.width}x${col.depth}mm`,
+        quantity: volume,
+        unit: "m³",
+        costPlanId: m.costPlanId || costPlans[0]?.id || "",
+        elementId: "columns",
+        module: "Columns",
+        mark: m.mark,
+        sourceMeasurementId: m.id,
+      });
+    });
+
+    // --- SURFACE BEDS ---
+    surfaceBedMeasurements.forEach((m) => {
+      const sb = surfaceBedTypes.find((s) => s.id === m.surfaceBedTypeId);
+      if (!sb) return;
+      const volume = m.area * (sb.thickness / 1000);
+      items.push({
+        id: `sb-${m.id}`,
+        description: `${sb.concreteClass} surface bed - ${sb.thickness}mm`,
+        quantity: volume,
+        unit: "m³",
+        costPlanId: m.costPlanId || costPlans[0]?.id || "",
+        elementId: "surface-beds",
+        module: "Surface Beds",
+        mark: m.mark,
+        sourceMeasurementId: m.id,
+      });
+    });
+
+    // --- GROUND BEAMS ---
+    groundBeamMeasurements.forEach((m) => {
+      const gb = groundBeamTypes.find((g) => g.id === m.groundBeamTypeId);
+      if (!gb) return;
+      const volume = (gb.beamWidth / 1000) * (gb.beamDepth / 1000) * m.length;
+      items.push({
+        id: `gb-${m.id}`,
+        description: `${gb.concreteClass} ground beam`,
+        quantity: volume,
+        unit: "m³",
+        costPlanId: m.costPlanId || costPlans[0]?.id || "",
+        elementId: "ground-beams",
+        module: "Ground Beams",
+        mark: m.mark,
+        sourceMeasurementId: m.id,
+      });
+    });
+
+    // --- PAD FOOTINGS ---
+    padFootingMeasurements.forEach((m) => {
+      const pf = padFootingTypes.find((p) => p.id === m.padFootingTypeId);
+      if (!pf) return;
+      const volume = (pf.padLength / 1000) * (pf.padWidth / 1000) * (pf.padDepth / 1000) * m.quantity;
+      items.push({
+        id: `pf-${m.id}`,
+        description: `${pf.concreteClass} pad footing`,
+        quantity: volume,
+        unit: "m³",
+        costPlanId: m.costPlanId || costPlans[0]?.id || "",
+        elementId: "pad-footings",
+        module: "Pad Footings",
+        mark: m.mark,
+        sourceMeasurementId: m.id,
+      });
+    });
+
+    // --- OPENINGS ---
+    openingMeasurements.forEach((m) => {
+      const op = openingTypes.find((o) => o.id === m.openingTypeId);
+      if (!op) return;
+      items.push({
+        id: `op-${m.id}`,
+        description: `${op.category} - ${op.name}`,
+        quantity: m.quantity || 1,
+        unit: "No",
+        costPlanId: m.costPlanId || costPlans[0]?.id || "",
+        elementId: "openings",
+        module: "Openings",
+        mark: m.mark,
+        sourceMeasurementId: m.id,
+      });
+    });
+
+    return items;
+  }, [
+    wallMeasurements,
+    wallTypes,
+    slabMeasurements,
+    slabTypes,
+    beamMeasurements,
+    beamTypes,
+    columnMeasurements,
+    columnTypes,
+    surfaceBedMeasurements,
+    surfaceBedTypes,
+    groundBeamMeasurements,
+    groundBeamTypes,
+    padFootingMeasurements,
+    padFootingTypes,
+    openingMeasurements,
+    openingTypes,
+    costPlans,
+  ]);
 
   // ============================================
   // RecalcEngine (AFTER state declarations)
   // ============================================
   const recalcEngine = useMemo(() => new RecalcEngine(
     (costPlanId, computed, total) => {
+      console.log("RecalcEngine callback: costPlanId", costPlanId, "computed items", computed.length);
       setComputedItems(prev => {
         const filtered = prev.filter(item => item.costPlanId !== costPlanId);
         return [...filtered, ...computed];
@@ -456,13 +630,17 @@ export default function Home() {
   // Recalculate on data change
   // ============================================
   useEffect(() => {
-    if (measurementItems.length === 0 || costPlans.length === 0) return;
+    if (measurementItems.length === 0 || costPlans.length === 0) {
+      console.log("Skipping recalc: no measurements or cost plans");
+      return;
+    }
+    console.log("Running recalcEngine with", measurementItems.length, "items and", costPlans.length, "cost plans");
     recalcEngine.recalculateProject(
       'current-project',
       costPlans,
       measurementItems,
-      {}, // elementRates (future)
-      {}  // projectRates (future)
+      {},
+      {}
     );
   }, [measurementItems, costPlans, recalcEngine]);
 
@@ -512,6 +690,20 @@ export default function Home() {
   ]);
 
   // ============================================
+  // MEASUREMENT EDITING STATES
+  // ============================================
+  const [editingBeamMeasurementId, setEditingBeamMeasurementId] = useState<number | null>(null);
+  const [editingSurfaceBedMeasurementId, setEditingSurfaceBedMeasurementId] = useState<number | null>(null);
+  const [editingPadFootingMeasurementId, setEditingPadFootingMeasurementId] = useState<number | null>(null);
+  const [editingGroundBeamMeasurementId, setEditingGroundBeamMeasurementId] = useState<number | null>(null);
+  const [editingColumnMeasurementId, setEditingColumnMeasurementId] = useState<number | null>(null);
+  const [editingWallMeasurementId, setEditingWallMeasurementId] = useState<number | null>(null);
+  const [editingSlabMeasurementId, setEditingSlabMeasurementId] = useState<number | null>(null);
+  const [editingOpeningMeasurementId, setEditingOpeningMeasurementId] = useState<number | null>(null);
+  // ✅ Selected Cost Plan for measurement assignment
+  const [selectedCostPlanId, setSelectedCostPlanId] = useState<string>("");
+
+  // ============================================
   // LOCAL STORAGE PERSISTENCE
   // ============================================
   useEffect(() => {
@@ -537,9 +729,9 @@ export default function Home() {
       setCostPlanComponents(savedData.costPlanComponents || []);
       // Restore executive input
       if (savedData.executiveInput) {
-      setExecutiveInput(savedData.executiveInput);
-      setCostPlans(savedData.costPlans || []);
+        setExecutiveInput(savedData.executiveInput);
       }
+      setCostPlans(savedData.costPlans || []);
     }
   }, []);
 
@@ -590,7 +782,8 @@ export default function Home() {
     openingMeasurements,
     rates,
     costPlanComponents,
-    executiveInput, // <-- ADDED
+    executiveInput,
+    costPlans,
   ]);
 
   const handleClearProject = () => {
@@ -614,14 +807,17 @@ export default function Home() {
       setOpeningMeasurements([]);
       setRates({});
       setCostPlanComponents([]);
-      // Reset executive input
+      setCostPlans([]);
+      setComputedItems([]);
       setExecutiveInput({
         projectName: "My Project",
         baseDate: new Date().toISOString().split("T")[0],
         buildingArea: 0,
         specialistServices: [],
         preliminaries: 0,
+        preliminariesPercent: 0,
         contingency: 0,
+        contingencyPercent: 0,
         escalations: {
           preConstructionMonths: 6,
           preConstructionRate: 5,
@@ -647,7 +843,7 @@ export default function Home() {
   };
 
   // ============================================
-  // BUILD COST PLANS FROM COMPONENTS
+  // BUILD COST PLANS FROM COMPONENTS (legacy)
   // ============================================
   const buildCostPlans = (): CostPlan[] => {
     const items: CostPlanItem[] = costPlanComponents.map((comp, index) => ({
@@ -701,12 +897,17 @@ export default function Home() {
   }
 
   function addBeamMeasurement() {
+    if (!selectedCostPlanId) {
+      alert("Please select a Cost Plan first.");
+      return;
+    }
     if (!newBeamMeas.mark.trim() || newBeamMeas.beamTypeId === 0 || !newBeamMeas.length || newBeamMeas.length <= 0) return;
     const measurement = {
       id: Date.now(),
       ...newBeamMeas,
       elementalSectionId: "Structural Frame",
       elementalElementId: "beams",
+      costPlanId: selectedCostPlanId,
     };
     if (editingBeamMeasurementId !== null) {
       setBeamMeasurements((prev) =>
@@ -724,6 +925,7 @@ export default function Home() {
     if (measurement) {
       updateBeamMeas(measurement);
       setEditingBeamMeasurementId(id);
+      setSelectedCostPlanId(measurement.costPlanId || "");
     }
   }
 
@@ -763,12 +965,17 @@ export default function Home() {
   }
 
   function addSurfaceBedMeasurement() {
+    if (!selectedCostPlanId) {
+      alert("Please select a Cost Plan first.");
+      return;
+    }
     if (!newSurfaceBedMeas.mark.trim() || newSurfaceBedMeas.surfaceBedTypeId === 0 || !newSurfaceBedMeas.area || newSurfaceBedMeas.area <= 0) return;
     const measurement = {
       id: Date.now(),
       ...newSurfaceBedMeas,
       elementalSectionId: "ground-floor",
       elementalElementId: "solid-floors",
+      costPlanId: selectedCostPlanId,
     };
     if (editingSurfaceBedMeasurementId !== null) {
       setSurfaceBedMeasurements((prev) =>
@@ -786,6 +993,7 @@ export default function Home() {
     if (measurement) {
       updateSurfaceBedMeas(measurement);
       setEditingSurfaceBedMeasurementId(id);
+      setSelectedCostPlanId(measurement.costPlanId || "");
     }
   }
 
@@ -825,12 +1033,17 @@ export default function Home() {
   }
 
   function addPadFootingMeasurement() {
+    if (!selectedCostPlanId) {
+      alert("Please select a Cost Plan first.");
+      return;
+    }
     if (!newPadFootingMeas.mark.trim() || newPadFootingMeas.padFootingTypeId === 0 || !newPadFootingMeas.quantity || newPadFootingMeas.quantity <= 0) return;
     const measurement = {
       id: Date.now(),
       ...newPadFootingMeas,
       elementalSectionId: "substructure",
       elementalElementId: "pad-footings",
+      costPlanId: selectedCostPlanId,
     };
     if (editingPadFootingMeasurementId !== null) {
       setPadFootingMeasurements((prev) =>
@@ -848,6 +1061,7 @@ export default function Home() {
     if (measurement) {
       updatePadFootingMeas(measurement);
       setEditingPadFootingMeasurementId(id);
+      setSelectedCostPlanId(measurement.costPlanId || "");
     }
   }
 
@@ -887,12 +1101,17 @@ export default function Home() {
   }
 
   function addGroundBeamMeasurement() {
+    if (!selectedCostPlanId) {
+      alert("Please select a Cost Plan first.");
+      return;
+    }
     if (!newGroundBeamMeas.mark.trim() || newGroundBeamMeas.groundBeamTypeId === 0 || !newGroundBeamMeas.length || newGroundBeamMeas.length <= 0) return;
     const measurement = {
       id: Date.now(),
       ...newGroundBeamMeas,
       elementalSectionId: "substructure",
       elementalElementId: "ground-beams",
+      costPlanId: selectedCostPlanId,
     };
     if (editingGroundBeamMeasurementId !== null) {
       setGroundBeamMeasurements((prev) =>
@@ -910,6 +1129,7 @@ export default function Home() {
     if (measurement) {
       updateGroundBeamMeas(measurement);
       setEditingGroundBeamMeasurementId(id);
+      setSelectedCostPlanId(measurement.costPlanId || "");
     }
   }
 
@@ -949,12 +1169,17 @@ export default function Home() {
   }
 
   function addColumnMeasurement() {
+    if (!selectedCostPlanId) {
+      alert("Please select a Cost Plan first.");
+      return;
+    }
     if (!newColumnMeas.mark.trim() || newColumnMeas.columnTypeId === 0 || !newColumnMeas.quantity || newColumnMeas.quantity <= 0) return;
     const measurement = {
       id: Date.now(),
       ...newColumnMeas,
       elementalSectionId: "Structural Frame",
       elementalElementId: "columns",
+      costPlanId: selectedCostPlanId,
     };
     if (editingColumnMeasurementId !== null) {
       setColumnMeasurements((prev) =>
@@ -972,6 +1197,7 @@ export default function Home() {
     if (measurement) {
       updateColumnMeas(measurement);
       setEditingColumnMeasurementId(id);
+      setSelectedCostPlanId(measurement.costPlanId || "");
     }
   }
 
@@ -1011,6 +1237,10 @@ export default function Home() {
   }
 
   function addSlabMeasurement() {
+    if (!selectedCostPlanId) {
+      alert("Please select a Cost Plan first.");
+      return;
+    }
     if (!newSlabMeas.mark.trim() || newSlabMeas.slabTypeId === 0 ||
         !newSlabMeas.length || newSlabMeas.length <= 0 ||
         !newSlabMeas.width || newSlabMeas.width <= 0 ||
@@ -1029,6 +1259,7 @@ export default function Home() {
       area,
       elementalSectionId: "structural-frame",
       elementalElementId: "slabs",
+      costPlanId: selectedCostPlanId,
     };
     if (editingSlabMeasurementId !== null) {
       setSlabMeasurements((prev) =>
@@ -1046,6 +1277,7 @@ export default function Home() {
     if (measurement) {
       updateSlabMeas(measurement);
       setEditingSlabMeasurementId(id);
+      setSelectedCostPlanId(measurement.costPlanId || "");
     }
   }
 
@@ -1098,6 +1330,10 @@ export default function Home() {
   }
 
   function addWallMeasurement() {
+    if (!selectedCostPlanId) {
+      alert("Please select a Cost Plan first.");
+      return;
+    }
     if (!newWallMeas.mark.trim() || newWallMeas.wallTypeId === 0 || !newWallMeas.length || newWallMeas.length <= 0 || !newWallMeas.height || newWallMeas.height <= 0) {
       return;
     }
@@ -1132,6 +1368,7 @@ export default function Home() {
     if (measurement) {
       updateWallMeas(measurement);
       setEditingWallMeasurementId(id);
+      setSelectedCostPlanId(measurement.costPlanId || "");
     }
   }
 
@@ -1173,12 +1410,17 @@ export default function Home() {
   }
 
   function addOpeningMeasurement() {
+    if (!selectedCostPlanId) {
+      alert("Please select a Cost Plan first.");
+      return;
+    }
     if (!newOpeningMeas.mark.trim() || newOpeningMeas.openingTypeId === 0 || !newOpeningMeas.quantity || newOpeningMeas.quantity <= 0) return;
     const measurement = {
       id: Date.now(),
       ...newOpeningMeas,
       elementalSectionId: "Internal Divisions",
       elementalElementId: "Openings",
+      costPlanId: selectedCostPlanId,
     };
     if (editingOpeningMeasurementId !== null) {
       setOpeningMeasurements((prev) =>
@@ -1196,6 +1438,7 @@ export default function Home() {
     if (measurement) {
       updateOpeningMeas(measurement);
       setEditingOpeningMeasurementId(id);
+      setSelectedCostPlanId(measurement.costPlanId || "");
     }
   }
 
@@ -1330,7 +1573,7 @@ export default function Home() {
           Project Settings
         </button>
         <button style={tabButtonStyle(activeTab === "costplans")} onClick={() => setActiveTab("costplans")}>
-        Cost Plans
+          Cost Plans
         </button>
       </div>
 
@@ -1484,24 +1727,23 @@ export default function Home() {
         )}
 
         {activeTab === "costplans" && (
-  <CostPlanManager
-    costPlans={costPlans}
-    onAdd={(newCp) => {
-      // Add new Cost Plan with generated ID
-      const id = `cp-${Date.now()}`;
-      setCostPlans([...costPlans, { id, ...newCp }]);
-    }}
-    onEdit={(id, updatedCp) => {
-      setCostPlans(costPlans.map(cp =>
-        cp.id === id ? { ...cp, ...updatedCp, updatedAt: new Date().toISOString() } : cp
-      ));
-    }}
-    onDelete={(id) => {
-      setCostPlans(costPlans.filter(cp => cp.id !== id));
-    }}
-    styles={styles}
-  />
-)}
+          <CostPlanManager
+            costPlans={costPlans}
+            onAdd={(newCp) => {
+              const id = `cp-${Date.now()}`;
+              setCostPlans([...costPlans, { id, ...newCp }]);
+            }}
+            onEdit={(id, updatedCp) => {
+              setCostPlans(costPlans.map(cp =>
+                cp.id === id ? { ...cp, ...updatedCp, updatedAt: new Date().toISOString() } : cp
+              ));
+            }}
+            onDelete={(id) => {
+              setCostPlans(costPlans.filter(cp => cp.id !== id));
+            }}
+            styles={styles}
+          />
+        )}
 
         {activeTab === "boq" && (
           <>
@@ -1519,9 +1761,17 @@ export default function Home() {
 
         {activeTab === "reports" && (
           <ReportsTab
-            costPlans={buildCostPlans()}
-            executiveInput={executiveInput}
-            setExecutiveInput={setExecutiveInput}
+            costPlans={costPlans}
+            computedItems={computedItems}
+            elements={elements}
+            specialistServices={executiveInput.specialistServices || []}
+            preliminaries={executiveInput.preliminaries || 0}
+            preliminariesPercent={executiveInput.preliminariesPercent || 0}
+            contingency={executiveInput.contingency || 0}
+            contingencyPercent={executiveInput.contingencyPercent || 0}
+            escalations={executiveInput.escalations || { preConstructionMonths: 0, preConstructionRate: 0, constructionMonths: 0, constructionRate: 0 }}
+            professionalFees={executiveInput.professionalFees || { coreConsultants: 0, specialistConsultants: 0, disbursements: 0 }}
+            onUpdateExecutiveInput={(updates) => setExecutiveInput({ ...executiveInput, ...updates })}
             styles={styles}
           />
         )}

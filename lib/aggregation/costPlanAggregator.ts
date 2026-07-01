@@ -19,13 +19,14 @@ export type ElementalSummary = {
 export function getElementalSummaryForCostPlan(
   costPlanId: string,
   costPlans: CostPlan[],
-  computedItems: ComputedMeasurementItem[],
+  computedItems: ComputedMeasurementItem[] | undefined,
   elements: Element[]
 ): ElementalSummary | null {
+  const safeItems = computedItems || [];  // ✅ Guard
   const costPlan = costPlans.find(cp => cp.id === costPlanId);
   if (!costPlan) return null;
 
-  const items = computedItems.filter(item => item.costPlanId === costPlanId);
+  const items = safeItems.filter(item => item.costPlanId === costPlanId);
 
   const elementTotals: Record<string, number> = {};
   items.forEach(item => {
