@@ -1,6 +1,7 @@
 "use client";
 
-import type { PadFootingType, PadFootingMeasurement } from "@/types/boq";
+import { useState } from "react";
+import type { PadFootingType, PadFootingMeasurement, CostPlan } from "@/types/boq";
 
 interface PadFootingModuleProps {
   padFootingTypes: PadFootingType[];
@@ -18,6 +19,7 @@ interface PadFootingModuleProps {
   editingPadFootingMeasurementId: number | null;
   setEditingPadFootingMeasurementId: React.Dispatch<React.SetStateAction<number | null>>;
   styles: any;
+  costPlans: CostPlan[]; // NEW
 }
 
 export default function PadFootingModule({
@@ -26,18 +28,20 @@ export default function PadFootingModule({
   editingPadFootingId,
   setEditingPadFootingId,
   newPadFooting,
-  updatePadFooting = () => {},
-  resetPadFooting = () => {},
+  updatePadFooting,
+  resetPadFooting,
   padFootingMeasurements,
   setPadFootingMeasurements,
   newPadFootingMeas,
-  updatePadFootingMeas = () => {},
-  resetPadFootingMeas = () => {},
+  updatePadFootingMeas,
+  resetPadFootingMeas,
   editingPadFootingMeasurementId,
   setEditingPadFootingMeasurementId,
   styles,
+  costPlans,
 }: PadFootingModuleProps) {
   const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles || {};
+  const [selectedCostPlanId, setSelectedCostPlanId] = useState<string>("");
 
   // SAFEGUARD: Safe versions of all props
   const safeNewPadFooting = {
@@ -93,12 +97,17 @@ export default function PadFootingModule({
   };
 
   const addPadFootingMeasurement = () => {
+    if (!selectedCostPlanId) {
+      alert("Please select a Cost Plan first.");
+      return;
+    }
     if (!safeNewPadFootingMeas.mark.trim() || safeNewPadFootingMeas.padFootingTypeId === 0 || !safeNewPadFootingMeas.quantity || safeNewPadFootingMeas.quantity <= 0) return;
     const measurement = {
       id: Date.now(),
       ...safeNewPadFootingMeas,
       elementalSectionId: "substructure",
       elementalElementId: "pad-footings",
+      costPlanId: selectedCostPlanId,
     };
     if (editingPadFootingMeasurementId !== null) {
       setPadFootingMeasurements((prev) =>
@@ -198,6 +207,16 @@ export default function PadFootingModule({
           {safePadFootingTypes.map((pf) => <option key={pf.id} value={pf.id}>{pf.name}</option>)}
         </select>
         <input type="number" placeholder="Quantity" value={safeNewPadFootingMeas.quantity || ''} onChange={(e) => updatePadFootingMeas({ quantity: Number(e.target.value) || 0 })} />
+        <select
+          value={selectedCostPlanId}
+          onChange={(e) => setSelectedCostPlanId(e.target.value)}
+          style={{ padding: "8px", border: "1px solid #ccc", borderRadius: "4px" }}
+        >
+          <option value="">Select Cost Plan</option>
+          {costPlans.map(cp => (
+            <option key={cp.id} value={cp.id}>{cp.name}</option>
+          ))}
+        </select>
         <button onClick={addPadFootingMeasurement}>
           {editingPadFootingMeasurementId !== null ? "Update Measurement" : "Add Measurement"}
         </button>

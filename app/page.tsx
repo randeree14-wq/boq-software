@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type {
   BeamType,
   BeamMeasurement,
@@ -27,7 +27,12 @@ import type {
   CostPlan,
   CostPlanItem,
   ExecutiveSummaryInputData,
+  MeasurementItem, 
+  ComputedMeasurementItem, 
+  Element,
 } from "@/types/boq";
+import { RecalcEngine } from "@/lib/costEngine";
+import { DEFAULT_ELEMENTS } from "@/lib/domain";
 import {
   addToBoqItem,
   addLayerToBoq,
@@ -77,6 +82,7 @@ import BoqSummary from "@/components/modules/BoqSummary";
 import Dashboard from "@/components/dashboard/Dashboard";
 import ElementalMeasurement from "@/components/elements/ElementalMeasurement";
 import ReportsTab from "@/components/reports/ReportsTab";
+import CostPlanManager from "@/components/cost-plans/CostPlanManager";
 
 // Module components
 import BeamModule from "@/components/modules/BeamModule";
@@ -155,6 +161,7 @@ const styles = { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle };
 // MAIN COMPONENT
 // ============================================
 export default function Home() {
+
   // ---------- BEAM ----------
   const [beamTypes, setBeamTypes] = useState<BeamType[]>([]);
   const [editingBeamId, setEditingBeamId] = useState<number | null>(null);
@@ -377,9 +384,17 @@ export default function Home() {
   });
 
   // ============================================
-  // COST PLAN COMPONENTS STATE
+  // COST PLAN COMPONENTS STATE (LEGACY - KEEP FOR NOW)
   // ============================================
   const [costPlanComponents, setCostPlanComponents] = useState<CostPlanComponent[]>([]);
+
+  // ============================================
+  // COST PLANS & MEASUREMENT ITEMS (NEW)
+  // ============================================
+  const [costPlans, setCostPlans] = useState<CostPlan[]>([]);
+  const [measurementItems, setMeasurementItems] = useState<MeasurementItem[]>([]);
+  const [computedItems, setComputedItems] = useState<ComputedMeasurementItem[]>([]);
+  const [elements, setElements] = useState<Element[]>(DEFAULT_ELEMENTS);
 
   // ============================================
   // RATES STATE
@@ -389,30 +404,70 @@ export default function Home() {
   // ============================================
   // EXECUTIVE SUMMARY INPUT STATE (Persisted)
   // ============================================
-const [executiveInput, setExecutiveInput] = useState<ExecutiveSummaryInputData>({
-  projectName: "My Project",
-  baseDate: new Date().toISOString().split("T")[0],
-  buildingArea: 0,
-  specialistServices: [],
-  preliminaries: 0,
-  preliminariesPercent: 0,
-  contingency: 0,
-  contingencyPercent: 0,
-  escalations: {
-    preConstructionMonths: 6,
-    preConstructionRate: 5,
-    constructionMonths: 12,
-    constructionRate: 8,
-  },
-  professionalFees: {
-    coreConsultants: 0,
-    specialistConsultants: 0,
-    disbursements: 0,
-  },
-});
+  const [executiveInput, setExecutiveInput] = useState<ExecutiveSummaryInputData>({
+    projectName: "My Project",
+    baseDate: new Date().toISOString().split("T")[0],
+    buildingArea: 0,
+    specialistServices: [],
+    preliminaries: 0,
+    preliminariesPercent: 0,
+    contingency: 0,
+    contingencyPercent: 0,
+    escalations: {
+      preConstructionMonths: 6,
+      preConstructionRate: 5,
+      constructionMonths: 12,
+      constructionRate: 8,
+    },
+    professionalFees: {
+      coreConsultants: 0,
+      specialistConsultants: 0,
+      disbursements: 0,
+    },
+  });
 
   // ============================================
-  // AUTO-GENERATE COST PLAN COMPONENTS
+  // MEASUREMENT EDITING STATES
+  // ============================================
+  const [editingBeamMeasurementId, setEditingBeamMeasurementId] = useState<number | null>(null);
+  const [editingSurfaceBedMeasurementId, setEditingSurfaceBedMeasurementId] = useState<number | null>(null);
+  const [editingPadFootingMeasurementId, setEditingPadFootingMeasurementId] = useState<number | null>(null);
+  const [editingGroundBeamMeasurementId, setEditingGroundBeamMeasurementId] = useState<number | null>(null);
+  const [editingColumnMeasurementId, setEditingColumnMeasurementId] = useState<number | null>(null);
+  const [editingWallMeasurementId, setEditingWallMeasurementId] = useState<number | null>(null);
+  const [editingSlabMeasurementId, setEditingSlabMeasurementId] = useState<number | null>(null);
+  const [editingOpeningMeasurementId, setEditingOpeningMeasurementId] = useState<number | null>(null);
+  // ✅ Selected Cost Plan for measurement assignment
+  const [selectedCostPlanId, setSelectedCostPlanId] = useState<string>("");
+
+  // ============================================
+  // RecalcEngine (AFTER state declarations)
+  // ============================================
+  const recalcEngine = useMemo(() => new RecalcEngine(
+    (costPlanId, computed, total) => {
+      setComputedItems(prev => {
+        const filtered = prev.filter(item => item.costPlanId !== costPlanId);
+        return [...filtered, ...computed];
+      });
+    }
+  ), []);
+
+  // ============================================
+  // Recalculate on data change
+  // ============================================
+  useEffect(() => {
+    if (measurementItems.length === 0 || costPlans.length === 0) return;
+    recalcEngine.recalculateProject(
+      'current-project',
+      costPlans,
+      measurementItems,
+      {}, // elementRates (future)
+      {}  // projectRates (future)
+    );
+  }, [measurementItems, costPlans, recalcEngine]);
+
+  // ============================================
+  // AUTO-GENERATE COST PLAN COMPONENTS (legacy)
   // ============================================
   useEffect(() => {
     const wallComponents = generateWallCostPlanComponents(wallMeasurements, wallTypes);
@@ -457,18 +512,6 @@ const [executiveInput, setExecutiveInput] = useState<ExecutiveSummaryInputData>(
   ]);
 
   // ============================================
-  // MEASUREMENT EDITING STATES
-  // ============================================
-  const [editingBeamMeasurementId, setEditingBeamMeasurementId] = useState<number | null>(null);
-  const [editingSurfaceBedMeasurementId, setEditingSurfaceBedMeasurementId] = useState<number | null>(null);
-  const [editingPadFootingMeasurementId, setEditingPadFootingMeasurementId] = useState<number | null>(null);
-  const [editingGroundBeamMeasurementId, setEditingGroundBeamMeasurementId] = useState<number | null>(null);
-  const [editingColumnMeasurementId, setEditingColumnMeasurementId] = useState<number | null>(null);
-  const [editingWallMeasurementId, setEditingWallMeasurementId] = useState<number | null>(null);
-  const [editingSlabMeasurementId, setEditingSlabMeasurementId] = useState<number | null>(null);
-  const [editingOpeningMeasurementId, setEditingOpeningMeasurementId] = useState<number | null>(null);
-
-  // ============================================
   // LOCAL STORAGE PERSISTENCE
   // ============================================
   useEffect(() => {
@@ -494,7 +537,8 @@ const [executiveInput, setExecutiveInput] = useState<ExecutiveSummaryInputData>(
       setCostPlanComponents(savedData.costPlanComponents || []);
       // Restore executive input
       if (savedData.executiveInput) {
-        setExecutiveInput(savedData.executiveInput);
+      setExecutiveInput(savedData.executiveInput);
+      setCostPlans(savedData.costPlans || []);
       }
     }
   }, []);
@@ -519,7 +563,8 @@ const [executiveInput, setExecutiveInput] = useState<ExecutiveSummaryInputData>(
       openingMeasurements,
       rates,
       costPlanComponents,
-      executiveInput, // <-- ADDED
+      executiveInput,
+      costPlans,
     };
     saveProjectData(data);
   };
@@ -1067,6 +1112,7 @@ const [executiveInput, setExecutiveInput] = useState<ExecutiveSummaryInputData>(
       wallLocation,
       elementalSectionId: "internal-divisions",
       elementalElementId: "walls",
+      costPlanId: selectedCostPlanId,
     };
 
     if (editingWallMeasurementId !== null) {
@@ -1195,7 +1241,7 @@ const [executiveInput, setExecutiveInput] = useState<ExecutiveSummaryInputData>(
   // ============================================
   // TAB STATE
   // ============================================
-  const [activeTab, setActiveTab] = useState<"dashboard" | "measurement" | "boq" | "reports" | "settings">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "measurement" | "costplans" | "boq" | "reports" | "settings">("dashboard");
 
   // ============================================
   // TAB STYLES
@@ -1283,6 +1329,9 @@ const [executiveInput, setExecutiveInput] = useState<ExecutiveSummaryInputData>(
         <button style={tabButtonStyle(activeTab === "settings")} onClick={() => setActiveTab("settings")}>
           Project Settings
         </button>
+        <button style={tabButtonStyle(activeTab === "costplans")} onClick={() => setActiveTab("costplans")}>
+        Cost Plans
+        </button>
       </div>
 
       <div style={{ marginTop: "20px" }}>
@@ -1309,6 +1358,7 @@ const [executiveInput, setExecutiveInput] = useState<ExecutiveSummaryInputData>(
                 resetBeamMeas,
                 editingBeamMeasurementId,
                 setEditingBeamMeasurementId,
+                costPlans,
               },
               groundBeam: {
                 groundBeamTypes,
@@ -1325,6 +1375,7 @@ const [executiveInput, setExecutiveInput] = useState<ExecutiveSummaryInputData>(
                 resetGroundBeamMeas,
                 editingGroundBeamMeasurementId,
                 setEditingGroundBeamMeasurementId,
+                costPlans,
               },
               padFooting: {
                 padFootingTypes,
@@ -1341,6 +1392,7 @@ const [executiveInput, setExecutiveInput] = useState<ExecutiveSummaryInputData>(
                 resetPadFootingMeas,
                 editingPadFootingMeasurementId,
                 setEditingPadFootingMeasurementId,
+                costPlans,
               },
               column: {
                 columnTypes,
@@ -1357,6 +1409,7 @@ const [executiveInput, setExecutiveInput] = useState<ExecutiveSummaryInputData>(
                 resetColumnMeas,
                 editingColumnMeasurementId,
                 setEditingColumnMeasurementId,
+                costPlans,
               },
               slab: {
                 slabTypes,
@@ -1373,6 +1426,7 @@ const [executiveInput, setExecutiveInput] = useState<ExecutiveSummaryInputData>(
                 resetSlabMeas,
                 editingSlabMeasurementId,
                 setEditingSlabMeasurementId,
+                costPlans,
               },
               surfaceBed: {
                 surfaceBedTypes,
@@ -1389,6 +1443,7 @@ const [executiveInput, setExecutiveInput] = useState<ExecutiveSummaryInputData>(
                 resetSurfaceBedMeas,
                 editingSurfaceBedMeasurementId,
                 setEditingSurfaceBedMeasurementId,
+                costPlans,
               },
               wall: {
                 wallTypes,
@@ -1405,6 +1460,7 @@ const [executiveInput, setExecutiveInput] = useState<ExecutiveSummaryInputData>(
                 resetWallMeas,
                 editingWallMeasurementId,
                 setEditingWallMeasurementId,
+                costPlans,
               },
               openings: {
                 openingTypes,
@@ -1421,10 +1477,31 @@ const [executiveInput, setExecutiveInput] = useState<ExecutiveSummaryInputData>(
                 resetOpeningMeas,
                 editingOpeningMeasurementId,
                 setEditingOpeningMeasurementId,
+                costPlans,
               },
             }}
           />
         )}
+
+        {activeTab === "costplans" && (
+  <CostPlanManager
+    costPlans={costPlans}
+    onAdd={(newCp) => {
+      // Add new Cost Plan with generated ID
+      const id = `cp-${Date.now()}`;
+      setCostPlans([...costPlans, { id, ...newCp }]);
+    }}
+    onEdit={(id, updatedCp) => {
+      setCostPlans(costPlans.map(cp =>
+        cp.id === id ? { ...cp, ...updatedCp, updatedAt: new Date().toISOString() } : cp
+      ));
+    }}
+    onDelete={(id) => {
+      setCostPlans(costPlans.filter(cp => cp.id !== id));
+    }}
+    styles={styles}
+  />
+)}
 
         {activeTab === "boq" && (
           <>

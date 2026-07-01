@@ -1,7 +1,9 @@
 "use client";
 
-import type { WallType, WallMeasurement, BrickType, WallThicknessType, WallFinish, WallLocation } from "@/types/boq";
+
+import type { WallType, WallMeasurement, BrickType, WallThicknessType, WallFinish, WallLocation, CostPlan } from "@/types/boq";
 import { getBrickDefaults, getThicknessFromType } from "@/lib/boqHelpers";
+import { useState } from "react";
 
 interface WallModuleProps {
   wallTypes: WallType[];
@@ -19,6 +21,7 @@ interface WallModuleProps {
   editingWallMeasurementId: number | null;
   setEditingWallMeasurementId: React.Dispatch<React.SetStateAction<number | null>>;
   styles: any;
+  costPlans: CostPlan[];
 }
 
 const WallModule = ({
@@ -37,8 +40,10 @@ const WallModule = ({
   editingWallMeasurementId,
   setEditingWallMeasurementId,
   styles,
+  costPlans
 }: WallModuleProps) => {
   const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles || {};
+  const [selectedCostPlanId, setSelectedCostPlanId] = useState<string>("");
 
   // SAFEGUARD: Create safe versions of all props
   const safeNewWall = {
@@ -112,6 +117,7 @@ const WallModule = ({
       ...safeNewWallMeas,
       area,
       wallLocation: safeNewWallMeas.wallLocation || "Internal Division",
+      costPlanId: selectedCostPlanId,
     };
     if (editingWallMeasurementId !== null) {
       setWallMeasurements((prev) =>
@@ -233,7 +239,7 @@ const WallModule = ({
 
       <hr />
 
-      <h2>Wall Measurements</h2>
+ <h2>Wall Measurements</h2>
       <div style={formGridStyle}>
         <input placeholder="Mark (e.g., W1)" value={safeNewWallMeas.mark} onChange={(e) => updateWallMeas({ mark: e.target.value })} />
         <select value={safeNewWallMeas.wallTypeId} onChange={(e) => updateWallMeas({ wallTypeId: Number(e.target.value) })}>
@@ -250,6 +256,17 @@ const WallModule = ({
           <option value="Internal Division">Internal Division</option>
           <option value="External Envelope">External Envelope</option>
           <option value="Boundary / Retaining Wall">Boundary / Retaining Wall</option>
+        </select>
+        {/* NEW: Cost Plan dropdown */}
+        <select
+          value={selectedCostPlanId}
+          onChange={(e) => setSelectedCostPlanId(e.target.value)}
+          style={{ padding: "8px", border: "1px solid #ccc", borderRadius: "4px" }}
+        >
+          <option value="">Select Cost Plan</option>
+          {costPlans.map(cp => (
+            <option key={cp.id} value={cp.id}>{cp.name}</option>
+          ))}
         </select>
         <button onClick={saveWallMeasurement}>
           {editingWallMeasurementId !== null ? "Update Measurement" : "Add Measurement"}

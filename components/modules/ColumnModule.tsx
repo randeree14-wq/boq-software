@@ -1,6 +1,7 @@
 "use client";
 
-import type { ColumnType, ColumnMeasurement } from "@/types/boq";
+import { useState } from "react";
+import type { ColumnType, ColumnMeasurement, CostPlan } from "@/types/boq";
 
 interface ColumnModuleProps {
   columnTypes: ColumnType[];
@@ -18,6 +19,7 @@ interface ColumnModuleProps {
   editingColumnMeasurementId: number | null;
   setEditingColumnMeasurementId: React.Dispatch<React.SetStateAction<number | null>>;
   styles: any;
+  costPlans: CostPlan[]; // NEW
 }
 
 export default function ColumnModule({
@@ -26,18 +28,20 @@ export default function ColumnModule({
   editingColumnId,
   setEditingColumnId,
   newColumn,
-  updateColumn = () => {},
-  resetColumn = () => {},
+  updateColumn,
+  resetColumn,
   columnMeasurements,
   setColumnMeasurements,
   newColumnMeas,
-  updateColumnMeas = () => {},
-  resetColumnMeas = () => {},
+  updateColumnMeas,
+  resetColumnMeas,
   editingColumnMeasurementId,
   setEditingColumnMeasurementId,
   styles,
+  costPlans,
 }: ColumnModuleProps) {
   const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles || {};
+  const [selectedCostPlanId, setSelectedCostPlanId] = useState<string>("");
 
   // SAFEGUARD: Safe versions of all props
   const safeNewColumn = {
@@ -85,12 +89,17 @@ export default function ColumnModule({
   };
 
   const addColumnMeasurement = () => {
+    if (!selectedCostPlanId) {
+      alert("Please select a Cost Plan first.");
+      return;
+    }
     if (!safeNewColumnMeas.mark.trim() || safeNewColumnMeas.columnTypeId === 0 || !safeNewColumnMeas.quantity || safeNewColumnMeas.quantity <= 0) return;
     const measurement = {
       id: Date.now(),
       ...safeNewColumnMeas,
       elementalSectionId: "Structural Frame",
       elementalElementId: "columns",
+      costPlanId: selectedCostPlanId,
     };
     if (editingColumnMeasurementId !== null) {
       setColumnMeasurements((prev) =>
@@ -176,6 +185,16 @@ export default function ColumnModule({
           {safeColumnTypes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         <input type="number" placeholder="Quantity" value={safeNewColumnMeas.quantity || ''} onChange={(e) => updateColumnMeas({ quantity: Number(e.target.value) || 0 })} />
+        <select
+          value={selectedCostPlanId}
+          onChange={(e) => setSelectedCostPlanId(e.target.value)}
+          style={{ padding: "8px", border: "1px solid #ccc", borderRadius: "4px" }}
+        >
+          <option value="">Select Cost Plan</option>
+          {costPlans.map(cp => (
+            <option key={cp.id} value={cp.id}>{cp.name}</option>
+          ))}
+        </select>
         <button onClick={addColumnMeasurement}>
           {editingColumnMeasurementId !== null ? "Update Measurement" : "Add Measurement"}
         </button>

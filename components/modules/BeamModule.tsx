@@ -1,6 +1,7 @@
 "use client";
 
-import type { BeamType, BeamMeasurement, BeamProfileType, ProppingHeightBand } from "@/types/boq";
+import { useState } from "react";
+import type { BeamType, BeamMeasurement, BeamProfileType, ProppingHeightBand, CostPlan } from "@/types/boq";
 
 interface BeamModuleProps {
   beamTypes: BeamType[];
@@ -18,6 +19,7 @@ interface BeamModuleProps {
   editingBeamMeasurementId: number | null;
   setEditingBeamMeasurementId: React.Dispatch<React.SetStateAction<number | null>>;
   styles: any;
+  costPlans: CostPlan[]; // NEW
 }
 
 export default function BeamModule({
@@ -26,18 +28,20 @@ export default function BeamModule({
   editingBeamId,
   setEditingBeamId,
   newBeam,
-  updateBeam = () => {},
-  resetBeam = () => {},
+  updateBeam,
+  resetBeam,
   beamMeasurements,
   setBeamMeasurements,
   newBeamMeas,
-  updateBeamMeas = () => {},
-  resetBeamMeas = () => {},
+  updateBeamMeas,
+  resetBeamMeas,
   editingBeamMeasurementId,
   setEditingBeamMeasurementId,
   styles,
+  costPlans,
 }: BeamModuleProps) {
   const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles || {};
+  const [selectedCostPlanId, setSelectedCostPlanId] = useState<string>("");
 
   // SAFEGUARD: Safe versions of all props
   const safeNewBeam = {
@@ -90,12 +94,17 @@ export default function BeamModule({
   };
 
   const addBeamMeasurement = () => {
+    if (!selectedCostPlanId) {
+      alert("Please select a Cost Plan first.");
+      return;
+    }
     if (!safeNewBeamMeas.mark.trim() || safeNewBeamMeas.beamTypeId === 0 || !safeNewBeamMeas.length || safeNewBeamMeas.length <= 0) return;
     const measurement = {
       id: Date.now(),
       ...safeNewBeamMeas,
       elementalSectionId: "Structural Frame",
       elementalElementId: "beams",
+      costPlanId: selectedCostPlanId,
     };
     if (editingBeamMeasurementId !== null) {
       setBeamMeasurements((prev) =>
@@ -202,6 +211,16 @@ export default function BeamModule({
           {safeBeamTypes.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
         </select>
         <input type="number" placeholder="Length (m)" value={safeNewBeamMeas.length || ''} onChange={(e) => updateBeamMeas({ length: Number(e.target.value) || 0 })} />
+        <select
+          value={selectedCostPlanId}
+          onChange={(e) => setSelectedCostPlanId(e.target.value)}
+          style={{ padding: "8px", border: "1px solid #ccc", borderRadius: "4px" }}
+        >
+          <option value="">Select Cost Plan</option>
+          {costPlans.map(cp => (
+            <option key={cp.id} value={cp.id}>{cp.name}</option>
+          ))}
+        </select>
         <button onClick={addBeamMeasurement}>
           {editingBeamMeasurementId !== null ? "Update Measurement" : "Add Measurement"}
         </button>

@@ -1,6 +1,7 @@
 "use client";
 
-import type { SurfaceBedType, SurfaceBedMeasurement } from "@/types/boq";
+import { useState } from "react";
+import type { SurfaceBedType, SurfaceBedMeasurement, CostPlan } from "@/types/boq";
 
 interface SurfaceBedModuleProps {
   surfaceBedTypes: SurfaceBedType[];
@@ -18,6 +19,7 @@ interface SurfaceBedModuleProps {
   editingSurfaceBedMeasurementId: number | null;
   setEditingSurfaceBedMeasurementId: React.Dispatch<React.SetStateAction<number | null>>;
   styles: any;
+  costPlans: CostPlan[]; // NEW
 }
 
 export default function SurfaceBedModule({
@@ -26,18 +28,20 @@ export default function SurfaceBedModule({
   editingSurfaceBedId,
   setEditingSurfaceBedId,
   newSurfaceBed,
-  updateSurfaceBed = () => {},
-  resetSurfaceBed = () => {},
+  updateSurfaceBed,
+  resetSurfaceBed,
   surfaceBedMeasurements,
   setSurfaceBedMeasurements,
   newSurfaceBedMeas,
-  updateSurfaceBedMeas = () => {},
-  resetSurfaceBedMeas = () => {},
+  updateSurfaceBedMeas,
+  resetSurfaceBedMeas,
   editingSurfaceBedMeasurementId,
   setEditingSurfaceBedMeasurementId,
   styles,
+  costPlans,
 }: SurfaceBedModuleProps) {
   const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles || {};
+  const [selectedCostPlanId, setSelectedCostPlanId] = useState<string>("");
 
   // SAFEGUARD: Safe versions of all props
   const safeNewSurfaceBed = {
@@ -96,12 +100,17 @@ export default function SurfaceBedModule({
   };
 
   const addSurfaceBedMeasurement = () => {
+    if (!selectedCostPlanId) {
+      alert("Please select a Cost Plan first.");
+      return;
+    }
     if (!safeNewSurfaceBedMeas.mark.trim() || safeNewSurfaceBedMeas.surfaceBedTypeId === 0 || !safeNewSurfaceBedMeas.area || safeNewSurfaceBedMeas.area <= 0) return;
     const measurement = {
       id: Date.now(),
       ...safeNewSurfaceBedMeas,
       elementalSectionId: "ground-floor",
       elementalElementId: "solid-floors",
+      costPlanId: selectedCostPlanId,
     };
     if (editingSurfaceBedMeasurementId !== null) {
       setSurfaceBedMeasurements((prev) =>
@@ -211,6 +220,16 @@ export default function SurfaceBedModule({
           {safeSurfaceBedTypes.map((sb) => <option key={sb.id} value={sb.id}>{sb.name}</option>)}
         </select>
         <input type="number" placeholder="Area (m²)" value={safeNewSurfaceBedMeas.area || ''} onChange={(e) => updateSurfaceBedMeas({ area: Number(e.target.value) || 0 })} />
+        <select
+          value={selectedCostPlanId}
+          onChange={(e) => setSelectedCostPlanId(e.target.value)}
+          style={{ padding: "8px", border: "1px solid #ccc", borderRadius: "4px" }}
+        >
+          <option value="">Select Cost Plan</option>
+          {costPlans.map(cp => (
+            <option key={cp.id} value={cp.id}>{cp.name}</option>
+          ))}
+        </select>
         <button onClick={addSurfaceBedMeasurement}>
           {editingSurfaceBedMeasurementId !== null ? "Update Measurement" : "Add Measurement"}
         </button>

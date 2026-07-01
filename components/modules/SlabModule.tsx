@@ -1,6 +1,7 @@
 "use client";
 
-import type { SlabType, SlabMeasurement } from "@/types/boq";
+import { useState } from "react";
+import type { SlabType, SlabMeasurement, CostPlan } from "@/types/boq";
 
 interface SlabModuleProps {
   slabTypes: SlabType[];
@@ -18,6 +19,7 @@ interface SlabModuleProps {
   editingSlabMeasurementId: number | null;
   setEditingSlabMeasurementId: React.Dispatch<React.SetStateAction<number | null>>;
   styles: any;
+  costPlans: CostPlan[]; // NEW
 }
 
 export default function SlabModule({
@@ -26,18 +28,20 @@ export default function SlabModule({
   editingSlabId,
   setEditingSlabId,
   newSlab,
-  updateSlab = () => {},
-  resetSlab = () => {},
+  updateSlab,
+  resetSlab,
   slabMeasurements,
   setSlabMeasurements,
   newSlabMeas,
-  updateSlabMeas = () => {},
-  resetSlabMeas = () => {},
+  updateSlabMeas,
+  resetSlabMeas,
   editingSlabMeasurementId,
   setEditingSlabMeasurementId,
   styles,
+  costPlans,
 }: SlabModuleProps) {
   const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles || {};
+  const [selectedCostPlanId, setSelectedCostPlanId] = useState<string>("");
 
   // SAFEGUARD: Safe versions of all props
   const safeNewSlab = {
@@ -91,13 +95,17 @@ export default function SlabModule({
   };
 
   const addSlabMeasurement = () => {
-    if (!safeNewSlabMeas.mark.trim() || safeNewSlabMeas.slabTypeId === 0 || 
-        !safeNewSlabMeas.length || safeNewSlabMeas.length <= 0 || 
-        !safeNewSlabMeas.width || safeNewSlabMeas.width <= 0 || 
+    if (!selectedCostPlanId) {
+      alert("Please select a Cost Plan first.");
+      return;
+    }
+    if (!safeNewSlabMeas.mark.trim() || safeNewSlabMeas.slabTypeId === 0 ||
+        !safeNewSlabMeas.length || safeNewSlabMeas.length <= 0 ||
+        !safeNewSlabMeas.width || safeNewSlabMeas.width <= 0 ||
         !safeNewSlabMeas.quantity || safeNewSlabMeas.quantity <= 0) {
       return;
     }
-    
+
     const area = safeNewSlabMeas.length * safeNewSlabMeas.width * safeNewSlabMeas.quantity;
     const measurement = {
       id: Date.now(),
@@ -105,6 +113,7 @@ export default function SlabModule({
       area,
       elementalSectionId: "structural-frame",
       elementalElementId: "slabs",
+      costPlanId: selectedCostPlanId,
     };
     if (editingSlabMeasurementId !== null) {
       setSlabMeasurements((prev) =>
@@ -211,6 +220,16 @@ export default function SlabModule({
         <input type="number" placeholder="Length (m)" value={safeNewSlabMeas.length || ''} onChange={(e) => updateSlabMeas({ length: Number(e.target.value) || 0 })} />
         <input type="number" placeholder="Width (m)" value={safeNewSlabMeas.width || ''} onChange={(e) => updateSlabMeas({ width: Number(e.target.value) || 0 })} />
         <input type="number" placeholder="Quantity" value={safeNewSlabMeas.quantity || ''} onChange={(e) => updateSlabMeas({ quantity: Number(e.target.value) || 0 })} />
+        <select
+          value={selectedCostPlanId}
+          onChange={(e) => setSelectedCostPlanId(e.target.value)}
+          style={{ padding: "8px", border: "1px solid #ccc", borderRadius: "4px" }}
+        >
+          <option value="">Select Cost Plan</option>
+          {costPlans.map(cp => (
+            <option key={cp.id} value={cp.id}>{cp.name}</option>
+          ))}
+        </select>
         <button onClick={addSlabMeasurement}>
           {editingSlabMeasurementId !== null ? "Update Measurement" : "Add Measurement"}
         </button>

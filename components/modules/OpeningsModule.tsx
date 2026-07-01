@@ -1,6 +1,7 @@
 "use client";
 
-import type { OpeningType, OpeningMeasurement } from "@/types/boq";
+import { useState } from "react";
+import type { OpeningType, OpeningMeasurement, CostPlan } from "@/types/boq";
 
 interface OpeningsModuleProps {
   openingTypes: OpeningType[];
@@ -18,6 +19,7 @@ interface OpeningsModuleProps {
   editingOpeningMeasurementId: number | null;
   setEditingOpeningMeasurementId: React.Dispatch<React.SetStateAction<number | null>>;
   styles: any;
+  costPlans: CostPlan[]; // NEW
 }
 
 export default function OpeningsModule({
@@ -26,18 +28,20 @@ export default function OpeningsModule({
   editingOpeningId,
   setEditingOpeningId,
   newOpening,
-  updateOpening = () => {},
-  resetOpening = () => {},
+  updateOpening,
+  resetOpening,
   openingMeasurements,
   setOpeningMeasurements,
   newOpeningMeas,
-  updateOpeningMeas = () => {},
-  resetOpeningMeas = () => {},
+  updateOpeningMeas,
+  resetOpeningMeas,
   editingOpeningMeasurementId,
   setEditingOpeningMeasurementId,
   styles,
+  costPlans,
 }: OpeningsModuleProps) {
   const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles || {};
+  const [selectedCostPlanId, setSelectedCostPlanId] = useState<string>("");
 
   // SAFEGUARD: Safe versions of all props
   const safeNewOpening = {
@@ -101,12 +105,17 @@ export default function OpeningsModule({
   };
 
   const addOpeningMeasurement = () => {
+    if (!selectedCostPlanId) {
+      alert("Please select a Cost Plan first.");
+      return;
+    }
     if (!safeNewOpeningMeas.mark.trim() || safeNewOpeningMeas.openingTypeId === 0 || !safeNewOpeningMeas.quantity || safeNewOpeningMeas.quantity <= 0) return;
     const measurement = {
       id: Date.now(),
       ...safeNewOpeningMeas,
       elementalSectionId: "Internal Divisions",
       elementalElementId: "Openings",
+      costPlanId: selectedCostPlanId,
     };
     if (editingOpeningMeasurementId !== null) {
       setOpeningMeasurements((prev) =>
@@ -234,6 +243,16 @@ export default function OpeningsModule({
           {safeOpeningTypes.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
         </select>
         <input type="number" placeholder="Quantity" value={safeNewOpeningMeas.quantity || ''} onChange={(e) => updateOpeningMeas({ quantity: Number(e.target.value) || 0 })} />
+        <select
+          value={selectedCostPlanId}
+          onChange={(e) => setSelectedCostPlanId(e.target.value)}
+          style={{ padding: "8px", border: "1px solid #ccc", borderRadius: "4px" }}
+        >
+          <option value="">Select Cost Plan</option>
+          {costPlans.map(cp => (
+            <option key={cp.id} value={cp.id}>{cp.name}</option>
+          ))}
+        </select>
         <button onClick={addOpeningMeasurement}>
           {editingOpeningMeasurementId !== null ? "Update Measurement" : "Add Measurement"}
         </button>

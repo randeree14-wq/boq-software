@@ -416,8 +416,13 @@ export type ProjectData = {
   wallMeasurements: WallMeasurement[];
   slabTypes: SlabType[];
   slabMeasurements: SlabMeasurement[];
-  rates: Record<string, number>; // <-- NEW: keyed by `${billNo}|${section}|${description}|${unit}`
+  rates: Record<string, number>;
   costPlanComponents: CostPlanComponent[];
+  executiveInput: ExecutiveSummaryInputData;
+  costPlans: CostPlan[];
+  measurementItems: MeasurementItem[];
+  elements: Element[];
+  snapshots: CostSnapshot[];
 };
 // Add this type for type-safe bill references
 export type BillKey = 
@@ -599,4 +604,61 @@ export type ProjectData = {
   // ... existing fields (beamTypes, beamMeasurements, etc.)
   // ... rates, costPlanComponents
   executiveInput: ExecutiveSummaryInputData;
+};
+
+// ============================================
+// DOMAIN LAYER TYPES (PURE)
+// ============================================
+
+export type MeasurementItem = {
+  id: string;
+  description: string;
+  quantity: number;
+  unit: string;
+  costPlanId: string;        // Must be assigned
+  elementId: string;
+  module: string;            // "Walls", "Slabs", etc.
+  mark: string;
+  sourceMeasurementId: number;
+};
+
+export type CostPlan = {
+  id: string;
+  name: string;
+  grossFloorArea: number;
+  includedInExecutiveSummary: boolean;
+  executiveWeight?: number;   // 0-1, full inclusion if undefined
+  version: number;
+  revisionDate: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Element = {
+  id: string;
+  name: string;
+  category: "substructure" | "superstructure" | "finishes" | "services" | "external";
+  code: string;
+  order: number;
+  isActive: boolean;
+};
+
+// ENGINE OUTPUT (will be used later)
+export type ComputedMeasurementItem = MeasurementItem & {
+  rate: number;
+  amount: number;
+  versionId: string;
+  computedAt: number;
+};
+
+// SNAPSHOT (will be used later)
+export type CostSnapshot = {
+  id: string;
+  projectId: string;
+  costPlanId: string;
+  timestamp: string;
+  version: number;
+  computedItems: ComputedMeasurementItem[];
+  totalValue: number;
+  note?: string;
 };

@@ -1,6 +1,7 @@
 "use client";
 
-import type { GroundBeamType, GroundBeamMeasurement } from "@/types/boq";
+import { useState } from "react";
+import type { GroundBeamType, GroundBeamMeasurement, CostPlan } from "@/types/boq";
 
 interface GroundBeamModuleProps {
   groundBeamTypes: GroundBeamType[];
@@ -18,6 +19,7 @@ interface GroundBeamModuleProps {
   editingGroundBeamMeasurementId: number | null;
   setEditingGroundBeamMeasurementId: React.Dispatch<React.SetStateAction<number | null>>;
   styles: any;
+  costPlans: CostPlan[]; // NEW
 }
 
 export default function GroundBeamModule({
@@ -26,18 +28,20 @@ export default function GroundBeamModule({
   editingGroundBeamId,
   setEditingGroundBeamId,
   newGroundBeam,
-  updateGroundBeam = () => {},
-  resetGroundBeam = () => {},
+  updateGroundBeam,
+  resetGroundBeam,
   groundBeamMeasurements,
   setGroundBeamMeasurements,
   newGroundBeamMeas,
-  updateGroundBeamMeas = () => {},
-  resetGroundBeamMeas = () => {},
+  updateGroundBeamMeas,
+  resetGroundBeamMeas,
   editingGroundBeamMeasurementId,
   setEditingGroundBeamMeasurementId,
   styles,
+  costPlans,
 }: GroundBeamModuleProps) {
   const { cardStyle, formGridStyle, tableStyle, thStyle, tdStyle } = styles || {};
+  const [selectedCostPlanId, setSelectedCostPlanId] = useState<string>("");
 
   // SAFEGUARD: Safe versions of all props
   const safeNewGroundBeam = {
@@ -92,12 +96,17 @@ export default function GroundBeamModule({
   };
 
   const addGroundBeamMeasurement = () => {
+    if (!selectedCostPlanId) {
+      alert("Please select a Cost Plan first.");
+      return;
+    }
     if (!safeNewGroundBeamMeas.mark.trim() || safeNewGroundBeamMeas.groundBeamTypeId === 0 || !safeNewGroundBeamMeas.length || safeNewGroundBeamMeas.length <= 0) return;
     const measurement = {
       id: Date.now(),
       ...safeNewGroundBeamMeas,
       elementalSectionId: "substructure",
       elementalElementId: "ground-beams",
+      costPlanId: selectedCostPlanId,
     };
     if (editingGroundBeamMeasurementId !== null) {
       setGroundBeamMeasurements((prev) =>
@@ -193,6 +202,16 @@ export default function GroundBeamModule({
           {safeGroundBeamTypes.map((gb) => <option key={gb.id} value={gb.id}>{gb.name}</option>)}
         </select>
         <input type="number" placeholder="Length (m)" value={safeNewGroundBeamMeas.length || ''} onChange={(e) => updateGroundBeamMeas({ length: Number(e.target.value) || 0 })} />
+        <select
+          value={selectedCostPlanId}
+          onChange={(e) => setSelectedCostPlanId(e.target.value)}
+          style={{ padding: "8px", border: "1px solid #ccc", borderRadius: "4px" }}
+        >
+          <option value="">Select Cost Plan</option>
+          {costPlans.map(cp => (
+            <option key={cp.id} value={cp.id}>{cp.name}</option>
+          ))}
+        </select>
         <button onClick={addGroundBeamMeasurement}>
           {editingGroundBeamMeasurementId !== null ? "Update Measurement" : "Add Measurement"}
         </button>
